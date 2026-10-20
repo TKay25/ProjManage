@@ -1,0 +1,57 @@
+{% set definition = stage.definition %}
+<article class="stage-row {{ 'is-complete' if stage.status == 'complete' }} {{ 'is-current' if stage.status == 'in_progress' }} {{ 'is-blocked' if stage.status == 'blocked' }}" id="stage-{{ stage.key }}">
+  <div class="stage-rail">
+    <span class="stage-marker">
+      {% if stage.status == 'complete' %}{{ icon('check', 14) }}{% else %}{{ '%02d'|format(stage.position) }}{% endif %}
+    </span>
+  </div>
+
+  <div class="stage-body">
+    <div class="stage-row-head">
+      <div>
+        <p class="stage-title">{{ stage.name }}</p>
+        <p class="stage-meta">
+          {% if definition.authority %}
+            <span class="meta-item authority-tag">{{ icon('shield', 11) }} {{ definition.authority }}</span>
+          {% else %}
+            <span class="meta-item muted small">Site works</span>
+          {% endif %}
+          <span class="meta-item muted small">{{ stage.budget_cents|money }} budget</span>
+          <span class="meta-item {{ 'neg' if stage.over else 'muted' }} small">{{ stage.spent|money }} spent</span>
+          {% if stage.over %}
+            <span class="badge badge-danger">Over by {{ (stage.spent - stage.budget_cents)|money }}</span>
+          {% endif %}
+        </p>
+      </div>
+      {{ badge(stage.status) }}
+    </div>
+
+    <p class="stage-summary">{{ definition.summary }}</p>
+
+    {% if stage.notes %}
+      <p class="stage-note">{{ icon('message', 13) }} {{ stage.notes }}</p>
+    {% endif %}
+
+    {% if definition.documents %}
+      <div class="doc-chips">
+        {% for doc in definition.documents %}
+          <span class="doc-chip">{{ icon('folder', 11) }} {{ doc }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="stage-actions">
+      <button class="btn btn-ghost btn-xs" type="button"
+              data-modal-open="modal-stage"
+              data-modal-action="{{ url_for('projects.update_stage', project_id=project.id, stage_key=stage.key) }}"
+              data-modal-context="{{ stage.name }}"
+              data-modal-value-status="{{ stage.status }}"
+              data-modal-value-notes="{{ stage.notes or '' }}">
+        {{ icon('pen', 13) }} Update stage
+      </button>
+      {% if definition.authority %}
+        <span class="stage-gate">{{ icon('shield', 12) }} Statutory gate</span>
+      {% endif %}
+    </div>
+  </div>
+</article>

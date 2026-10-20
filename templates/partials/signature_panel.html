@@ -1,0 +1,43 @@
+{% if agreement.status == 'signed' or agreement.client_signature %}
+  <div class="card signed-panel" data-signature-panel>
+    <div class="card-head">
+      <h2>Signature</h2>
+      {{ badge(agreement.status) }}
+    </div>
+
+    {% if agreement.client_signature %}
+      <img class="signature-img signature-img-lg" src="{{ agreement.client_signature }}" alt="Client signature" />
+    {% endif %}
+
+    <p class="signature-name">{{ agreement.client_name }}</p>
+    <p class="signature-line">Client signature</p>
+    <p class="mini-meta">{{ agreement.signed_at|datetime if agreement.signed_at else '' }}</p>
+
+    <div class="all-clear signed-note">
+      <span>{{ icon('lock', 16) }}</span>
+      <p>Signed and locked to the project record. Any change needs a new agreement or a variation.</p>
+    </div>
+
+    <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('agreements.print_view', agreement_id=agreement.id) }}" target="_blank">
+      {{ icon('eye', 14) }} Open print view
+    </a>
+  </div>
+{% else %}
+  <div class="card" data-signature-panel>
+    <div class="card-head">
+      <h2>Signature</h2>
+      <span class="badge badge-warn">Awaiting signature</span>
+    </div>
+
+    <p class="muted small">
+      Send this agreement to {{ agreement.client_name }}. They sign on screen and the
+      signed copy is locked to the project.
+    </p>
+
+    <button class="btn btn-primary btn-block" type="button" data-modal-open="modal-sign">
+      {{ icon('pen', 15) }} Sign this agreement
+    </button>
+
+    <p class="micro-note">{{ icon('shield', 12) }} The signature and timestamp are stored with the record.</p>
+  </div>
+{% endif %}

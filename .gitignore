@@ -1,12 +1,27 @@
-# local database + uploaded documents
-prisma/*.db
-prisma/*.db-journal
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Local environment
+.env
+.env.local
+
+# SQLite database, session secret and uploaded documents
+instance/
 uploads/
 
-# next
-.next/
-next-env.d.ts
-*.tsbuildinfo
+# Test and log output
+*.log
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
 
 # Artifacto — generated semantic artifacts (auto-updated by plugin)
 artifacts/

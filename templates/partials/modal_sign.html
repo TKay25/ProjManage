@@ -1,0 +1,47 @@
+<dialog class="modal modal--slim" id="modal-sign" aria-labelledby="modal-sign-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Signature</p>
+        <h2 id="modal-sign-title">Sign this agreement</h2>
+        <p class="modal-sub">{{ agreement.title }}</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('agreements.sign', agreement_id=agreement.id) }}"
+          data-ajax data-signature-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="signature" value="" data-signature-input />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">Signed by (full name)</span>
+            <input class="input" type="text" name="signed_name" value="{{ agreement.client_name }}" required maxlength="120" data-modal-autofocus />
+          </label>
+
+          <div class="field">
+            <span class="field-label">Draw signature</span>
+            <div class="signature-pad" data-signature-pad>
+              <canvas width="600" height="220" data-signature-canvas></canvas>
+              <span class="signature-hint">Sign inside the box with your finger, stylus or mouse</span>
+            </div>
+            <div class="signature-actions">
+              <button class="btn btn-ghost btn-sm" type="button" data-signature-clear>{{ icon('trash', 13) }} Clear</button>
+            </div>
+          </div>
+
+          <p class="micro-note">{{ icon('lock', 12) }} Signing locks the agreement and records the date and time.</p>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('check', 16) }} <span data-submit-label>Sign and lock</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

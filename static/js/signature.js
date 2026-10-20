@@ -1,4 +1,5 @@
-/* Signature pad — draws to a canvas and submits a PNG data URL. */
+/* Signature pad — draws to a canvas and submits a PNG data URL.
+   Works inside a closed dialog by resizing when the pad becomes visible. */
 
 (() => {
   "use strict";
@@ -15,15 +16,20 @@
 
   let drawing = false;
   let dirty = false;
+  let lastWidth = 0;
 
   const resize = () => {
+    const bounds = pad.getBoundingClientRect();
+    if (bounds.width < 40) return; // Hidden (dialog closed) — wait for layout.
+
+    lastWidth = bounds.width;
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    const bounds = canvas.getBoundingClientRect();
     const snapshot = dirty ? canvas.toDataURL() : null;
 
-    canvas.width = Math.max(320, Math.round(bounds.width * ratio));
+    canvas.width = Math.round(bounds.width * ratio);
     canvas.height = Math.round(bounds.height * ratio);
 
+    context.setTransform(1, 0, 0, 1, 0, 0);
     context.scale(ratio, ratio);
     context.lineWidth = 2.1;
     context.lineCap = "round";
@@ -39,10 +45,7 @@
 
   const point = (event) => {
     const bounds = canvas.getBoundingClientRect();
-    return {
-      x: event.clientX - bounds.left,
-      y: event.clientY - bounds.top,
-    };
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
   };
 
   const start = (event) => {
@@ -80,14 +83,21 @@
     context.clearRect(0, 0, canvas.width, canvas.height);
     dirty = false;
     if (input) input.value = "";
+    pad.querySelector(".signature-hint")?.classList.remove("is-hidden");
   });
 
   form.addEventListener("submit", () => {
-    if (dirty && input) {
-      input.value = canvas.toDataURL("image/png");
-    }
+    if (dirty && input) input.value = canvas.toDataURL("image/png");
   });
 
+  if (typeof ResizeObserver === "function") {
+    new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width || 0;
+      if (width > 0 && Math.abs(width - lastWidth) > 1) resize();
+    }).observe(pad);
+  } else {
+    window.addEventListener("resize", resize);
+  }
+
   resize();
-  window.addEventListener("resize", resize);
 })();

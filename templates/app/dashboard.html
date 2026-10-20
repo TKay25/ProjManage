@@ -12,9 +12,11 @@
 
 {% block page_actions %}
   {% if project %}
-    <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}#record">{{ icon('plus', 15) }} Record money</a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}"
+       data-modal-open="modal-money">{{ icon('plus', 15) }} Record money</a>
   {% endif %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}">{{ icon('plus', 15) }} New project</a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}"
+     data-modal-open="modal-project">{{ icon('plus', 15) }} New project</a>
 {% endblock %}
 
 {% block content %}
@@ -24,7 +26,7 @@
       <span class="empty-icon">{{ icon('building', 26) }}</span>
       <h3>Create your first project</h3>
       <p>Add the stand, budget and target date. Vaka builds the full Zimbabwe stage plan for you.</p>
-      <a class="btn btn-primary" href="{{ url_for('projects.new') }}">{{ icon('plus', 16) }} Create project</a>
+      <a class="btn btn-primary" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 16) }} Create project</a>
     </div>
   </div>
 {% else %}
@@ -288,25 +290,14 @@
       <h2>Your projects</h2>
       {% if projects|length > 1 %}<a class="link-quiet" href="{{ url_for('projects.index') }}">Manage {{ icon('arrow-right', 14) }}</a>{% endif %}
     </div>
-    <div class="project-grid">
+    <div class="project-grid" data-project-grid>
       {% for item in projects %}
-        <a class="project-card {{ 'is-active' if item.id == project.id }}" href="{{ url_for('projects.detail', project_id=item.id) }}">
-          <div class="project-card-head">
-            <span class="project-code">{{ item.code }}</span>
-            {{ badge(item.status) }}
-          </div>
-          <h3>{{ item.name }}</h3>
-          <p class="project-location">{{ icon('map-pin', 13) }} {% if item.suburb %}{{ item.suburb }}, {% endif %}{{ item.city }}</p>
-          <div class="project-card-progress">
-            {{ progress_bar(item.progress) }}<span>{{ item.progress }}%</span>
-          </div>
-          <dl class="project-card-money">
-            <div><dt>Funded</dt><dd>{{ item.totals.funded|money }}</dd></div>
-            <div><dt>Spent</dt><dd>{{ item.totals.spent|money }}</dd></div>
-          </dl>
-        </a>
+        {% set is_active = item.id == project.id %}
+        {% with project=item %}
+          {% include "partials/project_card.html" %}
+        {% endwith %}
       {% endfor %}
-      <a class="project-card project-card-new" href="{{ url_for('projects.new') }}">
+      <a class="project-card project-card-new" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">
         <span class="project-new-icon">{{ icon('plus', 20) }}</span>
         <h3>Add a project</h3>
         <p>Start a new stand or rental build.</p>
@@ -314,4 +305,12 @@
     </div>
   </section>
 {% endif %}
+{% endblock %}
+
+{% block modals %}
+  {% if project %}
+    {% set money_return = "page" %}
+    {% include "partials/modal_money.html" %}
+  {% endif %}
+  {% include "partials/modal_project.html" %}
 {% endblock %}

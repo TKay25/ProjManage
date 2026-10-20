@@ -9,7 +9,6 @@ from money import format_money
 from queries import (
     latest_activity,
     missing_receipts,
-    money_totals,
     monthly_cashflow,
     next_stage,
     projects_with_summary,

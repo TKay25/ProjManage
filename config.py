@@ -41,6 +41,10 @@ class Config:
 
     SEED_DEMO = os.environ.get("SEED_DEMO", "true").lower() not in {"false", "0", "no"}
 
+    # Templates re-render from disk so edits show up without a restart.
+    TEMPLATES_AUTO_RELOAD = True
+    SEND_FILE_MAX_AGE_DEFAULT = 0
+
     WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
     WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
     WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "vaka-verify-token")

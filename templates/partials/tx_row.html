@@ -7,7 +7,7 @@
   <div class="tx-main">
     <p class="tx-title">{{ tx.description }}</p>
     <p class="tx-meta">
-      {{ category_label(tx.category) }}{% if stage %} · {{ stage.name }}{% endif %}{% if show_project and tx.project_name %} · {{ tx.project_name }}{% endif %} · {{ tx.occurred_at|date }}
+      {{ category_label(tx.category) }}{% if stage %} · {{ stage.name }}{% endif %} · {{ tx.occurred_at|date }}
     </p>
     {% if tx.reference %}<p class="tx-ref">Ref {{ tx.reference }}</p>{% endif %}
   </div>

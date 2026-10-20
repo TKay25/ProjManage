@@ -7,7 +7,8 @@ CURRENCY = "USD"
 
 def format_money(cents: int | None) -> str:
     value = (cents or 0) / 100
-    return f"${value:,.2f}"
+    sign = "-" if value < 0 else ""
+    return f"{sign}${abs(value):,.2f}"
 
 
 def format_money_compact(cents: int | None) -> str:

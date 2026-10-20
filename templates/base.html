@@ -13,6 +13,7 @@
   <meta property="og:image" content="{{ url_for('static', filename='icons/icon-512.png') }}" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="{{ url_for('static', filename='icons/favicon-32.png') }}" sizes="32x32" />
   <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}" sizes="192x192" />
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -25,21 +26,20 @@
 <body class="{% block body_class %}{% endblock %}">
   <a class="skip-link" href="#main">Skip to content</a>
 
-  {% block chrome %}
-    {% include "partials/site_header.html" %}
-  {% endblock %}
+  {% block body_content %}
+    {% block chrome %}{% include "partials/site_header.html" %}{% endblock %}
 
-  {% include "partials/flash.html" %}
+    {% include "partials/flash.html" %}
 
-  <main id="main">
-    {% block content %}{% endblock %}
-  </main>
+    <main id="main">
+      {% block content %}{% endblock %}
+    </main>
 
-  {% block footer %}
-    {% include "partials/site_footer.html" %}
+    {% block footer %}{% include "partials/site_footer.html" %}{% endblock %}
   {% endblock %}
 
   <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/modal.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

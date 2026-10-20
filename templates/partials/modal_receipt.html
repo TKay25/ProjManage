@@ -1,0 +1,35 @@
+<dialog class="modal modal--slim" id="modal-receipt" aria-labelledby="modal-receipt-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Receipt</p>
+        <h2 id="modal-receipt-title">Attach proof of payment</h2>
+        <p class="modal-sub" data-modal-context-target>This expense</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="" enctype="multipart/form-data" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="dropzone" data-dropzone>
+            <input type="file" name="receipt" accept="image/*,application/pdf" required data-drop-input />
+            <span class="dropzone-icon">{{ icon('upload', 24) }}</span>
+            <span class="dropzone-title" data-drop-title>Drop a file or tap to browse</span>
+            <span class="dropzone-hint">JPG, PNG, WebP or PDF · up to 8MB</span>
+          </label>
+          <p class="field-hint">Uploading a new file replaces the previous receipt on this entry.</p>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('upload', 15) }} <span data-submit-label>Save receipt</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

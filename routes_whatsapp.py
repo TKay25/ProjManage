@@ -2,17 +2,14 @@
 
 import hashlib
 import hmac
-import json
 
 from flask import (
     Blueprint,
     current_app,
     g,
     jsonify,
-    redirect,
     render_template,
     request,
-    url_for,
 )
 
 from auth import accessible_projects, login_required

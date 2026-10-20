@@ -1,0 +1,113 @@
+<dialog class="modal modal--wide" id="modal-money" aria-labelledby="modal-money-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Record money</p>
+        <h2 id="modal-money-title">Add a deposit or an expense</h2>
+        <p class="modal-sub">
+          {% if project %}{{ project.name }} · {% endif %}receipts stay attached to the entry that needed them.
+        </p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('money.create') }}" enctype="multipart/form-data"
+          data-ajax data-money-form data-balance="{{ totals.balance if totals else 0 }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="project_id" value="{{ project.id }}" />
+      <input type="hidden" name="_return" value="{{ money_return|default('list') }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <div class="type-toggle">
+            <label class="type-option">
+              <input type="radio" name="type" value="EXPENSE" checked />
+              <span>{{ icon('receipt', 15) }} Money out</span>
+            </label>
+            <label class="type-option">
+              <input type="radio" name="type" value="FUNDING" />
+              <span>{{ icon('wallet', 15) }} Money in</span>
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Amount (USD)</span>
+              <div class="money-input">
+                <span>$</span>
+                <input class="input" type="text" name="amount" inputmode="decimal" required placeholder="0.00" data-amount data-modal-autofocus />
+              </div>
+              <span class="field-hint" data-balance-hint>Balance after this entry: {{ totals.balance|money if totals else '$0.00' }}</span>
+            </label>
+            <label class="field">
+              <span class="field-label">Date</span>
+              <input class="input" type="date" name="occurred_at" value="{{ today_iso() }}" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Description</span>
+            <input class="input" type="text" name="description" maxlength="200" required placeholder="Cement, river sand and rebar" />
+          </label>
+
+          <div class="form-row expense-only">
+            <label class="field">
+              <span class="field-label">Category</span>
+              <select class="select" name="category">
+                {% for value, label in TRANSACTION_CATEGORIES if value != 'client_deposit' %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Method</span>
+              <select class="select" name="method">
+                {% for value, label in PAYMENT_METHODS %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Build stage</span>
+              <select class="select" name="stage_key">
+                <option value="">Not allocated</option>
+                {% for stage in stages %}
+                  <option value="{{ stage.key }}">{{ stage.name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Reference (optional)</span>
+              <input class="input" type="text" name="reference" maxlength="80" placeholder="Bank ref, invoice or EcoCash code" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Receipt or bank slip</span>
+            <input class="input input-file" type="file" name="receipt" accept="image/*,application/pdf" data-receipt-input />
+            <span class="field-hint">JPG, PNG, WebP or PDF · up to 8MB</span>
+          </label>
+
+          <div class="upload-preview" data-upload-preview hidden>
+            <span class="upload-preview-icon">{{ icon('receipt', 18) }}</span>
+            <div>
+              <p class="mini-title" data-upload-name></p>
+              <p class="mini-meta" data-upload-size></p>
+            </div>
+            <button class="icon-btn" type="button" data-upload-clear aria-label="Remove file">{{ icon('close', 14) }}</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('check', 16) }} <span data-submit-label>Save entry</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

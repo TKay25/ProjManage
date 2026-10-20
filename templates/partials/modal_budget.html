@@ -1,0 +1,33 @@
+<dialog class="modal modal--slim" id="modal-budget" aria-labelledby="modal-budget-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Budget</p>
+        <h2 id="modal-budget-title">Change the build budget</h2>
+        <p class="modal-sub">Stage allocations are recalculated from the same Zimbabwean weights.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('projects.update_budget', project_id=project.id) }}" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">Total budget (USD)</span>
+            <input class="input" type="text" name="budget" value="{{ project.budget_cents|money_input }}" inputmode="decimal" required data-money data-modal-autofocus />
+          </label>
+          <p class="field-hint">Currently {{ project.budget_cents|money }} across {{ STAGES|length }} stages.</p>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('wallet', 15) }} <span data-submit-label>Recalculate stages</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

@@ -1,0 +1,75 @@
+<dialog class="modal" id="modal-project" aria-labelledby="modal-project-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">New project</p>
+        <h2 id="modal-project-title">Start a new build</h2>
+        <p class="modal-sub">Vaka adds the 19-stage Zimbabwe plan and splits your budget by stage.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('projects.create') }}" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">Project name</span>
+            <input class="input" type="text" name="name" required maxlength="120" placeholder="Greendale Family Home" data-modal-autofocus />
+          </label>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">City / town</span>
+              <select class="select" name="city">
+                {% for city in ['Harare', 'Bulawayo', 'Mutare', 'Gweru', 'Kwekwe', 'Masvingo', 'Chinhoyi', 'Kadoma', 'Victoria Falls'] %}
+                  <option value="{{ city }}">{{ city }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Suburb</span>
+              <input class="input" type="text" name="suburb" placeholder="Greendale" maxlength="80" />
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Stand / plot number</span>
+              <input class="input" type="text" name="stand_number" placeholder="Stand 1421" maxlength="80" />
+            </label>
+            <label class="field">
+              <span class="field-label">Build budget (USD)</span>
+              <input class="input" type="text" name="budget" inputmode="decimal" required placeholder="85,000.00" data-money />
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Start date</span>
+              <input class="input" type="date" name="start_date" value="{{ today_iso() }}" />
+            </label>
+            <label class="field">
+              <span class="field-label">Target handover</span>
+              <input class="input" type="date" name="target_date" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Notes (optional)</span>
+            <textarea class="textarea" name="description" rows="2" maxlength="2000" placeholder="Who is on the ground, access notes, design preferences…"></textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <p class="modal-note">{{ stages_count }} stages will be created automatically.</p>
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('check', 16) }} <span data-submit-label>Create project</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

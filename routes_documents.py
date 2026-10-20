@@ -7,6 +7,7 @@ from flask import Blueprint, abort, current_app, flash, g, redirect, render_temp
 from auth import accessible_projects, can_manage_project, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query
 from storage import UploadError, delete_upload, save_upload
+import web
 
 bp = Blueprint("documents", __name__)
 
@@ -79,15 +80,18 @@ def upload():
     try:
         saved = save_upload(request.files.get("file"), kind)
     except UploadError as error:
+        if web.wants_json():
+            return web.fail(str(error))
         flash(str(error), "error")
         return redirect(url_for("documents.index", project=project["id"]))
 
+    attachment_id = new_id()
     execute(
         """INSERT INTO attachments
              (id, project_id, transaction_id, uploader_id, kind, filename, original_name, mime_type, size, created_at)
            VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)""",
         (
-            new_id(),
+            attachment_id,
             project["id"],
             g.user["id"],
             kind,
@@ -100,6 +104,24 @@ def upload():
     )
 
     log_event(g.user["id"], project["id"], "document.uploaded", saved["original_name"])
+
+    if web.wants_json():
+        file_row = query(
+            """SELECT a.*, u.name AS uploader_name, p.name AS project_name, NULL AS transaction_description
+               FROM attachments a
+               LEFT JOIN users u ON u.id = a.uploader_id
+               LEFT JOIN projects p ON p.id = a.project_id
+               WHERE a.id = ?""",
+            (attachment_id,),
+            one=True,
+        )
+        return web.ok(
+            f"{KINDS[kind]} uploaded.",
+            fragment=render_template("partials/doc_card.html", file=file_row, kinds=KINDS),
+            target="[data-doc-grid]",
+            mode="prepend",
+        )
+
     flash(f"{KINDS[kind]} uploaded.", "success")
     return redirect(url_for("documents.index", project=project["id"]))
 
@@ -141,5 +163,9 @@ def delete(attachment_id):
     delete_upload(attachment["filename"])
     execute("DELETE FROM attachments WHERE id = ?", (attachment_id,))
     log_event(g.user["id"], project["id"], "document.deleted", attachment["original_name"])
+
+    if web.wants_json():
+        return web.ok("Document removed.", fragment="", target=f"#doc-{attachment_id}", mode="remove")
+
     flash("Document removed.", "success")
     return redirect(url_for("documents.index", project=project["id"]))

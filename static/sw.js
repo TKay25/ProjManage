@@ -1,7 +1,7 @@
 /* Vaka service worker — app shell caching + offline fallback.
    Authenticated HTML is never cached, so a shared device cannot leak a project. */
 
-const VERSION = "vaka-v1";
+const VERSION = "vaka-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 
 const PRECACHE = [
@@ -60,18 +60,20 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (url.pathname.startsWith("/static/")) {
+    // Network-first: updated CSS and JS always win when the device is online.
     event.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ||
-          fetch(request).then((response) => {
-            if (response.ok) {
-              const copy = response.clone();
-              caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
-            }
-            return response;
-          }),
-      ),
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached || Response.error();
+        }),
     );
   }
 });

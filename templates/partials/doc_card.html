@@ -1,0 +1,23 @@
+<article class="doc-card" id="doc-{{ file.id }}">
+  <a class="doc-preview" href="{{ url_for('documents.serve', attachment_id=file.id) }}" target="_blank" rel="noopener">
+    {% if file.mime_type.startswith('image/') %}
+      <img src="{{ url_for('documents.serve', attachment_id=file.id) }}" alt="{{ file.original_name }}" loading="lazy" />
+    {% else %}
+      <span class="doc-pdf">{{ icon('folder', 28) }}<small>PDF</small></span>
+    {% endif %}
+    <span class="doc-kind">{{ kinds.get(file.kind, file.kind|title) }}</span>
+  </a>
+  <div class="doc-body">
+    <p class="doc-name" title="{{ file.original_name }}">{{ file.original_name }}</p>
+    <p class="mini-meta">{{ file.created_at|date }} · {{ (file.size / 1024)|round|int }}KB</p>
+    {% if file.project_name %}<p class="mini-meta">{{ file.project_name }}</p>{% endif %}
+    {% if file.transaction_description %}<p class="mini-meta">{{ icon('receipt', 11) }} {{ file.transaction_description }}</p>{% endif %}
+  </div>
+  <div class="doc-actions">
+    <a class="btn btn-ghost btn-xs" href="{{ url_for('documents.serve', attachment_id=file.id, download=1) }}">{{ icon('download', 13) }} Download</a>
+    <form method="post" action="{{ url_for('documents.delete', attachment_id=file.id) }}" data-ajax data-confirm="Remove this file from the project?">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="icon-btn icon-btn-danger" type="submit" aria-label="Delete">{{ icon('trash', 14) }}</button>
+    </form>
+  </div>
+</article>

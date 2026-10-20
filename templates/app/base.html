@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block body_class %}app{% endblock %}
 
-{% block chrome %}
+{% block body_content %}
 <div class="drawer-overlay" data-drawer-close></div>
+
 <div class="shell">
   {% include "partials/sidebar.html" %}
 
@@ -20,6 +21,8 @@
     </header>
 
     <main class="content" id="main">
+      {% include "partials/flash.html" %}
+
       <div class="page-head">
         <div>
           {% if eyebrow is defined and eyebrow %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
@@ -34,6 +37,8 @@
   </div>
 </div>
 
+{% block modals %}{% endblock %}
+
 <nav class="tabbar" aria-label="Sections">
   {% for item in tab_items %}
     <a class="tab {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}">
@@ -45,6 +50,3 @@
   </button>
 </nav>
 {% endblock %}
-
-{% block footer %}{% endblock %}
-{% block scripts %}{% endblock %}

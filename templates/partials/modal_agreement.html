@@ -1,0 +1,102 @@
+<dialog class="modal" id="modal-agreement" aria-labelledby="modal-agreement-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">New agreement</p>
+        <h2 id="modal-agreement-title">Set out the deal</h2>
+        <p class="modal-sub">Scope, milestones and terms — then capture the client's signature.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('agreements.create') }}" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Project</span>
+              <select class="select" name="project_id" required>
+                {% for item in projects %}
+                  <option value="{{ item.id }}" {% if project and item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Agreement type</span>
+              <select class="select" name="type">
+                <option value="build_contract">Full build contract</option>
+                <option value="stage_scope">Stage scope agreement</option>
+                <option value="variation">Variation order</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Title</span>
+            <input class="input" type="text" name="title" required maxlength="160" placeholder="Residential build contract" data-modal-autofocus />
+          </label>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Client's full name</span>
+              <input class="input" type="text" name="client_name" required maxlength="120" placeholder="As it appears on their ID" />
+            </label>
+            <label class="field">
+              <span class="field-label">Contract value (USD)</span>
+              <input class="input" type="text" name="contract_value" inputmode="decimal" required placeholder="85,000.00" data-money />
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Scope of works</span>
+            <textarea class="textarea" name="scope" rows="3" required placeholder="Design, council approval support, construction and handover of a three-bedroom house…"></textarea>
+          </label>
+
+          <div class="field">
+            <span class="field-label">Payment milestones</span>
+            <div class="milestone-list" data-milestones>
+              <div class="milestone-row">
+                <input class="input" type="text" name="milestone_label" placeholder="Signing and mobilisation" />
+                <input class="input" type="text" name="milestone_amount" inputmode="decimal" placeholder="0.00" data-money />
+              </div>
+              <div class="milestone-row">
+                <input class="input" type="text" name="milestone_label" placeholder="Foundation and slab" />
+                <input class="input" type="text" name="milestone_amount" inputmode="decimal" placeholder="0.00" data-money />
+              </div>
+              <div class="milestone-row">
+                <input class="input" type="text" name="milestone_label" placeholder="Roof and services" />
+                <input class="input" type="text" name="milestone_amount" inputmode="decimal" placeholder="0.00" data-money />
+              </div>
+              <div class="milestone-row">
+                <input class="input" type="text" name="milestone_label" placeholder="Practical completion" />
+                <input class="input" type="text" name="milestone_amount" inputmode="decimal" placeholder="0.00" data-money />
+              </div>
+            </div>
+            <div class="milestone-foot">
+              <button class="btn btn-ghost btn-xs" type="button" data-add-milestone>{{ icon('plus', 13) }} Add milestone</button>
+              <span class="field-hint" data-milestone-total>Milestone total: $0.00</span>
+            </div>
+          </div>
+
+          <details class="modal-details">
+            <summary>{{ icon('pen', 14) }} Terms and conditions</summary>
+            <label class="field">
+              <textarea class="textarea textarea-tall" name="terms" rows="8">{{ DEFAULT_AGREEMENT_TERMS }}</textarea>
+              <span class="field-hint">Defaults follow Zimbabwean practice. Edit anything your lawyer advises.</span>
+            </label>
+          </details>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <p class="modal-note">{{ icon('alert', 12) }} A management record, not legal advice.</p>
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('check', 16) }} <span data-submit-label>Save agreement</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

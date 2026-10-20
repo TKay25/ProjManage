@@ -94,7 +94,7 @@
       {% if messages %}
         {% for message in messages %}
           <div class="wa-bubble {{ 'wa-in' if message.direction == 'IN' else 'wa-out' }}">
-            <p>{{ message.body }}</p>
+            <p>{{ message.body|wa }}</p>
             <span class="wa-time">{{ message.created_at|datetime }}{% if message.intent %} · {{ message.intent }}{% endif %}</span>
           </div>
         {% endfor %}

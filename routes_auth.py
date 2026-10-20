@@ -1,6 +1,6 @@
 """Registration, login and logout."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
@@ -17,7 +17,7 @@ WINDOW = timedelta(minutes=15)
 
 
 def _rate_limited(key: str) -> bool:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     entry = ATTEMPTS.get(key)
     if not entry or now - entry["start"] > WINDOW:
         ATTEMPTS[key] = {"start": now, "count": 1}

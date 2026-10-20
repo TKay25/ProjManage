@@ -5,6 +5,7 @@ import re
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
+import web
 from auth import accessible_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query
 from money import parse_money_to_cents
@@ -129,6 +130,8 @@ def create():
             schedule.append({"label": label[:120], "amountCents": cents})
 
     if error:
+        if web.wants_json():
+            return web.fail(error)
         return (
             render_template(
                 "app/agreement_new.html",
@@ -171,6 +174,24 @@ def create():
     )
 
     log_event(g.user["id"], project["id"], "agreement.created", title[:120])
+
+    if web.wants_json():
+        created = query(
+            """SELECT g.*, p.name AS project_name
+               FROM agreements g JOIN projects p ON p.id = g.project_id
+               WHERE g.id = ?""",
+            (agreement_id,),
+            one=True,
+        )
+        created["schedule"] = schedule
+        return web.ok(
+            "Agreement saved and awaiting the client's signature.",
+            fragment=render_template("partials/agreement_card.html", agreement=created),
+            target="[data-agreement-list]",
+            mode="prepend",
+            redirect_to=url_for("agreements.detail", agreement_id=agreement_id),
+        )
+
     flash("Agreement saved. Send it to the client for signature.", "success")
     return redirect(url_for("agreements.detail", agreement_id=agreement_id))
 
@@ -184,6 +205,7 @@ def detail(agreement_id):
         abort(404)
 
     project = require_project(agreement["project_id"])
+    author = query("SELECT name, role FROM users WHERE id = ?", (agreement["created_by"],), one=True)
 
     try:
         schedule = json.loads(agreement["payment_schedule"] or "[]")
@@ -197,6 +219,7 @@ def detail(agreement_id):
         projects=accessible_projects(g.user),
         project=project,
         agreement=agreement,
+        author=author,
         schedule=schedule,
         scheduled_total=sum(item.get("amountCents", 0) for item in schedule),
     )
@@ -215,11 +238,17 @@ def sign(agreement_id):
     signed_name = (request.form.get("signed_name") or agreement["client_name"]).strip()
 
     if signature and not re.match(r"^data:image/(png|jpeg);base64,[A-Za-z0-9+/=]+$", signature):
-        flash("The signature could not be read. Try signing again.", "error")
+        message = "The signature could not be read. Try signing again."
+        if web.wants_json():
+            return web.fail(message)
+        flash(message, "error")
         return redirect(url_for("agreements.detail", agreement_id=agreement_id))
 
     if len(signature) > 1_500_000:
-        flash("That signature image is too large.", "error")
+        message = "That signature image is too large."
+        if web.wants_json():
+            return web.fail(message)
+        flash(message, "error")
         return redirect(url_for("agreements.detail", agreement_id=agreement_id))
 
     execute(
@@ -227,7 +256,18 @@ def sign(agreement_id):
         (signature or None, now_iso(), signed_name[:120], agreement_id),
     )
     log_event(g.user["id"], project["id"], "agreement.signed", agreement["title"][:120])
-    flash("Agreement signed and locked to the project record.", "success")
+    message = "Agreement signed and locked to the project record."
+
+    if web.wants_json():
+        signed = query("SELECT * FROM agreements WHERE id = ?", (agreement_id,), one=True)
+        return web.ok(
+            message,
+            fragment=render_template("partials/signature_panel.html", agreement=signed, user=g.user),
+            target="[data-signature-panel]",
+            mode="replace",
+        )
+
+    flash(message, "success")
     return redirect(url_for("agreements.detail", agreement_id=agreement_id))
 
 
@@ -242,6 +282,10 @@ def void(agreement_id):
     project = require_project(agreement["project_id"])
     execute("UPDATE agreements SET status = 'void' WHERE id = ?", (agreement_id,))
     log_event(g.user["id"], project["id"], "agreement.void", agreement["title"][:120])
+
+    if web.wants_json():
+        return web.ok("Agreement marked as void.", fields={"[data-agreement-status]": "Void"})
+
     flash("Agreement marked as void.", "success")
     return redirect(url_for("agreements.detail", agreement_id=agreement_id))
 

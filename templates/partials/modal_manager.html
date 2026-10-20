@@ -1,0 +1,33 @@
+<dialog class="modal modal--slim" id="modal-manager" aria-labelledby="modal-manager-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Team</p>
+        <h2 id="modal-manager-title">Assign a build manager</h2>
+        <p class="modal-sub">They need a Vaka account first — ask them to register as a build manager.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('projects.assign_manager', project_id=project.id) }}" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">Manager's email</span>
+            <input class="input" type="email" name="email" required placeholder="manager@vaka.co.zw" data-modal-autofocus />
+            <span class="field-hint">The build manager can post progress, record expenses and upload receipts.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('users', 15) }} <span data-submit-label>Assign manager</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

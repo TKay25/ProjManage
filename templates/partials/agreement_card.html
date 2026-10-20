@@ -1,0 +1,19 @@
+{% set schedule = agreement.schedule %}
+<a class="agreement-card" href="{{ url_for('agreements.detail', agreement_id=agreement.id) }}">
+  <div class="agreement-card-top">
+    <span class="agreement-icon">{{ icon('pen', 18) }}</span>
+    {{ badge(agreement.status) }}
+    <span class="agreement-type">{{ agreement.type|replace('_', ' ')|title }}</span>
+  </div>
+  <h3>{{ agreement.title }}</h3>
+  <p class="muted small">{{ agreement.project_name }}</p>
+  <dl class="agreement-card-stats">
+    <div><dt>Contract value</dt><dd>{{ agreement.contract_value_cents|money }}</dd></div>
+    <div><dt>Milestones</dt><dd>{{ schedule|length }}</dd></div>
+    <div><dt>Client</dt><dd>{{ agreement.client_name }}</dd></div>
+  </dl>
+  <p class="project-card-foot">
+    {{ icon('calendar', 13) }}
+    {% if agreement.signed_at %}Signed {{ agreement.signed_at|date }}{% else %}Created {{ agreement.created_at|date }}{% endif %}
+  </p>
+</a>

@@ -1,4 +1,19 @@
-"""Server-side UI primitives shared by Jinja templates."""
+"""Small text helpers shared by templates."""
+
+import re
+
+from markupsafe import Markup, escape
+
+_BOLD = re.compile(r"\*([^*\n]+)\*")
+_ITALIC = re.compile(r"(?<![\w_])_([^_\n]+)_(?![\w_])")
+
+
+def wa_format(text) -> Markup:
+    """Renders WhatsApp-style *bold* and _italic_ markup, escaping everything else."""
+    escaped = str(escape(text or ""))
+    escaped = _BOLD.sub(r"<strong>\1</strong>", escaped)
+    escaped = _ITALIC.sub(r"<em>\1</em>", escaped)
+    return Markup(escaped)
 
 from markupsafe import Markup
 

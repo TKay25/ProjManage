@@ -36,7 +36,7 @@ from stages import (
     stage_by_key,
     stage_name,
 )
-from ui import badge, brand, icon, logo_mark, progress_bar, progress_ring
+from ui import badge, brand, icon, logo_mark, progress_bar, progress_ring, wa_format
 
 NAV_ITEMS = [
     {"key": "dashboard", "href": "/app", "label": "Dashboard", "icon": "dashboard"},
@@ -59,7 +59,7 @@ def create_app(config_object=Config):
     db.init_app(app)
     auth.init_app(app)
 
-    from routes_agreements import bp as agreements_bp
+    from routes_agreements import DEFAULT_TERMS, bp as agreements_bp
     from routes_auth import bp as auth_bp
     from routes_dashboard import bp as dashboard_bp
     from routes_documents import bp as documents_bp
@@ -97,6 +97,9 @@ def create_app(config_object=Config):
         app_name=app.config["APP_NAME"],
         app_tagline=app.config["APP_TAGLINE"],
         current_year=datetime.now().year,
+        today_iso=lambda: datetime.now().strftime("%Y-%m-%d"),
+        stages_count=len(STAGES),
+        DEFAULT_AGREEMENT_TERMS=DEFAULT_TERMS,
         STAGE_GROUPS=STAGE_GROUPS,
         STAGES=STAGES,
         STATUS_LABELS=STATUS_LABELS,
@@ -122,6 +125,7 @@ def create_app(config_object=Config):
         relative=relative_time,
         percent=percent,
         initials=auth.initials,
+        wa=wa_format,
     )
 
     @app.context_processor

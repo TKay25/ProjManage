@@ -7,7 +7,6 @@
   <a class="btn btn-outline btn-sm" href="{{ url_for('agreements.print_view', agreement_id=agreement.id) }}" target="_blank">{{ icon('eye', 15) }} Print view</a>
   <a class="btn btn-primary btn-sm" href="{{ url_for('agreements.index', project=project.id) }}">All agreements</a>
 {% endblock %}
-
 {% block content %}
 <div class="detail-grid">
   <div class="detail-main">
@@ -83,7 +82,7 @@
             <p class="mini-meta">{{ agreement.signed_at|datetime if agreement.signed_at else '' }}</p>
           </div>
           <div class="signature-block">
-            <p class="signature-name">{{ user.name }}</p>
+            <p class="signature-name">{{ author.name if author else user.name }}</p>
             <p class="signature-line">For Vaka / build team</p>
             <p class="mini-meta">{{ agreement.created_at|date }}</p>
           </div>
@@ -93,33 +92,7 @@
   </div>
 
   <aside class="detail-side">
-    {% if agreement.status != 'signed' and agreement.status != 'void' %}
-      <div class="card" id="sign">
-        <div class="card-head"><h2>Sign this agreement</h2>{{ icon('pen', 16) }}</div>
-        <form class="form" method="post" action="{{ url_for('agreements.sign', agreement_id=agreement.id) }}" data-signature-form>
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <input type="hidden" name="signature" value="" data-signature-input />
-
-          <label class="field">
-            <span class="field-label">Signed by (full name)</span>
-            <input class="input" type="text" name="signed_name" value="{{ agreement.client_name }}" required maxlength="120" />
-          </label>
-
-          <div class="field">
-            <span class="field-label">Draw signature</span>
-            <div class="signature-pad" data-signature-pad>
-              <canvas width="600" height="220" data-signature-canvas></canvas>
-              <span class="signature-hint">Sign inside the box with your finger, stylus or mouse</span>
-            </div>
-            <div class="signature-actions">
-              <button class="btn btn-ghost btn-sm" type="button" data-signature-clear>{{ icon('trash', 13) }} Clear</button>
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-block" type="submit">{{ icon('check', 16) }} Sign and lock agreement</button>
-        </form>
-      </div>
-    {% endif %}
+    {% include "partials/signature_panel.html" %}
 
     <div class="card">
       <div class="card-head"><h2>Actions</h2></div>
@@ -127,7 +100,7 @@
         <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('agreements.print_view', agreement_id=agreement.id) }}" target="_blank">{{ icon('eye', 14) }} Open print view</a>
         <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('documents.index', project=project.id) }}">{{ icon('folder', 14) }} Project documents</a>
         {% if agreement.status != 'void' %}
-          <form method="post" action="{{ url_for('agreements.void', agreement_id=agreement.id) }}" data-confirm="Mark this agreement as void? The record stays in the project log.">
+          <form method="post" action="{{ url_for('agreements.void', agreement_id=agreement.id) }}" data-confirm="Mark this agreement as void? The record stays in the project log." data-ajax>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <button class="btn btn-danger-ghost btn-block btn-sm" type="submit">{{ icon('close', 14) }} Void agreement</button>
           </form>
@@ -138,14 +111,20 @@
     <div class="card">
       <div class="card-head"><h2>Record</h2></div>
       <dl class="fact-list">
-        <div><dt>Prepared by</dt><dd>{{ user.name }}</dd></div>
+        <div><dt>Prepared by</dt><dd>{{ author.name if author else user.name }}</dd></div>
         <div><dt>Created</dt><dd>{{ agreement.created_at|datetime }}</dd></div>
-        <div><dt>Status</dt><dd>{{ agreement.status|replace('_', ' ')|title }}</dd></div>
+        <div><dt>Status</dt><dd data-agreement-status>{{ agreement.status|replace('_', ' ')|title }}</dd></div>
         <div><dt>Currency</dt><dd>{{ agreement.currency }}</dd></div>
       </dl>
     </div>
   </aside>
 </div>
+{% endblock %}
+
+{% block modals %}
+  {% if agreement.status != 'signed' and agreement.status != 'void' %}
+    {% include "partials/modal_sign.html" %}
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}

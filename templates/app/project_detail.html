@@ -9,8 +9,10 @@
   </p>
 {% endblock %}
 {% block page_actions %}
-  <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}#record">{{ icon('wallet', 15) }} Record money</a>
-  <a class="btn btn-primary btn-sm" href="{{ url_for('agreements.new', project=project.id) }}">{{ icon('pen', 15) }} New agreement</a>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}"
+     data-modal-open="modal-money">{{ icon('wallet', 15) }} Record money</a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('agreements.new', project=project.id) }}"
+     data-modal-open="modal-agreement">{{ icon('pen', 15) }} New agreement</a>
 {% endblock %}
 
 {% block content %}
@@ -33,10 +35,10 @@
   </div>
 
   <dl class="project-hero-stats">
-    <div><dt>Budget</dt><dd>{{ project.budget_cents|money }}</dd></div>
+    <div><dt>Budget</dt><dd data-project-budget>{{ project.budget_cents|money }}</dd></div>
     <div><dt>Received</dt><dd>{{ totals.funded|money }}</dd></div>
     <div><dt>Spent</dt><dd>{{ totals.spent|money }}</dd></div>
-    <div><dt>Available</dt><dd class="{{ 'neg' if totals.balance < 0 else 'pos' }}">{{ totals.balance|money }}</dd></div>
+    <div><dt>Available</dt><dd class="{{ 'neg' if totals.balance < 0 else 'pos' }}" data-kpi-balance>{{ totals.balance|money }}</dd></div>
   </dl>
 </div>
 
@@ -46,7 +48,7 @@
       <div class="card-head">
         <div>
           <h2>Build stages</h2>
-          <p class="card-sub">{{ completed_count }} of {{ stages|length }} complete · {{ progress }}% weighted progress</p>
+          <p class="card-sub">{{ completed_count }} of {{ stages|length }} complete · <span data-progress-value>{{ progress }}%</span> weighted progress</p>
         </div>
         <span class="badge badge-soft">{{ stages|length }} stages</span>
       </div>
@@ -59,70 +61,7 @@
           </div>
 
           {% for stage in group.stages %}
-            <article class="stage-row {{ 'is-complete' if stage.status == 'complete' }} {{ 'is-current' if stage.status == 'in_progress' }} {{ 'is-blocked' if stage.status == 'blocked' }}" id="stage-{{ stage.key }}">
-              <div class="stage-rail">
-                <span class="stage-marker">
-                  {% if stage.status == 'complete' %}{{ icon('check', 14) }}{% else %}{{ '%02d'|format(stage.position) }}{% endif %}
-                </span>
-              </div>
-
-              <div class="stage-body">
-                <div class="stage-row-head">
-                  <div>
-                    <p class="stage-title">{{ stage.name }}</p>
-                    <p class="stage-meta">
-                      {% if stage.definition.authority %}
-                        <span class="authority-tag">{{ icon('shield', 11) }} {{ stage.definition.authority }}</span>
-                      {% else %}
-                        <span class="muted small">Site works</span>
-                      {% endif %}
-                      <span class="dot-sep">·</span>
-                      <span class="muted small">{{ stage.budget_cents|money }} budget</span>
-                      <span class="dot-sep">·</span>
-                      <span class="{{ 'neg' if stage.over else 'muted' }} small">{{ stage.spent|money }} spent</span>
-                      {% if stage.over %}
-                        <span class="badge badge-danger">Over by {{ (stage.spent - stage.budget_cents)|money }}</span>
-                      {% endif %}
-                    </p>
-                  </div>
-                  {{ badge(stage.status) }}
-                </div>
-
-                <p class="stage-summary">{{ stage.definition.summary }}</p>
-
-                {% if stage.notes %}
-                  <p class="stage-note">{{ icon('message', 13) }} {{ stage.notes }}</p>
-                {% endif %}
-
-                {% if stage.definition.documents %}
-                  <div class="doc-chips">
-                    {% for doc in stage.definition.documents %}
-                      <span class="doc-chip">{{ icon('folder', 11) }} {{ doc }}</span>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-
-                <details class="stage-edit">
-                  <summary>{{ icon('pen', 13) }} Update stage</summary>
-                  <form method="post" action="{{ url_for('projects.update_stage', project_id=project.id, stage_key=stage.key) }}" class="stage-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <label class="field">
-                      <span class="field-label">Status</span>
-                      <select class="select" name="status">
-                        {% for value, label in STATUS_LABELS.items() %}
-                          <option value="{{ value }}" {% if stage.status == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                      </select>
-                    </label>
-                    <label class="field">
-                      <span class="field-label">Note (optional)</span>
-                      <input class="input" type="text" name="notes" value="{{ stage.notes or '' }}" maxlength="1000" placeholder="Council inspection booked for Tuesday…" />
-                    </label>
-                    <button class="btn btn-primary btn-sm" type="submit">Save update</button>
-                  </form>
-                </details>
-              </div>
-            </article>
+            {% include "partials/stage_row.html" %}
           {% endfor %}
         </div>
       {% endfor %}
@@ -154,40 +93,28 @@
 
   <aside class="detail-side">
     <div class="card">
-      <div class="card-head"><h2>Project facts</h2></div>
+      <div class="card-head">
+        <h2>Project facts</h2>
+        <button class="icon-btn" type="button" data-modal-open="modal-budget" title="Change budget" aria-label="Change budget">{{ icon('wallet', 15) }}</button>
+      </div>
       <dl class="fact-list">
         <div><dt>Client</dt><dd>{{ owner.name if owner else '—' }}</dd></div>
-        <div><dt>Build manager</dt><dd>{{ manager.name if manager else 'Not assigned' }}</dd></div>
+        <div><dt>Build manager</dt><dd data-manager-name>{{ manager.name if manager else 'Not assigned' }}</dd></div>
         <div><dt>Start date</dt><dd>{{ project.start_date|date if project.start_date else '—' }}</dd></div>
         <div><dt>Target handover</dt><dd>{{ project.target_date|date if project.target_date else '—' }}</dd></div>
         <div><dt>Stage budget used</dt><dd>{{ ((totals.spent / project.budget_cents) * 100)|round|int if project.budget_cents else 0 }}%</dd></div>
       </dl>
 
-      {% if project.owner_id == user.id or user.role == 'admin' %}
-        <details class="card-details">
-          <summary>{{ icon('users', 14) }} Assign build manager</summary>
-          <form class="form form-compact" method="post" action="{{ url_for('projects.assign_manager', project_id=project.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <label class="field">
-              <span class="field-label">Manager email</span>
-              <input class="input" type="email" name="email" placeholder="manager@vaka.co.zw" required />
-            </label>
-            <button class="btn btn-outline btn-sm btn-block" type="submit">Assign</button>
-          </form>
-        </details>
-      {% endif %}
-
-      <details class="card-details">
-        <summary>{{ icon('wallet', 14) }} Change budget</summary>
-        <form class="form form-compact" method="post" action="{{ url_for('projects.update_budget', project_id=project.id) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <label class="field">
-            <span class="field-label">Total budget (USD)</span>
-            <input class="input" type="text" name="budget" value="{{ project.budget_cents|money_input }}" data-money required />
-          </label>
-          <button class="btn btn-outline btn-sm btn-block" type="submit">Recalculate stages</button>
-        </form>
-      </details>
+      <div class="stack-sm fact-actions">
+        {% if project.owner_id == user.id or user.role == 'admin' %}
+          <button class="btn btn-outline btn-sm btn-block" type="button" data-modal-open="modal-manager">
+            {{ icon('users', 14) }} {{ 'Change build manager' if manager else 'Assign build manager' }}
+          </button>
+        {% endif %}
+        <button class="btn btn-ghost btn-sm btn-block" type="button" data-modal-open="modal-budget">
+          {{ icon('wallet', 14) }} Change budget
+        </button>
+      </div>
     </div>
 
     <div class="card">
@@ -210,7 +137,7 @@
     <div class="card">
       <div class="card-head">
         <h2>Agreements</h2>
-        <a class="link-quiet" href="{{ url_for('agreements.new', project=project.id) }}">New</a>
+        <a class="link-quiet" href="{{ url_for('agreements.new', project=project.id) }}" data-modal-open="modal-agreement">New</a>
       </div>
       {% if agreements %}
         <ul class="mini-list">
@@ -269,4 +196,12 @@
     {% endif %}
   </aside>
 </div>
+{% endblock %}
+
+{% block modals %}
+  {% include "partials/modal_stage.html" %}
+  {% include "partials/modal_money.html" %}
+  {% include "partials/modal_agreement.html" %}
+  {% include "partials/modal_manager.html" %}
+  {% include "partials/modal_budget.html" %}
 {% endblock %}

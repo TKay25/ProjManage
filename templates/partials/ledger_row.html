@@ -1,0 +1,29 @@
+{% set is_funding = tx.type == 'FUNDING' %}
+{% set stage = stage_by_key(tx.stage_key) %}
+<li class="ledger-row" id="tx-{{ tx.id }}">
+  <span class="tx-icon {{ 'tx-in' if is_funding else 'tx-out' }}">{{ icon('wallet' if is_funding else 'receipt', 17) }}</span>
+  <div class="ledger-main">
+    <p class="tx-title">{{ tx.description }}</p>
+    <p class="tx-meta">{{ category_label(tx.category) }}{% if stage %} · {{ stage.name }}{% endif %} · {{ method_label(tx.method) }}</p>
+    <p class="tx-meta">{{ tx.occurred_at|date }}{% if tx.reference %} · Ref {{ tx.reference }}{% endif %}</p>
+  </div>
+  <div class="ledger-actions">
+    <p class="tx-amount {{ 'is-in' if is_funding else '' }}">{{ '+' if is_funding else '−' }}{{ tx.amount_cents|money }}</p>
+    <div class="row-buttons">
+      {% if tx.receipt_id %}
+        <a class="btn btn-ghost btn-xs" href="{{ url_for('documents.serve', attachment_id=tx.receipt_id) }}" target="_blank" rel="noopener">{{ icon('eye', 13) }} Receipt</a>
+      {% endif %}
+      <button class="btn btn-ghost btn-xs {{ 'is-warn' if not tx.receipt_id and not is_funding }}" type="button"
+              data-modal-open="modal-receipt"
+              data-modal-action="{{ url_for('money.attach_receipt', transaction_id=tx.id) }}"
+              data-modal-context="{{ tx.description }}">
+        {{ icon('upload' if not tx.receipt_id else 'receipt', 13) }}
+        {{ 'Add receipt' if not tx.receipt_id else 'Replace' }}
+      </button>
+      <form method="post" action="{{ url_for('money.delete', transaction_id=tx.id) }}" data-ajax data-confirm="Delete this ledger entry? This cannot be undone.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="icon-btn icon-btn-danger" type="submit" aria-label="Delete entry">{{ icon('trash', 14) }}</button>
+      </form>
+    </div>
+  </div>
+</li>

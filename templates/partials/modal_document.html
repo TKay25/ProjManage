@@ -1,0 +1,56 @@
+<dialog class="modal modal--slim" id="modal-document" aria-labelledby="modal-document-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Upload</p>
+        <h2 id="modal-document-title">Add to the project file</h2>
+        <p class="modal-sub">Plans, council receipts, delivery notes or site photos.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('documents.upload') }}" enctype="multipart/form-data" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          {% if projects|length > 1 %}
+            <label class="field">
+              <span class="field-label">Project</span>
+              <select class="select" name="project_id" required>
+                {% for item in projects %}
+                  <option value="{{ item.id }}" {% if project and item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          {% else %}
+            <input type="hidden" name="project_id" value="{{ projects[0].id if projects else '' }}" />
+          {% endif %}
+
+          <label class="field">
+            <span class="field-label">What is it?</span>
+            <select class="select" name="kind">
+              {% for value, label in kinds.items() %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label class="dropzone" data-dropzone>
+            <input type="file" name="file" accept="image/*,application/pdf" required data-drop-input data-modal-autofocus />
+            <span class="dropzone-icon">{{ icon('upload', 24) }}</span>
+            <span class="dropzone-title" data-drop-title>Drop a file or tap to browse</span>
+            <span class="dropzone-hint">JPG, PNG, WebP or PDF · up to 8MB</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('upload', 15) }} <span data-submit-label>Upload file</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

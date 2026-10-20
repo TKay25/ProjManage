@@ -1,0 +1,45 @@
+<dialog class="modal" id="modal-stage" aria-labelledby="modal-stage-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Build stage</p>
+        <h2 id="modal-stage-title" data-modal-context-target>Update stage</h2>
+        <p class="modal-sub">Marking a stage complete updates weighted progress and the project log.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <div class="field">
+            <span class="field-label">Status</span>
+            <div class="status-choices">
+              {% for value, label in STATUS_LABELS.items() %}
+                <label class="status-choice">
+                  <input type="radio" name="status" value="{{ value }}" />
+                  <span>{{ label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Note (optional)</span>
+            <textarea class="textarea" name="notes" maxlength="1000" rows="2" placeholder="Council inspection booked for Tuesday…"></textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <p class="modal-note">{{ icon('shield', 12) }} Statutory gates need the approval before completion.</p>
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('check', 16) }} <span data-submit-label>Save update</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

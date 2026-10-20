@@ -4,7 +4,8 @@ from datetime import datetime
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
-from auth import accessible_projects, can_manage_project, login_required, require_project
+import web
+from auth import accessible_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query, touch_project
 from money import format_money, parse_money_to_cents
 from queries import (
@@ -17,7 +18,6 @@ from queries import (
     stage_spend,
 )
 from stages import STAGE_GROUPS, STAGES, project_progress, stage_by_key, stage_budget
-from storage import UploadError, save_upload
 
 bp = Blueprint("projects", __name__)
 
@@ -69,6 +69,8 @@ def create():
         error = "Enter a build budget of at least $100."
 
     if error:
+        if web.wants_json():
+            return web.fail(error)
         return render_template("app/project_new.html", title="New project", active="projects", values=values, error=error), 400
 
     project_id = new_id()
@@ -112,6 +114,20 @@ def create():
         )
 
     log_event(g.user["id"], project_id, "project.created", f"Project {values['name']} created")
+
+    if web.wants_json():
+        created = query("SELECT * FROM projects WHERE id = ?", (project_id,), one=True)
+        created["stages"] = stage_rows(project_id)
+        created["totals"] = money_totals(project_id)
+        created["progress"] = project_progress(created["stages"])
+        return web.ok(
+            f"{values['name']} created with the full Zimbabwe stage plan.",
+            fragment=render_template("partials/project_card.html", project=created),
+            target="[data-project-grid]",
+            mode="prepend",
+            redirect_to=url_for("projects.detail", project_id=project_id),
+        )
+
     flash("Project created. Vaka has added the full Zimbabwe stage plan.", "success")
     return redirect(url_for("projects.detail", project_id=project_id))
 
@@ -197,6 +213,8 @@ def update_stage(project_id, stage_key):
     notes = (request.form.get("notes") or "").strip()[:1000]
 
     if status not in {"pending", "in_progress", "complete", "blocked"}:
+        if web.wants_json():
+            return web.fail("Choose a valid stage status.")
         flash("Choose a valid stage status.", "error")
         return redirect(url_for("projects.detail", project_id=project_id))
 
@@ -220,17 +238,42 @@ def update_stage(project_id, stage_key):
 
     if status == "complete":
         log_event(g.user["id"], project_id, "stage.completed", f"{stage['name']} marked complete")
-        flash(f"{stage['name']} marked complete.", "success")
+        message = f"{stage['name']} marked complete."
+        category = "success"
     elif status == "blocked":
         log_event(g.user["id"], project_id, "stage.blocked", f"{stage['name']} blocked: {notes or 'no reason given'}")
-        flash(f"{stage['name']} is flagged as blocked.", "error")
+        message = f"{stage['name']} is flagged as blocked."
+        category = "error"
     else:
         log_event(g.user["id"], project_id, "stage.updated", f"{stage['name']} set to {status.replace('_', ' ')}")
-        flash(f"{stage['name']} updated.", "success")
+        message = f"{stage['name']} updated."
+        category = "success"
 
     if project["status"] == "planning" and status in {"in_progress", "complete"}:
         execute("UPDATE projects SET status = 'in_progress' WHERE id = ?", (project_id,))
 
+    if web.wants_json():
+        refreshed = query("SELECT * FROM stages WHERE id = ?", (stage["id"],), one=True)
+        spent = stage_spend(project_id).get(stage_key, 0)
+        refreshed = {
+            **refreshed,
+            "definition": stage_by_key(stage_key),
+            "spent": spent,
+            "variance": refreshed["budget_cents"] - spent,
+            "over": spent > refreshed["budget_cents"] > 0,
+        }
+        all_stages = stage_rows(project_id)
+        return web.ok(
+            message,
+            fragment=render_template("partials/stage_row.html", stage=refreshed, project=project),
+            target=f"#stage-{stage_key}",
+            mode="replace",
+            fields={
+                "[data-progress-value]": f"{project_progress(all_stages)}%",
+            },
+        )
+
+    flash(message, category)
     return redirect(f"{url_for('projects.detail', project_id=project_id)}#stage-{stage_key}")
 
 
@@ -262,12 +305,20 @@ def assign_manager(project_id):
     manager = query("SELECT * FROM users WHERE email = ? AND role IN ('manager', 'admin')", (email,), one=True)
 
     if not manager:
-        flash("No build manager account matches that email. Ask them to register first.", "error")
+        message = "No build manager account matches that email. Ask them to register first."
+        if web.wants_json():
+            return web.fail(message)
+        flash(message, "error")
         return redirect(url_for("projects.detail", project_id=project_id))
 
     execute("UPDATE projects SET manager_id = ?, updated_at = ? WHERE id = ?", (manager["id"], now_iso(), project_id))
     log_event(g.user["id"], project_id, "project.manager", f"{manager['name']} assigned as build manager")
-    flash(f"{manager['name']} is now the build manager on this project.", "success")
+    message = f"{manager['name']} is now the build manager on this project."
+
+    if web.wants_json():
+        return web.ok(message, fields={"[data-manager-name]": manager["name"]})
+
+    flash(message, "success")
     return redirect(url_for("projects.detail", project_id=project_id))
 
 
@@ -278,7 +329,10 @@ def update_budget(project_id):
     budget_cents = parse_money_to_cents(request.form.get("budget"))
 
     if budget_cents < 10000:
-        flash("Enter a budget of at least $100.", "error")
+        message = "Enter a budget of at least $100."
+        if web.wants_json():
+            return web.fail(message)
+        flash(message, "error")
         return redirect(url_for("projects.detail", project_id=project_id))
 
     execute("UPDATE projects SET budget_cents = ?, updated_at = ? WHERE id = ?", (budget_cents, now_iso(), project_id))
@@ -289,5 +343,11 @@ def update_budget(project_id):
         )
 
     log_event(g.user["id"], project_id, "project.budget", f"Budget set to {format_money(budget_cents)}")
-    flash("Budget updated and stage allocations recalculated.", "success")
+    message = "Budget updated and stage allocations recalculated."
+
+    if web.wants_json():
+        # Stage budgets feed several regions, so let the page re-read them once.
+        return web.ok(message, fields={"[data-project-budget]": format_money(budget_cents)})
+
+    flash(message, "success")
     return redirect(url_for("projects.detail", project_id=project_id))
