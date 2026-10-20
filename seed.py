@@ -10,6 +10,7 @@ import auth
 from db import execute, new_id, now_iso, query
 from stages import STAGES, stage_budget
 from suppliers import SUPPLIERS
+from workspaces import ensure_default_workspace
 
 BASE_DIR = Path(__file__).resolve().parent
 SEED_ASSETS = BASE_DIR / "static" / "img" / "seed"
@@ -217,10 +218,12 @@ def _create_project(
 ):
     project_id = new_id()
     created_at = "2026-02-24T08:00:00+00:00"
+    owner = query("SELECT * FROM users WHERE id = ?", (owner_id,), one=True)
+    workspace = ensure_default_workspace(owner)
     execute(
         """INSERT INTO projects
-             (id, code, name, description, owner_id, manager_id, city, suburb, stand_number, status, budget_cents, start_date, target_date, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             (id, code, name, description, owner_id, manager_id, city, suburb, stand_number, status, budget_cents, start_date, target_date, workspace_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             project_id,
             code,
@@ -235,6 +238,7 @@ def _create_project(
             budget_cents,
             start_date,
             target_date,
+            workspace["id"] if workspace else None,
             created_at,
             now_iso(),
         ),

@@ -9,6 +9,8 @@
   </p>
 {% endblock %}
 {% block page_actions %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('projects.detail', project_id=project.id) }}"
+     data-modal-open="modal-project-edit">{{ icon('settings', 15) }} Edit</a>
   <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}"
      data-modal-open="modal-money">{{ icon('wallet', 15) }} Record money</a>
   <a class="btn btn-primary btn-sm" href="{{ url_for('agreements.new', project=project.id) }}"
@@ -196,6 +198,24 @@
         </ul>
       </div>
     {% endif %}
+
+    <div class="card">
+      <div class="card-head"><h2>{{ 'Archived project' if project.archived_at else 'Archive' }}</h2></div>
+      {% if project.archived_at %}
+        <p class="muted small">Archived on {{ project.archived_at|date }}. The ledger, documents and agreements are still here.</p>
+        <form method="post" action="{{ url_for('projects.restore', project_id=project.id) }}" data-ajax>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="btn btn-outline btn-block btn-sm" type="submit">{{ icon('refresh', 14) }} Restore project</button>
+        </form>
+      {% else %}
+        <p class="muted small">Archiving hides this project from your lists and pickers. Nothing is deleted.</p>
+        <form method="post" action="{{ url_for('projects.archive', project_id=project.id) }}"
+              data-ajax data-confirm="Archive this project? Its records are kept and you can restore it later.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="btn btn-danger-ghost btn-block btn-sm" type="submit">{{ icon('archive', 14) }} Archive project</button>
+        </form>
+      {% endif %}
+    </div>
   </aside>
 </div>
 {% endblock %}
@@ -207,4 +227,5 @@
   {% include "partials/modal_agreement.html" %}
   {% include "partials/modal_manager.html" %}
   {% include "partials/modal_budget.html" %}
+  {% include "partials/modal_project_edit.html" %}
 {% endblock %}

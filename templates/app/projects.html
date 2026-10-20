@@ -2,29 +2,39 @@
 {% block title %}Projects · YaVaKa{% endblock %}
 
 {% block page_title %}Projects{% endblock %}
-{% block page_subtitle %}<p class="page-subtitle">{{ total_rows }} project{{ '' if total_rows == 1 else 's' }} in your workspace</p>{% endblock %}
+{% block page_subtitle %}<p class="page-subtitle">{{ total_rows }} {{ 'archived project' if archived else 'project' }}{{ '' if total_rows == 1 else 's' }}{{ '' if archived else ' in your workspace' }}</p>{% endblock %}
 {% block page_actions %}
   <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 15) }} New project</a>
 {% endblock %}
 
 {% block content %}
-{% if total_rows or search or status != 'all' %}
-  <div class="filter-row">
-    {% for key, label in [('all', 'All'), ('planning', 'Planning'), ('in_progress', 'In progress'), ('completed', 'Completed')] %}
-      <a class="chip {{ 'is-active' if status == key }}" href="{{ url_for('projects.index', status=key, q=search) }}"
-         {% if status == key %}aria-current="true"{% endif %}>{{ label }}</a>
-    {% endfor %}
-  </div>
-
+{% if total_rows or search or status != 'all' or archived %}
   <form class="filter-bar filter-bar--single" method="get" action="{{ url_for('projects.index') }}">
-    <input type="hidden" name="status" value="{{ status }}" />
+    {% if workspaces|length > 1 %}
+      <select class="select select-sm" name="workspace" data-autosubmit aria-label="Filter by workspace">
+        <option value="">All workspaces</option>
+        {% for item in workspaces %}
+          <option value="{{ item.id }}" {% if workspace and workspace.id == item.id %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+    {% elif workspace %}
+      <input type="hidden" name="workspace" value="{{ workspace.id }}" />
+    {% endif %}
+
+    <select class="select select-sm" name="status" data-autosubmit aria-label="Filter projects by status">
+      {% for value, label in [('all', 'All projects'), ('planning', 'Planning'), ('in_progress', 'In progress'), ('completed', 'Completed'), ('archived', 'Archived')] %}
+        <option value="{{ value }}"
+          {% if value == 'archived' and archived %}selected{% elif value != 'archived' and not archived and status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
     <label class="search-field">
       {{ icon('search', 16) }}
       <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search name, code or suburb" aria-label="Search projects" />
     </label>
     <button class="btn btn-outline btn-sm" type="submit">Search</button>
     {% if search %}
-      <a class="link-quiet" href="{{ url_for('projects.index', status=status) }}">Clear</a>
+      <a class="link-quiet" href="{{ url_for('projects.index') }}">Clear</a>
     {% endif %}
   </form>
 

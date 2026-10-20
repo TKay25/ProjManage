@@ -59,6 +59,8 @@ ICONS = {
     "leaf": '<path d="M11 20A7 7 0 0 1 4 13V8a8 8 0 0 1 8-8h8v8a8 8 0 0 1-8 8Z"/><path d="M4 21c2-7 7-11 13-13"/>',
     "play": '<path d="m7 4 13 8-13 8Z"/>',
     "home": '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
+    "archive": '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>',
+    "refresh": '<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/>',
 }
 
 BADGES = {

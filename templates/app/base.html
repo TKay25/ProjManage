@@ -39,6 +39,9 @@
 
 {% block modals %}{% endblock %}
 
+{# Available everywhere in the workspace: any page can raise it. #}
+{% include "partials/modal_workspace.html" %}
+
 {# Shared reader dialog. Any record with a JSON-capable detail route can open in
    here by setting data-modal-remote on its link, so nothing has to redirect. #}
 <dialog class="modal modal--reader" id="modal-view" aria-labelledby="modal-view-title">

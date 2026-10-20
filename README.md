@@ -258,6 +258,8 @@ file; threads handle concurrency better than extra processes here.
   requirements with the council, EMA, ZINWA and ZESA.
 - Single SQLite file: perfect for a pilot, swap for Postgres before running many
   concurrent workspaces.
-- No payment gateway is wired in — funding is recorded, not collected.
-- The supplier directory is a convenience index. YaVaKa takes no commission and
-  does not process supplier payments.
+- No card or bank integration: funding is **recorded**, not collected inside the
+  app. Where YaVaKa manages the build, payments to builders and suppliers are
+  made from the project account and logged against the stage they belong to.
+- The supplier directory is a convenience index. YaVaKa takes no commission from
+  the suppliers listed in it.

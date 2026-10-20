@@ -40,6 +40,7 @@ from stages import (
     stage_name,
 )
 from ui import badge, brand, icon, logo_mark, progress_bar, progress_ring, wa_format
+from workspaces import workspaces_for
 
 NAV_ITEMS = [
     {"key": "dashboard", "href": "/app", "label": "Dashboard", "icon": "dashboard"},
@@ -157,6 +158,7 @@ def create_app(config_object=Config):
             "user": getattr(g, "user", None),
             "current_path": request.path,
             "demo_mode": app.config.get("DEMO_MODE", False),
+            "sidebar_workspaces": workspaces_for(getattr(g, "user", None)),
         }
 
     # ------------------------------------------------------------------

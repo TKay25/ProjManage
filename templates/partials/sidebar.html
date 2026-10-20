@@ -25,6 +25,21 @@
     </nav>
   </div>
 
+  <div class="sidebar-section">
+    <p class="sidebar-label">Workspaces</p>
+    <nav class="sidebar-nav" aria-label="Workspaces">
+      {% for item in sidebar_workspaces[:4] %}
+        <a class="side-project" href="{{ url_for('projects.index', workspace=item.id) }}">
+          <span class="project-dot tone-{{ loop.index0 % 4 + 1 }}"></span>
+          <span class="side-project-name">{{ item.name }}</span>
+        </a>
+      {% endfor %}
+      <a class="side-project" href="{{ url_for('projects.index') }}" data-modal-open="modal-workspace">
+        {{ icon('plus', 14) }}<span class="side-project-name">New workspace</span>
+      </a>
+    </nav>
+  </div>
+
   <div class="sidebar-section sidebar-projects">
     <p class="sidebar-label">Your projects</p>
     {% if projects %}

@@ -211,6 +211,70 @@ def run_migrations(connection):
 
         connection.execute("PRAGMA user_version = 1")
 
+    if version < 2:
+        # Archiving hides a project from the pickers and the list without
+        # touching its ledger, so the money history stays intact.
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(projects)")}
+        if "archived_at" not in columns:
+            connection.execute("ALTER TABLE projects ADD COLUMN archived_at TEXT")
+        connection.execute("PRAGMA user_version = 2")
+
+    if version < 3:
+        # Workspaces group several projects under one banner. They are an
+        # organisational filter: project-level permissions still decide who can
+        # see a build.
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS workspaces (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_workspace_owner ON workspaces(owner_id);
+            """
+        )
+
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(projects)")}
+        if "workspace_id" not in columns:
+            connection.execute("ALTER TABLE projects ADD COLUMN workspace_id TEXT")
+
+        # Give every existing project owner a workspace and adopt their builds.
+        connection.execute(
+            """INSERT INTO workspaces (id, name, owner_id, created_at)
+               SELECT lower(hex(randomblob(10))), COALESCE(u.name, 'My') || ' workspace',
+                      p.owner_id, '2026-01-01T00:00:00+00:00'
+               FROM (SELECT DISTINCT owner_id FROM projects WHERE workspace_id IS NULL) p
+               JOIN users u ON u.id = p.owner_id"""
+        )
+        connection.execute(
+            """UPDATE projects SET workspace_id = (
+                 SELECT w.id FROM workspaces w
+                 WHERE w.owner_id = projects.owner_id
+                 ORDER BY w.created_at LIMIT 1
+               )
+               WHERE workspace_id IS NULL"""
+        )
+        connection.execute("PRAGMA user_version = 3")
+
+    # Always run: adopts any project that has no workspace yet, including rows
+    # created by the seed after the version bump above. Idempotent.
+    connection.execute(
+        """INSERT INTO workspaces (id, name, owner_id, created_at)
+           SELECT lower(hex(randomblob(10))), COALESCE(u.name, 'My') || ' workspace',
+                  p.owner_id, '2026-01-01T00:00:00+00:00'
+           FROM (SELECT DISTINCT owner_id FROM projects WHERE workspace_id IS NULL) p
+           JOIN users u ON u.id = p.owner_id"""
+    )
+    connection.execute(
+        """UPDATE projects SET workspace_id = (
+             SELECT w.id FROM workspaces w
+             WHERE w.owner_id = projects.owner_id
+             ORDER BY w.created_at LIMIT 1
+           )
+           WHERE workspace_id IS NULL"""
+    )
+
     connection.commit()
 
 

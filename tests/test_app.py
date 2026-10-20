@@ -684,7 +684,7 @@ class BrandMigration(unittest.TestCase):
             from seed import DEMO_PASSWORD
 
             self.assertTrue(auth.verify_password(DEMO_PASSWORD, row["password_hash"]))
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 1)
+            self.assertGreaterEqual(connection.execute("PRAGMA user_version").fetchone()[0], 1)
 
             # Running again must not change anything.
             db.run_migrations(connection)

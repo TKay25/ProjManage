@@ -5,8 +5,9 @@ from datetime import datetime
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 import web
-from auth import accessible_projects, login_required, require_project
+from auth import accessible_projects, archived_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query, touch_project
+from workspaces import workspaces_for
 from money import format_money, parse_money_to_cents
 from paging import offset, page_number, page_window
 from queries import (
@@ -19,10 +20,13 @@ from queries import (
     stage_spend,
 )
 from stages import STAGE_GROUPS, STAGES, project_progress, stage_by_key, stage_budget
+from workspaces import create_workspace, ensure_default_workspace, find_workspace, workspaces_for
 
 bp = Blueprint("projects", __name__)
 
 PAGE_SIZE = 12
+
+PROJECT_STATUSES = {"planning", "in_progress", "on_hold", "completed"}
 
 
 def _next_code() -> str:
@@ -33,9 +37,17 @@ def _next_code() -> str:
 @bp.get("/app/projects")
 @login_required
 def index():
-    projects = projects_with_summary(accessible_projects(g.user))
-    search = (request.args.get("q") or "").strip()
     status = request.args.get("status", "all")
+    archived = request.args.get("archived") == "1" or status == "archived"
+    if status == "archived":
+        status = "all"
+
+    workspace = find_workspace(g.user, request.args.get("workspace"))
+    source = archived_projects(g.user) if archived else accessible_projects(g.user)
+    if workspace:
+        source = [row for row in source if row["workspace_id"] == workspace["id"]]
+    projects = projects_with_summary(source)
+    search = (request.args.get("q") or "").strip()
 
     if status != "all":
         projects = [row for row in projects if row["status"] == status]
@@ -62,6 +74,9 @@ def index():
         projects=visible,
         search=search,
         status=status,
+        archived=archived,
+        workspace=workspace,
+        workspaces=workspaces_for(g.user),
         total_rows=total_rows,
         page=page,
         page_count=page_count,
@@ -82,10 +97,8 @@ def new():
     )
 
 
-@bp.post("/app/projects")
-@login_required
-def create():
-    values = {
+def _read_project_form():
+    return {
         "name": (request.form.get("name") or "").strip(),
         "city": (request.form.get("city") or "Harare").strip(),
         "suburb": (request.form.get("suburb") or "").strip(),
@@ -94,8 +107,11 @@ def create():
         "budget": (request.form.get("budget") or "").strip(),
         "start_date": (request.form.get("start_date") or "").strip(),
         "target_date": (request.form.get("target_date") or "").strip(),
+        "status": (request.form.get("status") or "").strip(),
     }
 
+
+def _validate_project(values):
     budget_cents = parse_money_to_cents(values["budget"])
     error = None
 
@@ -104,6 +120,15 @@ def create():
     elif budget_cents < 10000:
         error = "Enter a build budget of at least $100."
 
+    return budget_cents, error
+
+
+@bp.post("/app/projects")
+@login_required
+def create():
+    values = _read_project_form()
+    budget_cents, error = _validate_project(values)
+
     if error:
         if web.wants_json():
             return web.fail(error)
@@ -111,11 +136,12 @@ def create():
 
     project_id = new_id()
     manager_id = g.user["id"] if g.user["role"] == "manager" else None
+    workspace = find_workspace(g.user, request.form.get("workspace_id")) or ensure_default_workspace(g.user)
 
     execute(
         """INSERT INTO projects
-             (id, code, name, description, owner_id, manager_id, city, suburb, stand_number, status, budget_cents, start_date, target_date, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?)""",
+             (id, code, name, description, owner_id, manager_id, city, suburb, stand_number, status, budget_cents, start_date, target_date, workspace_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?, ?)""",
         (
             project_id,
             _next_code(),
@@ -129,6 +155,7 @@ def create():
             budget_cents,
             values["start_date"] or None,
             values["target_date"] or None,
+            workspace["id"] if workspace else None,
             now_iso(),
             now_iso(),
         ),
@@ -386,3 +413,114 @@ def update_budget(project_id):
 
     flash(message, "success")
     return redirect(url_for("projects.detail", project_id=project_id))
+
+
+@bp.post("/app/projects/<project_id>")
+@login_required
+def update(project_id):
+    """The whole project record in one save, from the edit dialog."""
+    project = require_project(project_id)
+    values = _read_project_form()
+    budget_cents, error = _validate_project(values)
+
+    if error:
+        if web.wants_json():
+            return web.fail(error)
+        flash(error, "error")
+        return redirect(url_for("projects.detail", project_id=project_id))
+
+    status = values["status"] if values["status"] in PROJECT_STATUSES else project["status"]
+    budget_changed = budget_cents != project["budget_cents"]
+
+    execute(
+        """UPDATE projects
+           SET name = ?, city = ?, suburb = ?, stand_number = ?, description = ?,
+               status = ?, budget_cents = ?, start_date = ?, target_date = ?, updated_at = ?
+           WHERE id = ?""",
+        (
+            values["name"][:120],
+            values["city"][:80] or "Harare",
+            values["suburb"][:80] or None,
+            values["stand_number"][:80] or None,
+            values["description"][:2000] or None,
+            status,
+            budget_cents,
+            values["start_date"] or None,
+            values["target_date"] or None,
+            now_iso(),
+            project_id,
+        ),
+    )
+
+    # Stage allocations are derived from the budget, so they have to follow it.
+    if budget_changed:
+        for stage in STAGES:
+            execute(
+                "UPDATE stages SET budget_cents = ? WHERE project_id = ? AND key = ?",
+                (stage_budget(stage["weight"], budget_cents), project_id, stage["key"]),
+            )
+
+    log_event(g.user["id"], project_id, "project.updated", values["name"][:120])
+    message = "Project updated and stage budgets recalculated." if budget_changed else "Project updated."
+
+    if web.wants_json():
+        return web.ok(message, reload=True)
+
+    flash(message, "success")
+    return redirect(url_for("projects.detail", project_id=project_id))
+
+
+@bp.post("/app/projects/<project_id>/archive")
+@login_required
+def archive(project_id):
+    project = require_project(project_id)
+    execute(
+        "UPDATE projects SET archived_at = ?, updated_at = ? WHERE id = ?",
+        (now_iso(), now_iso(), project_id),
+    )
+    log_event(g.user["id"], project_id, "project.archived", project["name"][:120])
+    message = "Project archived. Its ledger, documents and agreements are kept."
+
+    if web.wants_json():
+        return web.ok(message, redirect_to=url_for("projects.index"))
+
+    flash(message, "success")
+    return redirect(url_for("projects.index"))
+
+
+@bp.post("/app/projects/<project_id>/restore")
+@login_required
+def restore(project_id):
+    project = require_project(project_id)
+    execute("UPDATE projects SET archived_at = NULL, updated_at = ? WHERE id = ?", (now_iso(), project_id))
+    log_event(g.user["id"], project_id, "project.restored", project["name"][:120])
+    message = "Project restored to your active list."
+
+    if web.wants_json():
+        return web.ok(message, redirect_to=url_for("projects.detail", project_id=project_id))
+
+    flash(message, "success")
+    return redirect(url_for("projects.detail", project_id=project_id))
+
+
+@bp.post("/app/workspaces")
+@login_required
+def new_workspace():
+    """A workspace groups several projects under one name."""
+    name = (request.form.get("name") or "").strip()
+
+    if len(name) < 2:
+        message = "Give the workspace a name of at least 2 characters."
+        if web.wants_json():
+            return web.fail(message)
+        flash(message, "error")
+        return redirect(url_for("projects.index"))
+
+    workspace = create_workspace(g.user, name)
+    message = f"{workspace['name']} is ready. New projects can be filed into it."
+
+    if web.wants_json():
+        return web.ok(message, reload=True)
+
+    flash(message, "success")
+    return redirect(url_for("projects.index", workspace=workspace["id"]))

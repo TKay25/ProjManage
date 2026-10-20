@@ -1,0 +1,34 @@
+<dialog class="modal modal--slim" id="modal-workspace" aria-labelledby="modal-workspace-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Workspace</p>
+        <h2 id="modal-workspace-title">New workspace</h2>
+        <p class="modal-sub">Group several projects under one name — a family portfolio, or a manager's book of builds.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('projects.new_workspace') }}" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">Workspace name</span>
+            <input class="input" type="text" name="name" required maxlength="80"
+                   placeholder="Moyo family builds" data-modal-autofocus />
+            <span class="field-hint">Clients see their own workspaces. Managers see the ones they build in.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('check', 16) }} <span data-submit-label>Create workspace</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

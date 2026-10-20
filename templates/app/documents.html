@@ -30,12 +30,16 @@
           <h2>Project file</h2>
           <p class="card-sub">Plans, approvals, receipts and site photos</p>
         </div>
-        <div class="segmented">
-          <a class="segment {{ 'is-active' if not kind }}" href="{{ url_for('documents.index', project=project.id if project else '') }}">All</a>
-          {% for value, label in kinds.items() %}
-            <a class="segment {{ 'is-active' if kind == value }}" href="{{ url_for('documents.index', project=project.id if project else '', kind=value) }}">{{ label }}</a>
-          {% endfor %}
-        </div>
+        <form class="inline-form" method="get" action="{{ url_for('documents.index') }}">
+          {% if project %}<input type="hidden" name="project" value="{{ project.id }}" />{% endif %}
+          <select class="select select-sm" name="kind" data-autosubmit aria-label="Filter documents by type">
+            <option value="">All files</option>
+            {% for value, label in kinds.items() %}
+              <option value="{{ value }}" {% if kind == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button class="btn btn-ghost btn-sm" type="submit">Filter</button></noscript>
+        </form>
       </div>
 
       {% if projects|length > 1 %}

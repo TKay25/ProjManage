@@ -1,0 +1,86 @@
+{# Editing an existing project. Rendered on the detail page so it works without
+   JavaScript; the form posts normally and the route redirects back. #}
+<dialog class="modal" id="modal-project-edit" aria-labelledby="modal-project-edit-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">{{ project.code }}</p>
+        <h2 id="modal-project-edit-title">Edit project</h2>
+        <p class="modal-sub">Changing the budget re-splits every stage allocation.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('projects.update', project_id=project.id) }}" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">Project name</span>
+            <input class="input" type="text" name="name" value="{{ project.name }}" required maxlength="120" data-modal-autofocus />
+          </label>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">City / town</span>
+              <select class="select" name="city">
+                {% for city in ['Harare', 'Bulawayo', 'Mutare', 'Gweru', 'Kwekwe', 'Masvingo', 'Chinhoyi', 'Kadoma', 'Victoria Falls'] %}
+                  <option value="{{ city }}" {% if project.city == city %}selected{% endif %}>{{ city }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Suburb</span>
+              <input class="input" type="text" name="suburb" value="{{ project.suburb or '' }}" maxlength="80" />
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Stand / plot number</span>
+              <input class="input" type="text" name="stand_number" value="{{ project.stand_number or '' }}" maxlength="80" />
+            </label>
+            <label class="field">
+              <span class="field-label">Build budget (USD)</span>
+              <input class="input" type="text" name="budget" inputmode="decimal" required
+                     value="{{ (project.budget_cents / 100)|round(2) }}" data-money />
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Start date</span>
+              <input class="input" type="date" name="start_date" value="{{ project.start_date or '' }}" />
+            </label>
+            <label class="field">
+              <span class="field-label">Target handover</span>
+              <input class="input" type="date" name="target_date" value="{{ project.target_date or '' }}" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Status</span>
+            <select class="select" name="status">
+              {% for value, label in [('planning', 'Planning'), ('in_progress', 'In progress'), ('on_hold', 'On hold'), ('completed', 'Completed')] %}
+                <option value="{{ value }}" {% if project.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Notes</span>
+            <textarea class="textarea" name="description" rows="2" maxlength="2000">{{ project.description or '' }}</textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('check', 16) }} <span data-submit-label>Save changes</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

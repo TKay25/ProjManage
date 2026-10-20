@@ -100,11 +100,25 @@ def accessible_projects(user):
     if not user:
         return []
     if user["role"] == "admin":
-        return query("SELECT * FROM projects ORDER BY created_at DESC")
+        return query("SELECT * FROM projects WHERE archived_at IS NULL ORDER BY created_at DESC")
     return query(
         """SELECT * FROM projects
-           WHERE owner_id = ? OR manager_id = ?
+           WHERE archived_at IS NULL AND (owner_id = ? OR manager_id = ?)
            ORDER BY created_at DESC""",
+        (user["id"], user["id"]),
+    )
+
+
+def archived_projects(user):
+    """Archived projects stay reachable for their record, just not in the lists."""
+    if not user:
+        return []
+    if user["role"] == "admin":
+        return query("SELECT * FROM projects WHERE archived_at IS NOT NULL ORDER BY archived_at DESC")
+    return query(
+        """SELECT * FROM projects
+           WHERE archived_at IS NOT NULL AND (owner_id = ? OR manager_id = ?)
+           ORDER BY archived_at DESC""",
         (user["id"], user["id"]),
     )
 
