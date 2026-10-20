@@ -221,7 +221,7 @@ h1, h2, h3 {
 }
 
 h2 {
-  font-size: clamp(1.55rem, 1.2rem + 1.4vw, 2.35rem);
+  font-size: clamp(1.3rem, 1.12rem + 0.85vw, 1.8rem);
 }
 
 h3 {
@@ -921,8 +921,8 @@ h3 {
 
 .hero-title {
   font-family: var(--font-serif);
-  font-size: clamp(2.5rem, 1.7rem + 3.1vw, 4rem);
-  line-height: 1.04;
+  font-size: clamp(2rem, 1.45rem + 2.2vw, 3.05rem);
+  line-height: 1.06;
   letter-spacing: -0.025em;
   font-weight: 500;
   margin-bottom: 22px;
@@ -1049,7 +1049,7 @@ h3 {
 
 .mock-amount {
   font-family: var(--font-serif);
-  font-size: 2.5rem;
+  font-size: 2rem;
   line-height: 1;
   letter-spacing: -0.03em;
   margin: 6px 0 6px;
@@ -2206,7 +2206,7 @@ h3 {
 }
 
 .auth-head h1 {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   letter-spacing: -0.02em;
   margin-bottom: 8px;
 }
