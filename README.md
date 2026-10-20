@@ -41,6 +41,7 @@ WhatsApp group and a notebook. Vaka turns that into a record you can audit:
 | Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, attention feed (blocked stages, missing receipts, overdraw), project log |
 | Interaction | Action flows run in dialogs (new project, money, agreement, upload, stage update) with an AJAX form enhancer; sidebar navigation shows a branded overlay loader and uses the View Transitions API where supported |
 | Record reader | Clicking an agreement opens it in a wide dialog over the list, with signing inside the dialog; a direct link still renders the full page for printing and sharing |
+| Sign-up | The header "Get started", the landing CTAs and the login link open a registration dialog; `/register` still works standalone for direct links and no-JavaScript browsers |
 | Statements | `GET /app/money/export` streams a CSV of the ledger with a running balance, filtered to whatever the user is viewing; spreadsheet-formula cells are neutralised |
 | Search & paging | Server-side search and paging on the ledger, projects and staff activity, with page numbers clamped so a stale link never shows a blank screen |
 | Accessibility | Skip link, `aria-current` on navigation, labelled search and filter controls, scoped table headers, focus trapping and focus restore in dialogs |
