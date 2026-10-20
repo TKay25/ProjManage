@@ -23,7 +23,7 @@ def ensure_seed():
 
 
 def _ensure_staff_account():
-    """Keeps a Vaka staff login available on demo installs."""
+    """Keeps a YaVaKa staff login available on demo installs."""
     existing = query("SELECT id FROM users WHERE role = 'admin' LIMIT 1", one=True)
     if existing:
         return
@@ -33,7 +33,7 @@ def _ensure_staff_account():
            VALUES (?, ?, ?, ?, 'admin', NULL, 'Zimbabwe', '#0B4F3C', ?)""",
         (
             new_id(),
-            "Vaka Staff",
+            "YaVaKa Staff",
             "admin@vaka.co.zw",
             auth.hash_password("Vaka2026!"),
             "2026-02-18T08:00:00+00:00",

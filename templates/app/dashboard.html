@@ -1,12 +1,12 @@
 {% extends "app/base.html" %}
-{% block title %}Dashboard · Vaka{% endblock %}
+{% block title %}Dashboard · YaVaKa{% endblock %}
 
 {% block page_title %}{{ greeting }}, {{ first_name }}{% endblock %}
 {% block page_subtitle %}
   {% if project %}
     <p class="page-subtitle">{{ project.name }} · {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}</p>
   {% else %}
-    <p class="page-subtitle">Let's get your build onto Vaka.</p>
+    <p class="page-subtitle">Let's get your build onto YaVaKa.</p>
   {% endif %}
 {% endblock %}
 
@@ -25,7 +25,7 @@
     <div class="empty">
       <span class="empty-icon">{{ icon('building', 26) }}</span>
       <h3>Create your first project</h3>
-      <p>Add the stand, budget and target date. Vaka builds the full Zimbabwe stage plan for you.</p>
+      <p>Add the stand, budget and target date. YaVaKa builds the full Zimbabwe stage plan for you.</p>
       <a class="btn btn-primary" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 16) }} Create project</a>
     </div>
   </div>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Sign in · Vaka{% endblock %}
+{% block title %}Sign in · YaVaKa{% endblock %}
 {% block body_class %}auth-body{% endblock %}
 {% block chrome %}{% endblock %}
 {% block footer %}{% endblock %}
@@ -10,7 +10,7 @@
     <aside class="auth-aside">
       <a class="auth-brand" href="/">
         {{ logo_mark(44) }}
-        <span><strong>Vaka</strong><small>Build from anywhere</small></span>
+        <span><strong>YaVaKa</strong><small>Build from anywhere</small></span>
       </a>
 
       <div class="auth-quote">
@@ -71,7 +71,7 @@
       {% endif %}
 
       <div class="auth-foot">
-        <p>New to Vaka? <a href="{{ url_for('auth.register') }}" data-modal-open="modal-register">Create an account</a></p>
+        <p>New to YaVaKa? <a href="{{ url_for('auth.register') }}" data-modal-open="modal-register">Create an account</a></p>
       </div>
     </div>
   </div>

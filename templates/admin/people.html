@@ -1,12 +1,12 @@
 {% extends "admin/base.html" %}
-{% block title %}People · Vaka{% endblock %}
+{% block title %}People · YaVaKa{% endblock %}
 
 {% block page_title %}People{% endblock %}
 {% block page_subtitle %}
   <p class="page-subtitle">
     {{ counts.clients }} client{{ '' if counts.clients == 1 else 's' }} ·
     {{ counts.managers }} build manager{{ '' if counts.managers == 1 else 's' }} ·
-    {{ counts.staff }} Vaka staff
+    {{ counts.staff }} YaVaKa staff
   </p>
 {% endblock %}
 {% block page_actions %}
@@ -17,7 +17,7 @@
 <div class="card">
   <div class="card-head">
     <div>
-      <h2>Everyone with a Vaka login</h2>
+      <h2>Everyone with a YaVaKa login</h2>
       <p class="card-sub">Change a role to give build-manager or staff access</p>
     </div>
   </div>
@@ -78,7 +78,7 @@
 <div class="side-note side-note-wide">
   {{ icon('shield', 16) }}
   <p>
-    Vaka staff can see and edit every project. Build managers only see the
+    YaVaKa staff can see and edit every project. Build managers only see the
     projects assigned to them, and clients only their own. Change a role to
     <strong>Build manager</strong> before assigning someone to a project.
   </p>
@@ -116,7 +116,7 @@
               <select class="select" name="role">
                 <option value="manager">Build manager</option>
                 <option value="client">Client</option>
-                <option value="admin">Vaka staff</option>
+                <option value="admin">YaVaKa staff</option>
               </select>
             </label>
             <label class="field">

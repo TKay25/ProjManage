@@ -163,7 +163,7 @@ def create():
             mode="prepend",
         )
 
-    flash("Project created. Vaka has added the full Zimbabwe stage plan.", "success")
+    flash("Project created. YaVaKa has added the full Zimbabwe stage plan.", "success")
     return redirect(url_for("projects.detail", project_id=project_id))
 
 

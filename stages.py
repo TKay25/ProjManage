@@ -1,4 +1,4 @@
-"""The Zimbabwean residential build sequence tracked by Vaka.
+"""The Zimbabwean residential build sequence tracked by YaVaKa.
 
 Regulatory gates reflect local-authority plan approval, the Deeds Registry,
 EMA and ZINWA requirements. Fees and forms differ by council, so each gate is a

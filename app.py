@@ -1,4 +1,4 @@
-"""Vaka — construction project management for Zimbabwe's diaspora.
+"""YaVaKa — construction project management for Zimbabwe's diaspora.
 
 Flask application factory. Run locally with:
     python app.py
@@ -243,5 +243,5 @@ app = create_app()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "3000"))
     debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    print(f"\n  Vaka running at http://localhost:{port}\n")
+    print(f"\n  YaVaKa running at http://localhost:{port}\n")
     app.run(host="0.0.0.0", port=port, debug=debug)

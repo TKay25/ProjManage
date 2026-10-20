@@ -1,4 +1,4 @@
-"""Vaka staff portal — every client and manager workspace in one place."""
+"""YaVaKa staff portal — every client and manager workspace in one place."""
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
@@ -18,7 +18,7 @@ from stages import STAGE_GROUPS, stage_by_key
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
-ROLES = {"client": "Client", "manager": "Build manager", "admin": "Vaka staff"}
+ROLES = {"client": "Client", "manager": "Build manager", "admin": "YaVaKa staff"}
 PAGE_SIZE = 30
 
 
@@ -201,7 +201,7 @@ def update_role(user_id):
 @bp.post("/people/invite")
 @admin_required
 def invite_staff():
-    """Create a Vaka staff or manager account on a client's behalf."""
+    """Create a YaVaKa staff or manager account on a client's behalf."""
     name = (request.form.get("name") or "").strip()
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""

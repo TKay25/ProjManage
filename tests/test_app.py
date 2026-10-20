@@ -1,4 +1,4 @@
-"""Smoke tests for Vaka. Run with: python -m unittest discover -s tests -v"""
+"""Smoke tests for YaVaKa. Run with: python -m unittest discover -s tests -v"""
 
 import os
 import re
@@ -635,7 +635,7 @@ class RegistrationModal(VakaTestCase):
         # survive the hop and land on the destination page.
         landing = client.get("/app/projects/new")
         self.assertEqual(landing.status_code, 200)
-        self.assertIn(b"Welcome to Vaka", landing.data)
+        self.assertIn(b"Welcome to YaVaKa", landing.data)
 
     def test_signup_without_javascript_still_redirects(self):
         response = self.client.post(

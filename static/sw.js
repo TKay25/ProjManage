@@ -1,4 +1,4 @@
-/* Vaka service worker — app shell caching + offline fallback.
+/* YaVaKa service worker — app shell caching + offline fallback.
    Authenticated HTML is never cached, so a shared device cannot leak a project. */
 
 const VERSION = "vaka-v3";

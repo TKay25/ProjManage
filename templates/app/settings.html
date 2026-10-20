@@ -1,5 +1,5 @@
 {% extends "app/base.html" %}
-{% block title %}Settings · Vaka{% endblock %}
+{% block title %}Settings · YaVaKa{% endblock %}
 
 {% block page_title %}Settings{% endblock %}
 {% block page_subtitle %}<p class="page-subtitle">Your profile, sign-in security and linked numbers</p>{% endblock %}
@@ -106,20 +106,20 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p class="muted small">No WhatsApp number linked yet. Add your number above, then message the Vaka business number.</p>
+        <p class="muted small">No WhatsApp number linked yet. Add your number above, then message the YaVaKa business number.</p>
       {% endif %}
       <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('whatsapp.index') }}">Open WhatsApp inbox</a>
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>Install Vaka</h2></div>
-      <p class="muted small">Use Vaka like an app on your phone or desktop. It opens full screen and keeps the last project state offline.</p>
+      <div class="card-head"><h2>Install YaVaKa</h2></div>
+      <p class="muted small">Use YaVaKa like an app on your phone or desktop. It opens full screen and keeps the last project state offline.</p>
       <button class="btn btn-outline btn-block btn-sm install-btn" type="button" id="install-btn">{{ icon('download', 15) }} Add to home screen</button>
     </div>
 
     <div class="side-note">
       {{ icon('shield', 16) }}
-      <p>Vaka never stores card numbers or bank credentials. Keep project money in a bank account you control.</p>
+      <p>YaVaKa never stores card numbers or bank credentials. Keep project money in a bank account you control.</p>
     </div>
   </aside>
 </div>

@@ -1,5 +1,5 @@
 {% extends "app/base.html" %}
-{% block title %}WhatsApp · Vaka{% endblock %}
+{% block title %}WhatsApp · YaVaKa{% endblock %}
 
 {% block page_title %}WhatsApp{% endblock %}
 {% block page_subtitle %}<p class="page-subtitle">The same ledger, over the app your family already uses</p>{% endblock %}
@@ -65,9 +65,9 @@
 
   <section class="card wa-chat">
     <div class="wa-chat-head">
-      <span class="avatar avatar-sm" style="background:#0F5D46">{{ (selected.name if selected else 'Vaka')|initials }}</span>
+      <span class="avatar avatar-sm" style="background:#0F5D46">{{ (selected.name if selected else 'YaVaKa')|initials }}</span>
       <div>
-        <p class="wa-chat-name">{{ selected.name if selected else 'Vaka assistant' }}</p>
+        <p class="wa-chat-name">{{ selected.name if selected else 'YaVaKa assistant' }}</p>
         <p class="mini-meta">{{ display_phone(selected.phone) if selected else 'Test the assistant without Meta credentials' }}</p>
       </div>
       {% if selected and selected.project_name %}

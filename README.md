@@ -1,6 +1,6 @@
-# Vaka
+# YaVaKa
 
-**Build from anywhere.** Vaka is a construction project management platform for
+**Build from anywhere.** YaVaKa is a construction project management platform for
 Zimbabweans in the diaspora who are building a home back home. It tracks the
 build from stand due diligence and council plan approval through to the
 Certificate of Occupation — with every dollar sent, every expense and every
@@ -14,7 +14,7 @@ templates in `templates/`, assets in `static/`).
 ## Why it exists
 
 Building from London, Johannesburg or Dubai usually means trusting a cousin, a
-WhatsApp group and a notebook. Vaka turns that into a record you can audit:
+WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 
 - **Money you sent vs money actually spent**, with a receipt attached to every expense.
 - **The real Zimbabwean approval sequence**, including the regulatory gates that stop a build.
@@ -28,7 +28,7 @@ WhatsApp group and a notebook. Vaka turns that into a record you can audit:
 | Area | What works today |
 | --- | --- |
 | Authentication | Register, login, logout, hashed passwords, signed session cookies, per-request CSRF tokens, login throttling |
-| Roles & access | `client`, `manager`, `admin`; a project is only visible to its owner, its build manager, or Vaka staff |
+| Roles & access | `client`, `manager`, `admin`; a project is only visible to its owner, its build manager, or YaVaKa staff |
 | **Staff portal** | `/admin` — every workspace in one table, platform money totals, attention feed, people & role management, account creation, activity log, stage reference |
 | Projects | Create with stand/suburb/budget; the 19-stage Zimbabwe plan and budget split are generated automatically |
 | Stages | 5 groups, 19 stages, 5 regulatory gates, notes, status transitions, weighted progress %, budget-vs-actual per stage |
@@ -77,7 +77,7 @@ $env:SEED_DEMO="true"; python app.py
 | --- | --- | --- |
 | Client | `client@vaka.co.zw` | `Vaka2026!` |
 | Build manager | `manager@vaka.co.zw` | `Vaka2026!` |
-| Vaka staff | `admin@vaka.co.zw` | `Vaka2026!` |
+| YaVaKa staff | `admin@vaka.co.zw` | `Vaka2026!` |
 
 Set `SEED_DEMO=false` to start with an empty workspace (the supplier directory is
 always seeded). On a fresh install with demo seeding enabled, a staff account is
@@ -85,7 +85,7 @@ created automatically if none exists.
 
 ### Staff portal
 
-Vaka staff sign in and use **/admin** (`admin` role only):
+YaVaKa staff sign in and use **/admin** (`admin` role only):
 
 - `/admin` — platform totals, every project with client/manager, attention feed
 - `/admin/projects` — searchable table of all workspaces; open any project with full controls
@@ -158,7 +158,7 @@ All amounts are stored as **integer US cents** — never floats. Parse with
 balance is always `SUM(funding) - SUM(expense)` for the project, so it cannot
 drift from the ledger.
 
-Vaka never touches client money: it is a record, not a wallet, bank or escrow.
+YaVaKa never touches client money: it is a record, not a wallet, bank or escrow.
 
 ---
 
@@ -259,5 +259,5 @@ file; threads handle concurrency better than extra processes here.
 - Single SQLite file: perfect for a pilot, swap for Postgres before running many
   concurrent workspaces.
 - No payment gateway is wired in — funding is recorded, not collected.
-- The supplier directory is a convenience index. Vaka takes no commission and
+- The supplier directory is a convenience index. YaVaKa takes no commission and
   does not process supplier payments.

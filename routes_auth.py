@@ -137,7 +137,7 @@ def register_post():
     elif len(password) < 8:
         error = "Password must be at least 8 characters."
     elif request.form.get("terms") != "yes":
-        error = "Please confirm you understand what Vaka is."
+        error = "Please confirm you understand what YaVaKa is."
     elif query("SELECT id FROM users WHERE email = ?", (values["email"],), one=True):
         error = "An account with that email already exists."
 
@@ -166,7 +166,7 @@ def register_post():
     )
 
     auth.login_user(user_id)
-    message = "Welcome to Vaka. Create your first project to get started."
+    message = "Welcome to YaVaKa. Create your first project to get started."
 
     # Flash in both paths: the dialog hands off to a page load, so the toast
     # would be gone before it could be read.

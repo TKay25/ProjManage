@@ -1,4 +1,4 @@
-/* Vaka — progressive enhancement. No framework, no build step.
+/* YaVaKa — progressive enhancement. No framework, no build step.
    Components are mounted from data attributes, React-style. */
 
 (() => {

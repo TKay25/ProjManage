@@ -1,5 +1,5 @@
 {% extends "app/base.html" %}
-{% block title %}Projects · Vaka{% endblock %}
+{% block title %}Projects · YaVaKa{% endblock %}
 
 {% block page_title %}Projects{% endblock %}
 {% block page_subtitle %}<p class="page-subtitle">{{ total_rows }} project{{ '' if total_rows == 1 else 's' }} in your workspace</p>{% endblock %}
@@ -53,7 +53,7 @@
     <div class="empty">
       <span class="empty-icon">{{ icon('building', 26) }}</span>
       <h3>No projects yet</h3>
-      <p>Add your stand, budget and target date. Vaka builds the Zimbabwe stage plan automatically.</p>
+      <p>Add your stand, budget and target date. YaVaKa builds the Zimbabwe stage plan automatically.</p>
       <a class="btn btn-primary" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 16) }} Create your first project</a>
     </div>
   </div>

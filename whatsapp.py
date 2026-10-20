@@ -1,4 +1,4 @@
-"""WhatsApp Cloud API integration and the Vaka conversation assistant."""
+"""WhatsApp Cloud API integration and the YaVaKa conversation assistant."""
 
 import json
 import re
@@ -13,7 +13,7 @@ from stages import project_progress, stage_by_key
 
 HELP = "\n".join(
     [
-        "*Vaka assistant* — reply with a number or keyword:",
+        "*YaVaKa assistant* — reply with a number or keyword:",
         "",
         "1. *BALANCE* — money received vs spent",
         "2. *STATUS* — current build stage",
@@ -183,7 +183,7 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
     if not project:
         reply = (
             "Karibu! I can't find a project linked to this number yet.\n\n"
-            "Ask your build manager to link your number in Vaka, or reply *HELP* to see what I can do."
+            "Ask your build manager to link your number in YaVaKa, or reply *HELP* to see what I can do."
         )
     elif intent in {"help", "unknown"}:
         reply = f"{HELP}\n\n_Project: {project['name']}_"
@@ -247,7 +247,7 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
             [
                 "📎 *Sending a receipt*",
                 "",
-                "1. Open Vaka → Documents → Upload receipt",
+                "1. Open YaVaKa → Documents → Upload receipt",
                 "2. Or send the photo here and your manager will attach it to the expense.",
                 "",
                 "Always include the amount, supplier and project name.",

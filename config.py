@@ -1,4 +1,4 @@
-"""Application configuration for Vaka."""
+"""Application configuration for YaVaKa."""
 
 import os
 import secrets
@@ -57,5 +57,5 @@ class Config:
     WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
     WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
 
-    APP_NAME = "Vaka"
+    APP_NAME = "YaVaKa"
     APP_TAGLINE = "Build from anywhere"

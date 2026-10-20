@@ -66,7 +66,7 @@ def login_required(view):
 
 
 def admin_required(view):
-    """Vaka staff only — the admin portal manages every workspace."""
+    """YaVaKa staff only — the admin portal manages every workspace."""
 
     @wraps(view)
     def wrapped(*args, **kwargs):

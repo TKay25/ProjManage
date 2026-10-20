@@ -1,5 +1,5 @@
 /* ============================================================
-   Vaka — modal dialogs and AJAX form submission
+   YaVaKa — modal dialogs and AJAX form submission
    Turns page-navigation action flows into in-place dialogs.
    ============================================================ */
 

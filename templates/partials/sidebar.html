@@ -41,7 +41,7 @@
 
   {% if user.role == 'admin' %}
     <div class="sidebar-section">
-      <p class="sidebar-label">Vaka staff</p>
+      <p class="sidebar-label">YaVaKa staff</p>
       <nav class="sidebar-nav">
         <a class="nav-link {% if active == 'admin' and admin_active == 'overview' %}is-active{% endif %}" href="{{ url_for('admin.overview') }}">
           {{ icon('shield', 19) }}<span>Staff overview</span>

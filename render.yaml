@@ -1,4 +1,4 @@
-# Render blueprint for Vaka.
+# Render blueprint for YaVaKa.
 #
 # Deploy with: Render Dashboard → New → Blueprint → pick this repo.
 # The disk is what keeps the SQLite database and uploaded receipts alive;

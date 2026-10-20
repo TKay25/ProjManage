@@ -1,4 +1,4 @@
-"""SQLite access layer for Vaka (standard library only)."""
+"""SQLite access layer for YaVaKa (standard library only)."""
 
 import sqlite3
 import uuid

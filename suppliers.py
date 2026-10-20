@@ -1,7 +1,7 @@
 """Starting directory of Zimbabwean building-material suppliers.
 
 Links point at each supplier's public site. Always confirm stock, price and
-delivery before paying. Vaka does not take a cut from these suppliers.
+delivery before paying. YaVaKa does not take a cut from these suppliers.
 """
 
 SUPPLIER_CATEGORIES = [

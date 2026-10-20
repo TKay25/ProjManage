@@ -88,7 +88,7 @@ def icon(name: str, size: int = 20, css_class: str = "") -> Markup:
 def logo_mark(size: int = 40, css_class: str = "") -> Markup:
     return Markup(
         f'<svg class="logo-mark {css_class}" width="{size}" height="{size}" viewBox="0 0 64 64" '
-        'role="img" aria-label="Vaka">'
+        'role="img" aria-label="YaVaKa">'
         '<rect width="64" height="64" rx="15" fill="#0F5D46"/>'
         '<path d="M12 32 32 15l20 17" fill="none" stroke="#F7F4EF" stroke-width="4.2" '
         'stroke-linecap="round" stroke-linejoin="round"/>'
@@ -103,7 +103,7 @@ def brand(href: str = "/", tone: str = "dark") -> Markup:
     return Markup(
         f'<a class="brand brand--{tone}" href="{href}">{logo_mark(38)}'
         '<span class="brand-text">'
-        '<span class="brand-name">Vaka</span>'
+        '<span class="brand-name">YaVaKa</span>'
         '<span class="brand-tag">Build from anywhere</span>'
         "</span></a>"
     )

@@ -1,5 +1,5 @@
 /* ============================================================
-   Vaka — smooth navigation
+   YaVaKa — smooth navigation
    Shows a branded overlay while the next server-rendered page loads.
    The overlay is delayed slightly so instant navigations never flash.
    ============================================================ */
@@ -13,7 +13,7 @@
     <div class="page-loader" role="status" aria-live="polite" aria-label="Loading page">
       <div class="loader-mark">
         <span class="loader-ring" aria-hidden="true"></span>
-        <svg class="logo-mark" width="56" height="56" viewBox="0 0 64 64" role="img" aria-label="Vaka">
+        <svg class="logo-mark" width="56" height="56" viewBox="0 0 64 64" role="img" aria-label="YaVaKa">
           <rect width="64" height="64" rx="15" fill="#0F5D46"/>
           <path d="M12 32 32 15l20 17" fill="none" stroke="#F7F4EF" stroke-width="4.2"
                 stroke-linecap="round" stroke-linejoin="round"/>
@@ -23,7 +23,7 @@
         </svg>
       </div>
       <p class="loader-text">Loading</p>
-      <p class="loader-sub">Vaka · build from anywhere</p>
+      <p class="loader-sub">YaVaKa · build from anywhere</p>
     </div>`;
 
   const mount = () => {
