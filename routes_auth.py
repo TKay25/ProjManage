@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 import auth
+import web
 from db import execute, new_id, now_iso, query
 from whatsapp import normalize_phone
 
@@ -141,6 +142,8 @@ def register_post():
         error = "An account with that email already exists."
 
     if error:
+        if web.wants_json():
+            return web.fail(error)
         return render_template("auth/register.html", title="Create your account", values=values, error=error), 400
 
     user_id = new_id()
@@ -163,7 +166,15 @@ def register_post():
     )
 
     auth.login_user(user_id)
-    flash("Welcome to Vaka. Create your first project to get started.", "success")
+    message = "Welcome to Vaka. Create your first project to get started."
+
+    # Flash in both paths: the dialog hands off to a page load, so the toast
+    # would be gone before it could be read.
+    flash(message, "success")
+
+    if web.wants_json():
+        return web.ok(message, redirect_to=url_for("projects.new"))
+
     return redirect(url_for("projects.new"))
 
 

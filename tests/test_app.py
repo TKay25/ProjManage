@@ -1,6 +1,7 @@
 """Smoke tests for Vaka. Run with: python -m unittest discover -s tests -v"""
 
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -583,6 +584,68 @@ class Accessibility(VakaTestCase):
         self.assertEqual(payload["fields"]["[data-agreement-status]"], "Signed")
         # The badge must be swapped too, or the dialog contradicts itself.
         self.assertIn("Signed", payload["html"]["[data-agreement-badge]"])
+
+
+class RegistrationModal(VakaTestCase):
+    """Sign-up happens in a dialog so public pages never navigate away."""
+
+    def _csrf(self, client=None):
+        client = client or self.client
+        return re.search(
+            r'name="csrf-token" content="([^"]+)"',
+            client.get("/login").get_data(as_text=True),
+        ).group(1)
+
+    def test_public_pages_carry_the_dialog_but_register_page_does_not(self):
+        for path in ["/", "/login", "/suppliers"]:
+            page = self.client.get(path).get_data(as_text=True)
+            self.assertIn('id="modal-register"', page, path)
+            self.assertIn('data-modal-open="modal-register"', page, path)
+
+        register = self.client.get("/register").get_data(as_text=True)
+        self.assertNotIn('id="modal-register"', register)
+
+    def test_validation_error_returns_json_so_the_dialog_stays_open(self):
+        response = self.client.post(
+            "/register",
+            data={"csrf_token": self._csrf(), "name": "A B", "email": "short@example.com",
+                  "password": "short", "terms": "yes"},
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+        )
+        self.assertEqual(response.status_code, 400)
+        payload = response.get_json()
+        self.assertFalse(payload["ok"])
+        self.assertIn("8 characters", payload["message"])
+
+    def test_successful_signup_returns_a_redirect_instead_of_a_page(self):
+        client = self.app.test_client()
+        email = f"modal-{os.urandom(4).hex()}@example.com"
+        response = client.post(
+            "/register",
+            data={"csrf_token": self._csrf(client), "name": "Modal Signup",
+                  "email": email, "phone": "+263771234567", "country": "United Kingdom",
+                  "role": "client", "password": "Str0ngPassw0rd!", "terms": "yes"},
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["redirect"], "/app/projects/new")
+        # The dialog hands off to a real page load, so the welcome flash must
+        # survive the hop and land on the destination page.
+        landing = client.get("/app/projects/new")
+        self.assertEqual(landing.status_code, 200)
+        self.assertIn(b"Welcome to Vaka", landing.data)
+
+    def test_signup_without_javascript_still_redirects(self):
+        response = self.client.post(
+            "/register",
+            data={"csrf_token": self._csrf(), "name": "Plain Signup",
+                  "email": f"plain-{os.urandom(4).hex()}@example.com",
+                  "password": "Str0ngPassw0rd!", "terms": "yes"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/app/projects/new", response.headers["Location"])
 
 
 class MoneyFormatting(unittest.TestCase):
