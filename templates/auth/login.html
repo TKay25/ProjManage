@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Vaka{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block chrome %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <div class="container auth-grid">
+    <aside class="auth-aside">
+      <a class="auth-brand" href="/">
+        {{ logo_mark(44) }}
+        <span><strong>Vaka</strong><small>Build from anywhere</small></span>
+      </a>
+
+      <div class="auth-quote">
+        <p class="eyebrow eyebrow-light">Built for the diaspora</p>
+        <h2>“I stopped asking for photos of the receipt. I could see it.”</h2>
+        <p class="auth-quote-sub">
+          Every stage, every dollar and every document in one place — even when
+          you are 8,000km away.
+        </p>
+      </div>
+
+      <ul class="auth-points">
+        <li>{{ icon('shield', 17) }} Council &amp; statutory stage gates</li>
+        <li>{{ icon('wallet', 17) }} USD funding vs spend, with receipts</li>
+        <li>{{ icon('message', 17) }} WhatsApp balance and status updates</li>
+        <li>{{ icon('folder', 17) }} Agreement, plans and handover file</li>
+      </ul>
+    </aside>
+
+    <div class="auth-card">
+      <div class="auth-head">
+        <p class="eyebrow">Welcome back</p>
+        <h1>Sign in to your build</h1>
+        <p class="muted">Track stages, funding and receipts from anywhere.</p>
+      </div>
+
+      <form class="form" method="post" action="{{ url_for('auth.login_post') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="next" value="{{ next }}" />
+
+        {% if error %}
+          <div class="form-error">{{ icon('alert', 17) }}<span>{{ error }}</span></div>
+        {% endif %}
+
+        <label class="field">
+          <span class="field-label">Email address</span>
+          <input class="input" type="email" name="email" value="{{ email }}" autocomplete="email" required placeholder="you@example.com" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Password</span>
+          <input class="input" type="password" name="password" autocomplete="current-password" required placeholder="Your password" />
+        </label>
+
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Sign in {{ icon('arrow-right', 17) }}</button>
+      </form>
+
+      <div class="demo-box">
+        <p class="demo-box-title">{{ icon('sparkles', 15) }} Demo workspace</p>
+        <p>
+          Client · <code>client@vaka.co.zw</code><br />
+          Manager · <code>manager@vaka.co.zw</code><br />
+          Password · <code>Vaka2026!</code>
+        </p>
+      </div>
+
+      <div class="auth-foot">
+        <p>New to Vaka? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

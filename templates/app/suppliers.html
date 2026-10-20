@@ -1,0 +1,81 @@
+{% extends "app/base.html" %}
+{% block title %}Suppliers · Vaka{% endblock %}
+
+{% block page_title %}Supplier directory{% endblock %}
+{% block page_subtitle %}<p class="page-subtitle">Zimbabwean material sources — confirm stock and price before paying</p>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <form class="filter-bar filter-bar-lg" method="get" action="{{ url_for('suppliers.index') }}">
+    <label class="search-field">
+      {{ icon('search', 16) }}
+      <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search cement, roof sheets, tiles…" />
+    </label>
+    <select class="select select-sm" name="category" data-autosubmit>
+      <option value="">All categories</option>
+      {% for item in categories %}
+        <option value="{{ item }}" {% if category == item %}selected{% endif %}>{{ item }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-outline btn-sm" type="submit">Search</button>
+    {% if search or category %}
+      <a class="link-quiet" href="{{ url_for('suppliers.index') }}">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="chip-row">
+  <a class="chip {{ 'is-active' if not category }}" href="{{ url_for('suppliers.index', q=search) }}">All</a>
+  {% for item in categories %}
+    <a class="chip {{ 'is-active' if category == item }}" href="{{ url_for('suppliers.index', category=item, q=search) }}">{{ item }}</a>
+  {% endfor %}
+</div>
+
+{% if suppliers %}
+  <div class="supplier-grid">
+    {% for supplier in suppliers %}
+      <article class="supplier-card">
+        <div class="supplier-top">
+          <span class="supplier-mark">{{ supplier.name[0] }}</span>
+          {% if supplier.verified %}<span class="badge badge-success">{{ icon('check', 12) }} Verified</span>{% endif %}
+          <span class="badge badge-soft">{{ supplier.category }}</span>
+        </div>
+        <h3>{{ supplier.name }}</h3>
+        <p class="supplier-city">{{ icon('map-pin', 13) }} {{ supplier.city }}</p>
+        <p class="supplier-desc">{{ supplier.description }}</p>
+        <div class="tag-row">
+          {% for tag in supplier.tags.split(',') if tag %}
+            <span class="tag">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        <div class="supplier-actions">
+          {% if supplier.website %}
+            <a class="btn btn-outline btn-sm" href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">{{ icon('external', 14) }} Website</a>
+          {% endif %}
+          {% if supplier.phone %}
+            <a class="btn btn-ghost btn-sm" href="tel:{{ supplier.phone }}">{{ icon('phone', 14) }} Call</a>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('store', 26) }}</span>
+      <h3>No suppliers match that search</h3>
+      <p>Try a broader category, or clear the filters.</p>
+      <a class="btn btn-primary" href="{{ url_for('suppliers.index') }}">Reset directory</a>
+    </div>
+  </div>
+{% endif %}
+
+<div class="side-note side-note-wide">
+  {{ icon('alert', 16) }}
+  <p>
+    Vaka does not take a commission from suppliers and does not process their
+    payments. Always verify the business, get a written quote, and record the
+    invoice against the correct build stage.
+  </p>
+</div>
+{% endblock %}

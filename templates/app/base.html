@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block body_class %}app{% endblock %}
+
+{% block chrome %}
+<div class="drawer-overlay" data-drawer-close></div>
+<div class="shell">
+  {% include "partials/sidebar.html" %}
+
+  <div class="shell-main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" type="button" data-drawer-open aria-label="Open menu">{{ icon('menu', 22) }}</button>
+      <a class="topbar-brand" href="/app">{{ logo_mark(28) }}<span>Vaka</span></a>
+      <div class="topbar-spacer"></div>
+      <button class="btn btn-ghost btn-sm install-btn" type="button" id="install-btn" hidden>
+        {{ icon('download', 16) }}<span>Install app</span>
+      </button>
+      <a class="avatar avatar-sm" href="{{ url_for('settings.index') }}" style="background:{{ user.avatar_color }}" aria-label="Your profile">
+        {{ user.name|initials }}
+      </a>
+    </header>
+
+    <main class="content" id="main">
+      <div class="page-head">
+        <div>
+          {% if eyebrow is defined and eyebrow %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
+          <h1 class="page-title">{% block page_title %}{{ title }}{% endblock %}</h1>
+          {% block page_subtitle %}{% endblock %}
+        </div>
+        <div class="page-actions">{% block page_actions %}{% endblock %}</div>
+      </div>
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<nav class="tabbar" aria-label="Sections">
+  {% for item in tab_items %}
+    <a class="tab {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}">
+      {{ icon(item.icon, 21) }}<span>{{ item.label }}</span>
+    </a>
+  {% endfor %}
+  <button class="tab" type="button" data-drawer-open>
+    {{ icon('menu', 21) }}<span>More</span>
+  </button>
+</nav>
+{% endblock %}
+
+{% block footer %}{% endblock %}
+{% block scripts %}{% endblock %}

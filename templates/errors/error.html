@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · Vaka{% endblock %}
+{% block chrome %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<section class="error-body">
+  <main class="error-card">
+    {{ logo_mark(44) }}
+    <p class="eyebrow">{{ code }}</p>
+    <h1>
+      {% if code == 404 %}Page not found
+      {% elif code == 403 %}Access denied
+      {% elif code == 413 %}File too large
+      {% elif code == 400 %}Check your details
+      {% else %}Something went wrong{% endif %}
+    </h1>
+    <p class="muted">{{ message }}</p>
+    <div class="error-actions">
+      <a class="btn btn-primary" href="{{ url_for('dashboard.index') if user else '/' }}">{{ 'Back to dashboard' if user else 'Back home' }}</a>
+      <button class="btn btn-ghost" type="button" data-back>Go back</button>
+    </div>
+  </main>
+</section>
+{% endblock %}

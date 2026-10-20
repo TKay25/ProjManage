@@ -1,0 +1,20 @@
+<header class="site-header">
+  <div class="container header-inner">
+    {{ brand('/') }}
+    <nav class="site-nav" aria-label="Main">
+      <a class="site-nav-link" href="/#how">How it works</a>
+      <a class="site-nav-link" href="/#stages">Build stages</a>
+      <a class="site-nav-link" href="/#money">Money</a>
+      <a class="site-nav-link" href="/#whatsapp">WhatsApp</a>
+      <a class="site-nav-link {% if current_path == '/suppliers' %}is-active{% endif %}" href="/suppliers">Suppliers</a>
+    </nav>
+    <div class="header-actions">
+      {% if user %}
+        <a class="btn btn-primary btn-sm" href="/app">Open dashboard</a>
+      {% else %}
+        <a class="btn btn-ghost btn-sm hide-sm" href="/login">Sign in</a>
+        <a class="btn btn-primary btn-sm" href="/register">Get started</a>
+      {% endif %}
+    </div>
+  </div>
+</header>

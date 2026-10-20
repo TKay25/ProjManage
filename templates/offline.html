@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Offline · Vaka{% endblock %}
+{% block body_class %}public{% endblock %}
+{% block chrome %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<section class="offline-page">
+  <div class="offline-card">
+    {{ logo_mark(46) }}
+    <span class="offline-icon">{{ icon('wifi-off', 26) }}</span>
+    <h1>You are offline</h1>
+    <p>
+      Vaka keeps the last project state on this device. Reconnect to record
+      money, upload receipts or sync changes.
+    </p>
+    <a class="btn btn-primary" href="/app">Try again</a>
+    <p class="micro-note">Pages you already visited remain available.</p>
+  </div>
+</section>
+{% endblock %}

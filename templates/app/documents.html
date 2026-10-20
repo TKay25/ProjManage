@@ -1,0 +1,134 @@
+{% extends "app/base.html" %}
+{% block title %}Documents · Vaka{% endblock %}
+
+{% block page_title %}Documents{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">{{ attachments|length }} file{{ '' if attachments|length == 1 else 's' }} · {{ (total_size / 1048576)|round(1) }}MB stored</p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="#upload">{{ icon('upload', 15) }} Upload</a>
+{% endblock %}
+
+{% block content %}
+<div class="split-grid">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Project file</h2>
+          <p class="card-sub">Plans, approvals, receipts and site photos</p>
+        </div>
+        <div class="segmented">
+          <a class="segment {{ 'is-active' if not kind }}" href="{{ url_for('documents.index', project=project.id if project else '') }}">All</a>
+          {% for value, label in kinds.items() %}
+            <a class="segment {{ 'is-active' if kind == value }}" href="{{ url_for('documents.index', project=project.id if project else '', kind=value) }}">{{ label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if projects|length > 1 %}
+        <form class="filter-bar" method="get" action="{{ url_for('documents.index') }}">
+          <input type="hidden" name="kind" value="{{ kind }}" />
+          <select class="select select-sm" name="project" data-autosubmit>
+            <option value="">All projects</option>
+            {% for item in projects %}
+              <option value="{{ item.id }}" {% if project and item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button class="btn btn-outline btn-sm" type="submit">Filter</button></noscript>
+        </form>
+      {% endif %}
+
+      {% if attachments %}
+        <div class="doc-grid">
+          {% for file in attachments %}
+            <article class="doc-card">
+              <a class="doc-preview" href="{{ url_for('documents.serve', attachment_id=file.id) }}" target="_blank" rel="noopener">
+                {% if file.mime_type.startswith('image/') %}
+                  <img src="{{ url_for('documents.serve', attachment_id=file.id) }}" alt="{{ file.original_name }}" loading="lazy" />
+                {% else %}
+                  <span class="doc-pdf">{{ icon('folder', 28) }}<small>PDF</small></span>
+                {% endif %}
+                <span class="doc-kind">{{ kinds.get(file.kind, file.kind|title) }}</span>
+              </a>
+              <div class="doc-body">
+                <p class="doc-name" title="{{ file.original_name }}">{{ file.original_name }}</p>
+                <p class="mini-meta">{{ file.created_at|date }} · {{ (file.size / 1024)|round|int }}KB</p>
+                {% if file.project_name %}<p class="mini-meta">{{ file.project_name }}</p>{% endif %}
+                {% if file.transaction_description %}<p class="mini-meta">{{ icon('receipt', 11) }} {{ file.transaction_description }}</p>{% endif %}
+              </div>
+              <div class="doc-actions">
+                <a class="btn btn-ghost btn-xs" href="{{ url_for('documents.serve', attachment_id=file.id, download=1) }}">{{ icon('download', 13) }} Download</a>
+                <form method="post" action="{{ url_for('documents.delete', attachment_id=file.id) }}" data-confirm="Remove this file from the project?">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button class="icon-btn icon-btn-danger" type="submit" aria-label="Delete">{{ icon('trash', 14) }}</button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">
+          <span class="empty-icon">{{ icon('folder', 26) }}</span>
+          <h3>No documents yet</h3>
+          <p>Upload approved plans, council receipts, delivery notes or site photos.</p>
+          <a class="btn btn-primary" href="#upload">{{ icon('upload', 15) }} Upload a file</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <aside class="detail-side">
+    <div class="card" id="upload">
+      <div class="card-head"><h2>Upload a file</h2></div>
+
+      <form class="form" method="post" action="{{ url_for('documents.upload') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <label class="field">
+          <span class="field-label">Project</span>
+          <select class="select" name="project_id" required>
+            {% for item in projects %}
+              <option value="{{ item.id }}" {% if project and item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">What is it?</span>
+          <select class="select" name="kind">
+            {% for value, label in kinds.items() %}
+              <option value="{{ value }}" {% if kind == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="dropzone" data-dropzone>
+          <input type="file" name="file" accept="image/*,application/pdf" required data-drop-input />
+          <span class="dropzone-icon">{{ icon('upload', 24) }}</span>
+          <span class="dropzone-title" data-drop-title>Drop a file or tap to browse</span>
+          <span class="dropzone-hint">JPG, PNG, WebP or PDF · up to 8MB</span>
+        </label>
+
+        <button class="btn btn-primary btn-block" type="submit">{{ icon('upload', 16) }} Upload to project</button>
+      </form>
+
+      <div class="side-note">
+        {{ icon('shield', 16) }}
+        <p>Only you and your assigned build manager can open these files.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>What to keep here</h2></div>
+      <ul class="check-list compact">
+        <li>{{ icon('check', 16) }}<span>Approved council plans and receipts</span></li>
+        <li>{{ icon('check', 16) }}<span>Title deed, cession and survey diagram</span></li>
+        <li>{{ icon('check', 16) }}<span>Supplier invoices and delivery notes</span></li>
+        <li>{{ icon('check', 16) }}<span>Site photos at each stage</span></li>
+        <li>{{ icon('check', 16) }}<span>Certificate of Occupation and warranties</span></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+{% endblock %}

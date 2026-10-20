@@ -1,0 +1,26 @@
+{% set is_funding = tx.type == 'FUNDING' %}
+{% set stage = stage_by_key(tx.stage_key) %}
+<li class="tx-row">
+  <span class="tx-icon {{ 'tx-in' if is_funding else 'tx-out' }}">
+    {{ icon('wallet' if is_funding else 'receipt', 17) }}
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">{{ tx.description }}</p>
+    <p class="tx-meta">
+      {{ category_label(tx.category) }}{% if stage %} · {{ stage.name }}{% endif %}{% if show_project and tx.project_name %} · {{ tx.project_name }}{% endif %} · {{ tx.occurred_at|date }}
+    </p>
+    {% if tx.reference %}<p class="tx-ref">Ref {{ tx.reference }}</p>{% endif %}
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount {{ 'is-in' if is_funding else '' }}">
+      {{ '+' if is_funding else '−' }}{{ tx.amount_cents|money }}
+    </p>
+    {% if tx.receipt_id %}
+      <a class="tx-receipt" href="{{ url_for('documents.serve', attachment_id=tx.receipt_id) }}" target="_blank" rel="noopener">{{ icon('receipt', 13) }} Receipt</a>
+    {% elif is_funding %}
+      <span class="tx-receipt muted">{{ icon('check', 13) }} Cleared</span>
+    {% else %}
+      <span class="tx-receipt is-warn">{{ icon('alert', 13) }} No receipt</span>
+    {% endif %}
+  </div>
+</li>

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Zimbabwe building suppliers · Vaka{% endblock %}
+{% block body_class %}public{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <p class="eyebrow">{{ icon('store', 14) }} Supplier directory</p>
+    <h1 class="page-hero-title">Source it locally, record it properly.</h1>
+    <p class="lead">
+      Established Zimbabwean suppliers for cement, roof sheets, rebar, tiles,
+      paint and electrical. Vaka links to their public catalogues — you confirm
+      stock, price and delivery before paying.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="/register">Track quotes in your project {{ icon('arrow-right', 16) }}</a>
+      <a class="btn btn-outline" href="/#money">See the money controls</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section-tight">
+  <div class="container">
+    <form class="filter-bar filter-bar-lg" method="get" action="/suppliers">
+      <label class="search-field">
+        {{ icon('search', 16) }}
+        <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search cement, roofing, paint…" />
+      </label>
+      <select class="select select-sm" name="category" data-autosubmit>
+        <option value="">All categories</option>
+        {% for item in categories %}
+          <option value="{{ item }}" {% if category == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-outline btn-sm" type="submit">Search</button>
+      {% if search or category %}<a class="link-quiet" href="/suppliers">Clear</a>{% endif %}
+    </form>
+
+    <div class="chip-row">
+      <a class="chip {{ 'is-active' if not category }}" href="/suppliers?q={{ search }}">All</a>
+      {% for item in categories %}
+        <a class="chip {{ 'is-active' if category == item }}" href="/suppliers?category={{ item }}&q={{ search }}">{{ item }}</a>
+      {% endfor %}
+    </div>
+
+    {% if suppliers %}
+      <div class="supplier-grid">
+        {% for supplier in suppliers %}
+          <article class="supplier-card">
+            <div class="supplier-top">
+              <span class="supplier-mark">{{ supplier.name[0] }}</span>
+              {% if supplier.verified %}<span class="badge badge-success">{{ icon('check', 12) }} Verified</span>{% endif %}
+              <span class="badge badge-soft">{{ supplier.category }}</span>
+            </div>
+            <h3>{{ supplier.name }}</h3>
+            <p class="supplier-city">{{ icon('map-pin', 13) }} {{ supplier.city }}</p>
+            <p class="supplier-desc">{{ supplier.description }}</p>
+            <div class="tag-row">
+              {% for tag in supplier.tags %}
+                <span class="tag">{{ tag }}</span>
+              {% endfor %}
+            </div>
+            {% if supplier.website %}
+              <a class="link-arrow" href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">View catalogue {{ icon('external', 14) }}</a>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="empty">
+          <span class="empty-icon">{{ icon('store', 26) }}</span>
+          <h3>No suppliers match that search</h3>
+          <p>Try a broader category or clear the filters.</p>
+          <a class="btn btn-primary" href="/suppliers">Reset directory</a>
+        </div>
+      </div>
+    {% endif %}
+
+    <p class="micro-note">
+      {{ icon('alert', 14) }} Supplier details are provided for convenience and
+      may change. Confirm the business, get a written quote and never pay without
+      a receipt.
+    </p>
+  </div>
+</section>
+{% endblock %}

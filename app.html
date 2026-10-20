@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Dashboard · Vaka</title>
+  <meta name="description" content="Vaka tracks Zimbabwe construction projects end to end: council approvals, stage progress, USD funding, expenses with receipts, supplier links and WhatsApp updates." />
+  <meta name="theme-color" content="#0F5D46" />
+  <meta name="color-scheme" content="light" />
+  <meta property="og:title" content="Vaka" />
+  <meta property="og:description" content="Construction project management for Zimbabweans abroad." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/static/icons/icon-512.png" />
+  <meta name="csrf-token" content="HuZ7k5ConhyUpRp1XuXXF03LAXLBKONOmkpw50Clhzk" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Vaka" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="stylesheet" href="/static/css/app.css" />
+  <link rel="stylesheet" href="/static/css/portal.css" />
+  
+</head>
+<body class="app">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  
+<div class="drawer-overlay" data-drawer-close></div>
+<div class="shell">
+  <aside class="sidebar" id="sidebar" aria-label="Workspace">
+  <div class="sidebar-top">
+    <a class="brand brand--dark" href="/app"><svg class="logo-mark " width="38" height="38" viewBox="0 0 64 64" role="img" aria-label="Vaka"><rect width="64" height="64" rx="15" fill="#0F5D46"/><path d="M12 32 32 15l20 17" fill="none" stroke="#F7F4EF" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="17" y="34" width="5.5" height="15" rx="2.4" fill="#C8963E"/><rect x="26.5" y="29" width="5.5" height="20" rx="2.4" fill="#E3B968"/><rect x="36" y="24" width="5.5" height="25" rx="2.4" fill="#C8963E"/></svg><span class="brand-text"><span class="brand-name">Vaka</span><span class="brand-tag">Build from anywhere</span></span></a>
+    <button class="icon-btn drawer-close" type="button" data-drawer-close aria-label="Close menu"><svg class="icon " width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+
+  <nav class="sidebar-nav">
+    
+      <a class="nav-link is-active" href="/app">
+        <svg class="icon " width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span>Dashboard</span>
+      </a>
+    
+      <a class="nav-link " href="/app/projects">
+        <svg class="icon " width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h2a2 2 0 0 1 2 2v10"/><path d="M9 7h2M9 11h2M9 15h2"/></svg><span>Projects</span>
+      </a>
+    
+      <a class="nav-link " href="/app/money">
+        <svg class="icon " width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6"/><path d="M16 14h.01"/></svg><span>Money</span>
+      </a>
+    
+      <a class="nav-link " href="/app/documents">
+        <svg class="icon " width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-7l-2-2H4a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1Z"/></svg><span>Documents</span>
+      </a>
+    
+      <a class="nav-link " href="/app/agreements">
+        <svg class="icon " width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Agreements</span>
+      </a>
+    
+  </nav>
+
+  <div class="sidebar-section">
+    <p class="sidebar-label">Tools</p>
+    <nav class="sidebar-nav">
+      
+        <a class="nav-link " href="/app/suppliers">
+          <svg class="icon " width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9 4.5 4h15L21 9"/><path d="M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M9 20v-6h6v6"/></svg><span>Suppliers</span>
+        </a>
+      
+        <a class="nav-link " href="/app/whatsapp">
+          <svg class="icon " width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-.9L3 21l1.9-4.4a8.4 8.4 0 1 1 16.1-5.1Z"/></svg><span>WhatsApp</span>
+        </a>
+      
+        <a class="nav-link " href="/app/settings">
+          <svg class="icon " width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Settings</span>
+        </a>
+      
+    </nav>
+  </div>
+
+  <div class="sidebar-section sidebar-projects">
+    <p class="sidebar-label">Your projects</p>
+    
+      
+        <a class="side-project" href="/app/projects/0f10000a15f7456db33e">
+          <span class="project-dot tone-1"></span>
+          <span class="side-project-name">Greendale Family Home</span>
+        </a>
+      
+        <a class="side-project" href="/app/projects/4bbe8a9543bf48f9bc65">
+          <span class="project-dot tone-2"></span>
+          <span class="side-project-name">Waterfalls Rental Cottage</span>
+        </a>
+      
+    
+  </div>
+
+  <div class="sidebar-foot">
+    <a class="user-card" href="/app/settings">
+      <span class="avatar" style="background:#0F5D46">RC</span>
+      <span class="user-card-text">
+        <span class="user-card-name">Rudo Chikafu</span>
+        <span class="user-card-role">Client</span>
+      </span>
+    </a>
+    <form method="post" action="/logout" class="logout-form">
+      <input type="hidden" name="csrf_token" value="HuZ7k5ConhyUpRp1XuXXF03LAXLBKONOmkpw50Clhzk" />
+      <button class="icon-btn" type="submit" aria-label="Sign out" title="Sign out"><svg class="icon " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+    </form>
+  </div>
+</aside>
+
+  <div class="shell-main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" type="button" data-drawer-open aria-label="Open menu"><svg class="icon " width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <a class="topbar-brand" href="/app"><svg class="logo-mark " width="28" height="28" viewBox="0 0 64 64" role="img" aria-label="Vaka"><rect width="64" height="64" rx="15" fill="#0F5D46"/><path d="M12 32 32 15l20 17" fill="none" stroke="#F7F4EF" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="17" y="34" width="5.5" height="15" rx="2.4" fill="#C8963E"/><rect x="26.5" y="29" width="5.5" height="20" rx="2.4" fill="#E3B968"/><rect x="36" y="24" width="5.5" height="25" rx="2.4" fill="#C8963E"/></svg><span>Vaka</span></a>
+      <div class="topbar-spacer"></div>
+      <button class="btn btn-ghost btn-sm install-btn" type="button" id="install-btn" hidden>
+        <svg class="icon " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg><span>Install app</span>
+      </button>
+      <a class="avatar avatar-sm" href="/app/settings" style="background:#0F5D46" aria-label="Your profile">
+        RC
+      </a>
+    </header>
+
+    <main class="content" id="main">
+      <div class="page-head">
+        <div>
+          
+          <h1 class="page-title">Good morning, Rudo</h1>
+          
+  
+    <p class="page-subtitle">Greendale Family Home · Greendale, Harare</p>
+  
+
+        </div>
+        <div class="page-actions">
+  
+    <a class="btn btn-outline btn-sm" href="/app/money?project=0f10000a15f7456db33e#record"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Record money</a>
+  
+  <a class="btn btn-primary btn-sm" href="/app/projects/new"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> New project</a>
+</div>
+      </div>
+
+      
+
+  
+  
+
+  
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="toolbar-label">Viewing</span>
+        <form class="inline-form" method="get" action="/app">
+          <label class="field-inline">
+            <span class="sr-only">Project</span>
+            <select class="select select-sm" name="project" data-autosubmit>
+              
+                <option value="0f10000a15f7456db33e" selected>Greendale Family Home</option>
+              
+                <option value="4bbe8a9543bf48f9bc65" >Waterfalls Rental Cottage</option>
+              
+            </select>
+          </label>
+          <noscript><button class="btn btn-ghost btn-sm" type="submit">Switch</button></noscript>
+        </form>
+      </div>
+      <a class="link-quiet" href="/app/projects">All projects <svg class="icon " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+  
+
+  <div class="kpi-grid">
+    <a class="kpi card-hover" href="/app/money?project=0f10000a15f7456db33e">
+      <div class="kpi-top">
+        <span class="kpi-label">Available balance</span>
+        <span class="kpi-icon kpi-icon-positive"><svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6"/><path d="M16 14h.01"/></svg></span>
+      </div>
+      <p class="kpi-value ">$30,854.50</p>
+      <p class="kpi-sub">$60,000.00 received · $29,145.50 spent</p>
+    </a>
+
+    <a class="kpi card-hover" href="/app/money?project=0f10000a15f7456db33e&amp;filter=funding">
+      <div class="kpi-top">
+        <span class="kpi-label">Total received</span>
+        <span class="kpi-icon"><svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>
+      </div>
+      <p class="kpi-value">$60,000.00</p>
+      <p class="kpi-sub">1 funding entries</p>
+    </a>
+
+    <a class="kpi card-hover" href="/app/money?project=0f10000a15f7456db33e&amp;filter=expense">
+      <div class="kpi-top">
+        <span class="kpi-label">Total spent</span>
+        <span class="kpi-icon"><svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+      </div>
+      <p class="kpi-value">$29,145.50</p>
+      <p class="kpi-sub">49% of funds used</p>
+    </a>
+
+    <a class="kpi card-hover" href="/app/projects/0f10000a15f7456db33e">
+      <div class="kpi-top">
+        <span class="kpi-label">Build progress</span>
+        <span class="kpi-icon"><svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h2a2 2 0 0 1 2 2v10"/><path d="M9 7h2M9 11h2M9 15h2"/></svg></span>
+      </div>
+      <p class="kpi-value">38%</p>
+      <p class="kpi-sub">9 of 19 stages complete</p>
+    </a>
+  </div>
+
+  <div class="dash-grid">
+    <div class="dash-main">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Cash flow</h2>
+            <p class="card-sub">Last six months on Greendale Family Home</p>
+          </div>
+          <a class="link-quiet" href="/app/money?project=0f10000a15f7456db33e">Open ledger <svg class="icon " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+
+        <div class="chart">
+          <div class="chart-legend">
+            <span><i class="dot dot-funded"></i> Received</span>
+            <span><i class="dot dot-spent"></i> Spent</span>
+          </div>
+          <div class="chart-area">
+            
+              <span class="chart-line" style="bottom:100%"></span>
+            
+              <span class="chart-line" style="bottom:75%"></span>
+            
+              <span class="chart-line" style="bottom:50%"></span>
+            
+              <span class="chart-line" style="bottom:25%"></span>
+            
+              <span class="chart-line" style="bottom:0%"></span>
+            
+            <div class="chart-groups">
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:100%" title="Received $25,000.00"></span>
+                    <span class="chart-bar bar-spent" style="height:3%" title="Spent $0.00"></span>
+                  </div>
+                  <span class="chart-label">May</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:3%" title="Received $0.00"></span>
+                    <span class="chart-bar bar-spent" style="height:28%" title="Spent $7,070.00"></span>
+                  </div>
+                  <span class="chart-label">Jun</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:60%" title="Received $15,000.00"></span>
+                    <span class="chart-bar bar-spent" style="height:3%" title="Spent $0.00"></span>
+                  </div>
+                  <span class="chart-label">Jul</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:3%" title="Received $0.00"></span>
+                    <span class="chart-bar bar-spent" style="height:14%" title="Spent $3,500.00"></span>
+                  </div>
+                  <span class="chart-label">Aug</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:3%" title="Received $0.00"></span>
+                    <span class="chart-bar bar-spent" style="height:3%" title="Spent $0.00"></span>
+                  </div>
+                  <span class="chart-label">Sep</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:3%" title="Received $0.00"></span>
+                    <span class="chart-bar bar-spent" style="height:21%" title="Spent $5,325.50"></span>
+                  </div>
+                  <span class="chart-label">Oct</span>
+                </div>
+              
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-summary">
+          <div><span class="muted small">Received</span><strong>$60.0k</strong></div>
+          <div><span class="muted small">Spent</span><strong>$29.1k</strong></div>
+          <div><span class="muted small">Remaining</span><strong class="pos">$30.9k</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Latest money movements</h2>
+            <p class="card-sub">Receipts stay attached to every expense</p>
+          </div>
+          <a class="link-quiet" href="/app/money?project=0f10000a15f7456db33e">View all <svg class="icon " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+
+        
+          <ul class="tx-list">
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Site security - 2 weeks</p>
+    <p class="tx-meta">
+      Labour · Superstructure brickwork · 19 Oct 2026
+    </p>
+    <p class="tx-ref">Ref TEST-1</p>
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$125.50
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Roof trusses — 40% deposit</p>
+    <p class="tx-meta">
+      Materials · Ring beam, trusses &amp; roof sheeting · 2 Oct 2026
+    </p>
+    <p class="tx-ref">Ref INV-6033</p>
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$5,200.00
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Bricklaying crew — progress payment</p>
+    <p class="tx-meta">
+      Labour · Superstructure brickwork · 5 Aug 2026
+    </p>
+    
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$3,500.00
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-in">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6"/><path d="M16 14h.01"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Third tranche — superstructure</p>
+    <p class="tx-meta">
+      Client deposit · 29 Jul 2026
+    </p>
+    <p class="tx-ref">Ref WISE-5512</p>
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount is-in">
+      +$15,000.00
+    </p>
+    
+      <span class="tx-receipt muted"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Cleared</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Truck hire — materials to site</p>
+    <p class="tx-meta">
+      Transport &amp; logistics · Superstructure brickwork · 19 Jun 2026
+    </p>
+    
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$620.00
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">River sand and 19mm stone</p>
+    <p class="tx-meta">
+      Materials · Superstructure brickwork · 18 Jun 2026
+    </p>
+    
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$1,600.00
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+          </ul>
+        
+      </div>
+
+      
+        <div class="card">
+          <div class="card-head">
+            <h2>Receipts to chase</h2>
+            <a class="link-quiet" href="/app/money?project=0f10000a15f7456db33e&amp;filter=missing">View all</a>
+          </div>
+          <ul class="mini-list">
+            
+              <li>
+                <span class="mini-icon"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="mini-title">Site security - 2 weeks</p>
+                  <p class="mini-meta">$125.50 · 19 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="mini-icon"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="mini-title">Roof trusses — 40% deposit</p>
+                  <p class="mini-meta">$5,200.00 · 2 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="mini-icon"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="mini-title">Bricklaying crew — progress payment</p>
+                  <p class="mini-meta">$3,500.00 · 5 Aug 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="mini-icon"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="mini-title">Truck hire — materials to site</p>
+                  <p class="mini-meta">$620.00 · 19 Jun 2026</p>
+                </div>
+              </li>
+            
+          </ul>
+          <a class="btn btn-ghost btn-block btn-sm" href="/app/money?project=0f10000a15f7456db33e&amp;filter=missing">Attach receipts</a>
+        </div>
+      
+    </div>
+
+    <aside class="dash-side">
+      <div class="card stage-focus">
+        <div class="card-head">
+          <h2>Current stage</h2>
+          <span class="badge badge-live">In progress</span>
+        </div>
+
+        
+          <div class="stage-focus-body">
+            <svg class="ring" width="92" height="92" viewBox="0 0 92 92" role="img" aria-label="38% complete"><circle class="ring-track" cx="46.0" cy="46.0" r="41.0" fill="none" stroke-width="7"/><circle class="ring-value" cx="46.0" cy="46.0" r="41.0" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="257.61" stroke-dashoffset="159.72" transform="rotate(-90 46.0 46.0)"/><text class="ring-text" x="50%" y="50%" dominant-baseline="central" text-anchor="middle">38%</text></svg>
+            <div>
+              <p class="stage-focus-name">Superstructure brickwork</p>
+              <p class="stage-focus-meta">
+                Stage 10 of 19
+                
+              </p>
+            </div>
+          </div>
+          <p class="stage-focus-summary">Walls, lintels, columns and ring beam built to the approved drawings, with openings set out correctly.</p>
+          <div class="stage-focus-foot">
+            <span class="muted small">Stage budget</span>
+            <strong>$14,450.00</strong>
+          </div>
+          <a class="btn btn-outline btn-block btn-sm" href="/app/projects/0f10000a15f7456db33e#stage-superstructure">
+            Open stage checklist <svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Needs your attention</h2>
+          <span class="count-pill">1</span>
+        </div>
+        
+          <ul class="alert-list">
+            
+              <li class="alert-item alert-warn">
+                <span class="alert-icon"><svg class="icon " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="alert-title">9 expenses need a receipt</p>
+                  <p class="alert-body">Attach proof before the next tranche is released.</p>
+                </div>
+                <a class="alert-link" href="/app/money?project=0f10000a15f7456db33e&amp;filter=missing" aria-label="Open"><svg class="icon " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+              </li>
+            
+          </ul>
+        
+      </div>
+
+      
+        <div class="card">
+          <div class="card-head"><h2>Coming up</h2></div>
+          <ol class="upcoming-list">
+            
+              <li>
+                <span class="upcoming-index">1</span>
+                <div>
+                  <p class="mini-title">Ring beam, trusses &amp; roof sheeting</p>
+                  <p class="mini-meta">
+                    
+                      Site works
+                    
+                    · $10,200.00
+                  </p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="upcoming-index">2</span>
+                <div>
+                  <p class="mini-title">Doors, windows &amp; burglar bars</p>
+                  <p class="mini-meta">
+                    
+                      Site works
+                    
+                    · $5,100.00
+                  </p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="upcoming-index">3</span>
+                <div>
+                  <p class="mini-title">Plumbing &amp; electrical rough-in</p>
+                  <p class="mini-meta">
+                    
+                      Site works
+                    
+                    · $4,250.00
+                  </p>
+                </div>
+              </li>
+            
+          </ol>
+        </div>
+      
+
+      
+        <div class="card">
+          <div class="card-head"><h2>Project log</h2></div>
+          <ul class="timeline">
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Superstructure brickwork set to in progress</p>
+                  <p class="mini-meta">Rudo Chikafu · 20 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Site security - 2 weeks — spent</p>
+                  <p class="mini-meta">Rudo Chikafu · 20 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Roof trusses deposit of $5,200.00 recorded</p>
+                  <p class="mini-meta">Tendai Moyo · 2 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Third tranche of $15,000.00 received</p>
+                  <p class="mini-meta">Rudo Chikafu · 29 Jul 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Slab &amp; damp course marked complete</p>
+                  <p class="mini-meta">Tendai Moyo · 30 May 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Project Greendale Family Home created</p>
+                  <p class="mini-meta">Tendai Moyo · 24 Feb 2026</p>
+                </div>
+              </li>
+            
+          </ul>
+        </div>
+      
+    </aside>
+  </div>
+
+  <section class="section-block">
+    <div class="section-block-head">
+      <h2>Your projects</h2>
+      <a class="link-quiet" href="/app/projects">Manage <svg class="icon " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <div class="project-grid">
+      
+        <a class="project-card is-active" href="/app/projects/0f10000a15f7456db33e">
+          <div class="project-card-head">
+            <span class="project-code">VK-2401</span>
+            <span class="badge badge-live">In progress</span>
+          </div>
+          <h3>Greendale Family Home</h3>
+          <p class="project-location"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg> Greendale, Harare</p>
+          <div class="project-card-progress">
+            <div class="progress" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100"><span style="width:38%"></span></div><span>38%</span>
+          </div>
+          <dl class="project-card-money">
+            <div><dt>Funded</dt><dd>$60,000.00</dd></div>
+            <div><dt>Spent</dt><dd>$29,145.50</dd></div>
+          </dl>
+        </a>
+      
+        <a class="project-card " href="/app/projects/4bbe8a9543bf48f9bc65">
+          <div class="project-card-head">
+            <span class="project-code">VK-2402</span>
+            <span class="badge badge-muted">Planning</span>
+          </div>
+          <h3>Waterfalls Rental Cottage</h3>
+          <p class="project-location"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg> Waterfalls, Harare</p>
+          <div class="project-card-progress">
+            <div class="progress" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"><span style="width:10%"></span></div><span>10%</span>
+          </div>
+          <dl class="project-card-money">
+            <div><dt>Funded</dt><dd>$0.00</dd></div>
+            <div><dt>Spent</dt><dd>$0.00</dd></div>
+          </dl>
+        </a>
+      
+      <a class="project-card project-card-new" href="/app/projects/new">
+        <span class="project-new-icon"><svg class="icon " width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+        <h3>Add a project</h3>
+        <p>Start a new stand or rental build.</p>
+      </a>
+    </div>
+  </section>
+
+
+    </main>
+  </div>
+</div>
+
+<nav class="tabbar" aria-label="Sections">
+  
+    <a class="tab is-active" href="/app">
+      <svg class="icon " width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span>Dashboard</span>
+    </a>
+  
+    <a class="tab " href="/app/projects">
+      <svg class="icon " width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h2a2 2 0 0 1 2 2v10"/><path d="M9 7h2M9 11h2M9 15h2"/></svg><span>Projects</span>
+    </a>
+  
+    <a class="tab " href="/app/money">
+      <svg class="icon " width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6"/><path d="M16 14h.01"/></svg><span>Money</span>
+    </a>
+  
+    <a class="tab " href="/app/documents">
+      <svg class="icon " width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-7l-2-2H4a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1Z"/></svg><span>Documents</span>
+    </a>
+  
+  <button class="tab" type="button" data-drawer-open>
+    <svg class="icon " width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>More</span>
+  </button>
+</nav>
+
+
+  
+  
+    <div class="toast-stack" id="toast-stack">
+      
+        <div class="notice notice-success" role="status">
+          <svg class="icon " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <p>Welcome back, Rudo.</p>
+          <button class="notice-close" type="button" data-dismiss aria-label="Dismiss"><svg class="icon " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+      
+    </div>
+  
+
+
+  <main id="main">
+    
+
+  
+  
+
+  
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="toolbar-label">Viewing</span>
+        <form class="inline-form" method="get" action="/app">
+          <label class="field-inline">
+            <span class="sr-only">Project</span>
+            <select class="select select-sm" name="project" data-autosubmit>
+              
+                <option value="0f10000a15f7456db33e" selected>Greendale Family Home</option>
+              
+                <option value="4bbe8a9543bf48f9bc65" >Waterfalls Rental Cottage</option>
+              
+            </select>
+          </label>
+          <noscript><button class="btn btn-ghost btn-sm" type="submit">Switch</button></noscript>
+        </form>
+      </div>
+      <a class="link-quiet" href="/app/projects">All projects <svg class="icon " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+  
+
+  <div class="kpi-grid">
+    <a class="kpi card-hover" href="/app/money?project=0f10000a15f7456db33e">
+      <div class="kpi-top">
+        <span class="kpi-label">Available balance</span>
+        <span class="kpi-icon kpi-icon-positive"><svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6"/><path d="M16 14h.01"/></svg></span>
+      </div>
+      <p class="kpi-value ">$30,854.50</p>
+      <p class="kpi-sub">$60,000.00 received · $29,145.50 spent</p>
+    </a>
+
+    <a class="kpi card-hover" href="/app/money?project=0f10000a15f7456db33e&amp;filter=funding">
+      <div class="kpi-top">
+        <span class="kpi-label">Total received</span>
+        <span class="kpi-icon"><svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>
+      </div>
+      <p class="kpi-value">$60,000.00</p>
+      <p class="kpi-sub">1 funding entries</p>
+    </a>
+
+    <a class="kpi card-hover" href="/app/money?project=0f10000a15f7456db33e&amp;filter=expense">
+      <div class="kpi-top">
+        <span class="kpi-label">Total spent</span>
+        <span class="kpi-icon"><svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+      </div>
+      <p class="kpi-value">$29,145.50</p>
+      <p class="kpi-sub">49% of funds used</p>
+    </a>
+
+    <a class="kpi card-hover" href="/app/projects/0f10000a15f7456db33e">
+      <div class="kpi-top">
+        <span class="kpi-label">Build progress</span>
+        <span class="kpi-icon"><svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h2a2 2 0 0 1 2 2v10"/><path d="M9 7h2M9 11h2M9 15h2"/></svg></span>
+      </div>
+      <p class="kpi-value">38%</p>
+      <p class="kpi-sub">9 of 19 stages complete</p>
+    </a>
+  </div>
+
+  <div class="dash-grid">
+    <div class="dash-main">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Cash flow</h2>
+            <p class="card-sub">Last six months on Greendale Family Home</p>
+          </div>
+          <a class="link-quiet" href="/app/money?project=0f10000a15f7456db33e">Open ledger <svg class="icon " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+
+        <div class="chart">
+          <div class="chart-legend">
+            <span><i class="dot dot-funded"></i> Received</span>
+            <span><i class="dot dot-spent"></i> Spent</span>
+          </div>
+          <div class="chart-area">
+            
+              <span class="chart-line" style="bottom:100%"></span>
+            
+              <span class="chart-line" style="bottom:75%"></span>
+            
+              <span class="chart-line" style="bottom:50%"></span>
+            
+              <span class="chart-line" style="bottom:25%"></span>
+            
+              <span class="chart-line" style="bottom:0%"></span>
+            
+            <div class="chart-groups">
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:100%" title="Received $25,000.00"></span>
+                    <span class="chart-bar bar-spent" style="height:3%" title="Spent $0.00"></span>
+                  </div>
+                  <span class="chart-label">May</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:3%" title="Received $0.00"></span>
+                    <span class="chart-bar bar-spent" style="height:28%" title="Spent $7,070.00"></span>
+                  </div>
+                  <span class="chart-label">Jun</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:60%" title="Received $15,000.00"></span>
+                    <span class="chart-bar bar-spent" style="height:3%" title="Spent $0.00"></span>
+                  </div>
+                  <span class="chart-label">Jul</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:3%" title="Received $0.00"></span>
+                    <span class="chart-bar bar-spent" style="height:14%" title="Spent $3,500.00"></span>
+                  </div>
+                  <span class="chart-label">Aug</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:3%" title="Received $0.00"></span>
+                    <span class="chart-bar bar-spent" style="height:3%" title="Spent $0.00"></span>
+                  </div>
+                  <span class="chart-label">Sep</span>
+                </div>
+              
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:3%" title="Received $0.00"></span>
+                    <span class="chart-bar bar-spent" style="height:21%" title="Spent $5,325.50"></span>
+                  </div>
+                  <span class="chart-label">Oct</span>
+                </div>
+              
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-summary">
+          <div><span class="muted small">Received</span><strong>$60.0k</strong></div>
+          <div><span class="muted small">Spent</span><strong>$29.1k</strong></div>
+          <div><span class="muted small">Remaining</span><strong class="pos">$30.9k</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Latest money movements</h2>
+            <p class="card-sub">Receipts stay attached to every expense</p>
+          </div>
+          <a class="link-quiet" href="/app/money?project=0f10000a15f7456db33e">View all <svg class="icon " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+
+        
+          <ul class="tx-list">
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Site security - 2 weeks</p>
+    <p class="tx-meta">
+      Labour · Superstructure brickwork · 19 Oct 2026
+    </p>
+    <p class="tx-ref">Ref TEST-1</p>
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$125.50
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Roof trusses — 40% deposit</p>
+    <p class="tx-meta">
+      Materials · Ring beam, trusses &amp; roof sheeting · 2 Oct 2026
+    </p>
+    <p class="tx-ref">Ref INV-6033</p>
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$5,200.00
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Bricklaying crew — progress payment</p>
+    <p class="tx-meta">
+      Labour · Superstructure brickwork · 5 Aug 2026
+    </p>
+    
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$3,500.00
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-in">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6"/><path d="M16 14h.01"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Third tranche — superstructure</p>
+    <p class="tx-meta">
+      Client deposit · 29 Jul 2026
+    </p>
+    <p class="tx-ref">Ref WISE-5512</p>
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount is-in">
+      +$15,000.00
+    </p>
+    
+      <span class="tx-receipt muted"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Cleared</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">Truck hire — materials to site</p>
+    <p class="tx-meta">
+      Transport &amp; logistics · Superstructure brickwork · 19 Jun 2026
+    </p>
+    
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$620.00
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+              
+
+<li class="tx-row">
+  <span class="tx-icon tx-out">
+    <svg class="icon " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+  </span>
+  <div class="tx-main">
+    <p class="tx-title">River sand and 19mm stone</p>
+    <p class="tx-meta">
+      Materials · Superstructure brickwork · 18 Jun 2026
+    </p>
+    
+  </div>
+  <div class="tx-side">
+    <p class="tx-amount ">
+      −$1,600.00
+    </p>
+    
+      <span class="tx-receipt is-warn"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> No receipt</span>
+    
+  </div>
+</li>
+            
+          </ul>
+        
+      </div>
+
+      
+        <div class="card">
+          <div class="card-head">
+            <h2>Receipts to chase</h2>
+            <a class="link-quiet" href="/app/money?project=0f10000a15f7456db33e&amp;filter=missing">View all</a>
+          </div>
+          <ul class="mini-list">
+            
+              <li>
+                <span class="mini-icon"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="mini-title">Site security - 2 weeks</p>
+                  <p class="mini-meta">$125.50 · 19 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="mini-icon"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="mini-title">Roof trusses — 40% deposit</p>
+                  <p class="mini-meta">$5,200.00 · 2 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="mini-icon"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="mini-title">Bricklaying crew — progress payment</p>
+                  <p class="mini-meta">$3,500.00 · 5 Aug 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="mini-icon"><svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="mini-title">Truck hire — materials to site</p>
+                  <p class="mini-meta">$620.00 · 19 Jun 2026</p>
+                </div>
+              </li>
+            
+          </ul>
+          <a class="btn btn-ghost btn-block btn-sm" href="/app/money?project=0f10000a15f7456db33e&amp;filter=missing">Attach receipts</a>
+        </div>
+      
+    </div>
+
+    <aside class="dash-side">
+      <div class="card stage-focus">
+        <div class="card-head">
+          <h2>Current stage</h2>
+          <span class="badge badge-live">In progress</span>
+        </div>
+
+        
+          <div class="stage-focus-body">
+            <svg class="ring" width="92" height="92" viewBox="0 0 92 92" role="img" aria-label="38% complete"><circle class="ring-track" cx="46.0" cy="46.0" r="41.0" fill="none" stroke-width="7"/><circle class="ring-value" cx="46.0" cy="46.0" r="41.0" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="257.61" stroke-dashoffset="159.72" transform="rotate(-90 46.0 46.0)"/><text class="ring-text" x="50%" y="50%" dominant-baseline="central" text-anchor="middle">38%</text></svg>
+            <div>
+              <p class="stage-focus-name">Superstructure brickwork</p>
+              <p class="stage-focus-meta">
+                Stage 10 of 19
+                
+              </p>
+            </div>
+          </div>
+          <p class="stage-focus-summary">Walls, lintels, columns and ring beam built to the approved drawings, with openings set out correctly.</p>
+          <div class="stage-focus-foot">
+            <span class="muted small">Stage budget</span>
+            <strong>$14,450.00</strong>
+          </div>
+          <a class="btn btn-outline btn-block btn-sm" href="/app/projects/0f10000a15f7456db33e#stage-superstructure">
+            Open stage checklist <svg class="icon " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Needs your attention</h2>
+          <span class="count-pill">1</span>
+        </div>
+        
+          <ul class="alert-list">
+            
+              <li class="alert-item alert-warn">
+                <span class="alert-icon"><svg class="icon " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <p class="alert-title">9 expenses need a receipt</p>
+                  <p class="alert-body">Attach proof before the next tranche is released.</p>
+                </div>
+                <a class="alert-link" href="/app/money?project=0f10000a15f7456db33e&amp;filter=missing" aria-label="Open"><svg class="icon " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+              </li>
+            
+          </ul>
+        
+      </div>
+
+      
+        <div class="card">
+          <div class="card-head"><h2>Coming up</h2></div>
+          <ol class="upcoming-list">
+            
+              <li>
+                <span class="upcoming-index">1</span>
+                <div>
+                  <p class="mini-title">Ring beam, trusses &amp; roof sheeting</p>
+                  <p class="mini-meta">
+                    
+                      Site works
+                    
+                    · $10,200.00
+                  </p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="upcoming-index">2</span>
+                <div>
+                  <p class="mini-title">Doors, windows &amp; burglar bars</p>
+                  <p class="mini-meta">
+                    
+                      Site works
+                    
+                    · $5,100.00
+                  </p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="upcoming-index">3</span>
+                <div>
+                  <p class="mini-title">Plumbing &amp; electrical rough-in</p>
+                  <p class="mini-meta">
+                    
+                      Site works
+                    
+                    · $4,250.00
+                  </p>
+                </div>
+              </li>
+            
+          </ol>
+        </div>
+      
+
+      
+        <div class="card">
+          <div class="card-head"><h2>Project log</h2></div>
+          <ul class="timeline">
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Superstructure brickwork set to in progress</p>
+                  <p class="mini-meta">Rudo Chikafu · 20 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Site security - 2 weeks — spent</p>
+                  <p class="mini-meta">Rudo Chikafu · 20 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Roof trusses deposit of $5,200.00 recorded</p>
+                  <p class="mini-meta">Tendai Moyo · 2 Oct 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Third tranche of $15,000.00 received</p>
+                  <p class="mini-meta">Rudo Chikafu · 29 Jul 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Slab &amp; damp course marked complete</p>
+                  <p class="mini-meta">Tendai Moyo · 30 May 2026</p>
+                </div>
+              </li>
+            
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">Project Greendale Family Home created</p>
+                  <p class="mini-meta">Tendai Moyo · 24 Feb 2026</p>
+                </div>
+              </li>
+            
+          </ul>
+        </div>
+      
+    </aside>
+  </div>
+
+  <section class="section-block">
+    <div class="section-block-head">
+      <h2>Your projects</h2>
+      <a class="link-quiet" href="/app/projects">Manage <svg class="icon " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <div class="project-grid">
+      
+        <a class="project-card is-active" href="/app/projects/0f10000a15f7456db33e">
+          <div class="project-card-head">
+            <span class="project-code">VK-2401</span>
+            <span class="badge badge-live">In progress</span>
+          </div>
+          <h3>Greendale Family Home</h3>
+          <p class="project-location"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg> Greendale, Harare</p>
+          <div class="project-card-progress">
+            <div class="progress" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100"><span style="width:38%"></span></div><span>38%</span>
+          </div>
+          <dl class="project-card-money">
+            <div><dt>Funded</dt><dd>$60,000.00</dd></div>
+            <div><dt>Spent</dt><dd>$29,145.50</dd></div>
+          </dl>
+        </a>
+      
+        <a class="project-card " href="/app/projects/4bbe8a9543bf48f9bc65">
+          <div class="project-card-head">
+            <span class="project-code">VK-2402</span>
+            <span class="badge badge-muted">Planning</span>
+          </div>
+          <h3>Waterfalls Rental Cottage</h3>
+          <p class="project-location"><svg class="icon " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg> Waterfalls, Harare</p>
+          <div class="project-card-progress">
+            <div class="progress" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"><span style="width:10%"></span></div><span>10%</span>
+          </div>
+          <dl class="project-card-money">
+            <div><dt>Funded</dt><dd>$0.00</dd></div>
+            <div><dt>Spent</dt><dd>$0.00</dd></div>
+          </dl>
+        </a>
+      
+      <a class="project-card project-card-new" href="/app/projects/new">
+        <span class="project-new-icon"><svg class="icon " width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+        <h3>Add a project</h3>
+        <p>Start a new stand or rental build.</p>
+      </a>
+    </div>
+  </section>
+
+
+  </main>
+
+  
+
+  <script src="/static/js/app.js" defer></script>
+  
+</body>
+</html>

@@ -1,0 +1,124 @@
+{% extends "app/base.html" %}
+{% block title %}WhatsApp · Vaka{% endblock %}
+
+{% block page_title %}WhatsApp{% endblock %}
+{% block page_subtitle %}<p class="page-subtitle">The same ledger, over the app your family already uses</p>{% endblock %}
+
+{% block content %}
+<div class="card integration-card">
+  <div class="integration-main">
+    <span class="integration-icon">{{ icon('message', 22) }}</span>
+    <div>
+      <div class="integration-title">
+        <h2>Meta Cloud API connection</h2>
+        {% if configured %}
+          <span class="badge badge-success">{{ icon('check', 12) }} Connected</span>
+        {% else %}
+          <span class="badge badge-warn">Simulator mode</span>
+        {% endif %}
+      </div>
+      <p class="muted small">
+        {% if configured %}
+          Outbound messages are being delivered through your WhatsApp Business number.
+        {% else %}
+          Add WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID to .env to go live. Until then,
+          messages are stored locally so the full flow stays testable.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="integration-fields">
+    <label class="field">
+      <span class="field-label">Webhook callback URL</span>
+      <div class="copy-field">
+        <input class="input input-mono" type="text" value="{{ webhook_url }}" readonly />
+        <button class="icon-btn" type="button" data-copy="{{ webhook_url }}" aria-label="Copy webhook URL">{{ icon('folder', 15) }}</button>
+      </div>
+    </label>
+    <label class="field">
+      <span class="field-label">Verify token</span>
+      <div class="copy-field">
+        <input class="input input-mono" type="text" value="{{ verify_token }}" readonly />
+        <button class="icon-btn" type="button" data-copy="{{ verify_token }}" aria-label="Copy verify token">{{ icon('folder', 15) }}</button>
+      </div>
+    </label>
+  </div>
+</div>
+
+<div class="wa-layout">
+  <aside class="card wa-contacts">
+    <div class="card-head">
+      <h2>Conversations</h2>
+      <span class="count-pill">{{ contacts|length }}</span>
+    </div>
+
+    {% if contacts %}
+      <ul class="contact-list">
+        {% for contact in contacts %}
+          <li>
+            <a class="contact {{ 'is-active' if selected and contact.id == selected.id }}" href="{{ url_for('whatsapp.index', contact=contact.id) }}">
+              <span class="avatar avatar-sm" style="background:#0F5D46">{{ contact.name|initials }}</span>
+              <span class="contact-text">
+                <span class="contact-name">{{ contact.name }}</span>
+                <span class="contact-meta">{{ display_phone(contact.phone) }}{% if contact.project_name %} · {{ contact.project_name }}{% endif %}</span>
+              </span>
+              <span class="contact-count">{{ contact.message_count }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small pad">No conversations yet. Send a test message below to start one.</p>
+    {% endif %}
+
+    <div class="side-note">
+      {{ icon('sparkles', 16) }}
+      <p>Try <code>BALANCE</code>, <code>STATUS</code>, <code>PROJECTS</code> or <code>PAY 500</code>.</p>
+    </div>
+  </aside>
+
+  <section class="card wa-chat">
+    <div class="wa-chat-head">
+      <span class="avatar avatar-sm" style="background:#0F5D46">{{ (selected.name if selected else 'Vaka')|initials }}</span>
+      <div>
+        <p class="wa-chat-name">{{ selected.name if selected else 'Vaka assistant' }}</p>
+        <p class="mini-meta">{{ display_phone(selected.phone) if selected else 'Test the assistant without Meta credentials' }}</p>
+      </div>
+      {% if selected and selected.project_name %}
+        <span class="badge badge-soft">{{ selected.project_name }}</span>
+      {% endif %}
+    </div>
+
+    <div class="wa-messages" id="wa-messages" aria-live="polite">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="wa-bubble {{ 'wa-in' if message.direction == 'IN' else 'wa-out' }}">
+            <p>{{ message.body }}</p>
+            <span class="wa-time">{{ message.created_at|datetime }}{% if message.intent %} · {{ message.intent }}{% endif %}</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="wa-empty">
+          {{ icon('message', 24) }}
+          <p>No messages in this conversation yet.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <form class="wa-composer" id="wa-sim-form" data-contact-id="{{ selected.id if selected else '' }}" data-project-id="{{ selected.project_id if selected and selected.project_id else (projects[0].id if projects else '') }}" data-phone="{{ selected.phone if selected else (user.phone or '263771234567') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input class="input" type="text" name="body" id="wa-input" autocomplete="off" placeholder="Message as the client (e.g. BALANCE)" required />
+      <button class="btn btn-primary" type="submit" id="wa-send">{{ icon('arrow-right', 16) }} Send</button>
+    </form>
+    <p class="micro-note pad-x">
+      {{ icon('alert', 13) }} Simulated messages are stored exactly like real
+      WhatsApp messages and can create ledger entries.
+    </p>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/whatsapp.js') }}" defer></script>
+{% endblock %}

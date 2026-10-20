@@ -1,0 +1,53 @@
+{% extends "app/base.html" %}
+{% block title %}Projects · Vaka{% endblock %}
+
+{% block page_title %}Projects{% endblock %}
+{% block page_subtitle %}<p class="page-subtitle">{{ projects|length }} project{{ '' if projects|length == 1 else 's' }} in your workspace</p>{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}">{{ icon('plus', 15) }} New project</a>
+{% endblock %}
+
+{% block content %}
+{% if projects %}
+  <div class="filter-row" data-filter-group>
+    <button class="chip is-active" type="button" data-filter="all">All</button>
+    <button class="chip" type="button" data-filter="planning">Planning</button>
+    <button class="chip" type="button" data-filter="in_progress">In progress</button>
+    <button class="chip" type="button" data-filter="completed">Completed</button>
+  </div>
+
+  <div class="project-grid">
+    {% for project in projects %}
+      <a class="project-card" href="{{ url_for('projects.detail', project_id=project.id) }}" data-status="{{ project.status }}">
+        <div class="project-card-head">
+          <span class="project-code">{{ project.code }}</span>
+          {{ badge(project.status) }}
+        </div>
+        <h3>{{ project.name }}</h3>
+        <p class="project-location">{{ icon('map-pin', 13) }} {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}</p>
+        <div class="project-card-progress">
+          {{ progress_bar(project.progress) }}<span>{{ project.progress }}%</span>
+        </div>
+        <dl class="project-card-money">
+          <div><dt>Funded</dt><dd>{{ project.totals.funded|money }}</dd></div>
+          <div><dt>Spent</dt><dd>{{ project.totals.spent|money }}</dd></div>
+          <div><dt>Available</dt><dd class="{{ 'neg' if project.totals.balance < 0 else 'pos' }}">{{ project.totals.balance|money }}</dd></div>
+        </dl>
+        <p class="project-card-foot">
+          {{ icon('calendar', 13) }}
+          Target {{ project.target_date|date if project.target_date else 'not set' }}
+        </p>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('building', 26) }}</span>
+      <h3>No projects yet</h3>
+      <p>Add your stand, budget and target date. Vaka builds the Zimbabwe stage plan automatically.</p>
+      <a class="btn btn-primary" href="{{ url_for('projects.new') }}">{{ icon('plus', 16) }} Create your first project</a>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

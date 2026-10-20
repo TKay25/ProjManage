@@ -1,0 +1,272 @@
+{% extends "app/base.html" %}
+{% block title %}{{ project.name }} · Vaka{% endblock %}
+
+{% block page_title %}{{ project.name }}{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ project.code }} · {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}
+    {% if project.stand_number %} · {{ project.stand_number }}{% endif %}
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}#record">{{ icon('wallet', 15) }} Record money</a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('agreements.new', project=project.id) }}">{{ icon('pen', 15) }} New agreement</a>
+{% endblock %}
+
+{% block content %}
+<div class="project-hero">
+  <div class="project-hero-main">
+    {{ progress_ring(progress, 104) }}
+    <div>
+      <div class="project-hero-status">{{ badge(project.status) }}<span class="muted small">Updated {{ project.updated_at|date }}</span></div>
+      <p class="project-hero-name">{{ current.name if current else 'All stages complete' }}</p>
+      <p class="muted">
+        {% if current_definition and current_definition.authority %}
+          {{ icon('shield', 13) }} {{ current_definition.authority }}
+        {% elif current %}
+          Site works in progress
+        {% else %}
+          Ready for handover
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <dl class="project-hero-stats">
+    <div><dt>Budget</dt><dd>{{ project.budget_cents|money }}</dd></div>
+    <div><dt>Received</dt><dd>{{ totals.funded|money }}</dd></div>
+    <div><dt>Spent</dt><dd>{{ totals.spent|money }}</dd></div>
+    <div><dt>Available</dt><dd class="{{ 'neg' if totals.balance < 0 else 'pos' }}">{{ totals.balance|money }}</dd></div>
+  </dl>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-main">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Build stages</h2>
+          <p class="card-sub">{{ completed_count }} of {{ stages|length }} complete · {{ progress }}% weighted progress</p>
+        </div>
+        <span class="badge badge-soft">{{ stages|length }} stages</span>
+      </div>
+
+      {% for group in groups %}
+        <div class="stage-group">
+          <div class="stage-group-head">
+            <h3>{{ group.name }}</h3>
+            <span class="stage-count">{{ group.stages|length }}</span>
+          </div>
+
+          {% for stage in group.stages %}
+            <article class="stage-row {{ 'is-complete' if stage.status == 'complete' }} {{ 'is-current' if stage.status == 'in_progress' }} {{ 'is-blocked' if stage.status == 'blocked' }}" id="stage-{{ stage.key }}">
+              <div class="stage-rail">
+                <span class="stage-marker">
+                  {% if stage.status == 'complete' %}{{ icon('check', 14) }}{% else %}{{ '%02d'|format(stage.position) }}{% endif %}
+                </span>
+              </div>
+
+              <div class="stage-body">
+                <div class="stage-row-head">
+                  <div>
+                    <p class="stage-title">{{ stage.name }}</p>
+                    <p class="stage-meta">
+                      {% if stage.definition.authority %}
+                        <span class="authority-tag">{{ icon('shield', 11) }} {{ stage.definition.authority }}</span>
+                      {% else %}
+                        <span class="muted small">Site works</span>
+                      {% endif %}
+                      <span class="dot-sep">·</span>
+                      <span class="muted small">{{ stage.budget_cents|money }} budget</span>
+                      <span class="dot-sep">·</span>
+                      <span class="{{ 'neg' if stage.over else 'muted' }} small">{{ stage.spent|money }} spent</span>
+                      {% if stage.over %}
+                        <span class="badge badge-danger">Over by {{ (stage.spent - stage.budget_cents)|money }}</span>
+                      {% endif %}
+                    </p>
+                  </div>
+                  {{ badge(stage.status) }}
+                </div>
+
+                <p class="stage-summary">{{ stage.definition.summary }}</p>
+
+                {% if stage.notes %}
+                  <p class="stage-note">{{ icon('message', 13) }} {{ stage.notes }}</p>
+                {% endif %}
+
+                {% if stage.definition.documents %}
+                  <div class="doc-chips">
+                    {% for doc in stage.definition.documents %}
+                      <span class="doc-chip">{{ icon('folder', 11) }} {{ doc }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                <details class="stage-edit">
+                  <summary>{{ icon('pen', 13) }} Update stage</summary>
+                  <form method="post" action="{{ url_for('projects.update_stage', project_id=project.id, stage_key=stage.key) }}" class="stage-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <label class="field">
+                      <span class="field-label">Status</span>
+                      <select class="select" name="status">
+                        {% for value, label in STATUS_LABELS.items() %}
+                          <option value="{{ value }}" {% if stage.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span class="field-label">Note (optional)</span>
+                      <input class="input" type="text" name="notes" value="{{ stage.notes or '' }}" maxlength="1000" placeholder="Council inspection booked for Tuesday…" />
+                    </label>
+                    <button class="btn btn-primary btn-sm" type="submit">Save update</button>
+                  </form>
+                </details>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Money activity</h2>
+          <p class="card-sub">Latest five movements on this project</p>
+        </div>
+        <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">Open ledger {{ icon('arrow-right', 14) }}</a>
+      </div>
+      {% if transactions %}
+        <ul class="tx-list">
+          {% for tx in transactions %}
+            {% include "partials/tx_row.html" %}
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="empty">
+          <span class="empty-icon">{{ icon('wallet', 26) }}</span>
+          <h3>No money recorded</h3>
+          <p>Record the first deposit to start tracking this build.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <aside class="detail-side">
+    <div class="card">
+      <div class="card-head"><h2>Project facts</h2></div>
+      <dl class="fact-list">
+        <div><dt>Client</dt><dd>{{ owner.name if owner else '—' }}</dd></div>
+        <div><dt>Build manager</dt><dd>{{ manager.name if manager else 'Not assigned' }}</dd></div>
+        <div><dt>Start date</dt><dd>{{ project.start_date|date if project.start_date else '—' }}</dd></div>
+        <div><dt>Target handover</dt><dd>{{ project.target_date|date if project.target_date else '—' }}</dd></div>
+        <div><dt>Stage budget used</dt><dd>{{ ((totals.spent / project.budget_cents) * 100)|round|int if project.budget_cents else 0 }}%</dd></div>
+      </dl>
+
+      {% if project.owner_id == user.id or user.role == 'admin' %}
+        <details class="card-details">
+          <summary>{{ icon('users', 14) }} Assign build manager</summary>
+          <form class="form form-compact" method="post" action="{{ url_for('projects.assign_manager', project_id=project.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <label class="field">
+              <span class="field-label">Manager email</span>
+              <input class="input" type="email" name="email" placeholder="manager@vaka.co.zw" required />
+            </label>
+            <button class="btn btn-outline btn-sm btn-block" type="submit">Assign</button>
+          </form>
+        </details>
+      {% endif %}
+
+      <details class="card-details">
+        <summary>{{ icon('wallet', 14) }} Change budget</summary>
+        <form class="form form-compact" method="post" action="{{ url_for('projects.update_budget', project_id=project.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <label class="field">
+            <span class="field-label">Total budget (USD)</span>
+            <input class="input" type="text" name="budget" value="{{ project.budget_cents|money_input }}" data-money required />
+          </label>
+          <button class="btn btn-outline btn-sm btn-block" type="submit">Recalculate stages</button>
+        </form>
+      </details>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Stage budget</h2></div>
+      <div class="panel-bars">
+        {% for group in groups %}
+          {% set group_budget = group.stages|sum(attribute='budget_cents') %}
+          {% set group_spent = group.stages|sum(attribute='spent') %}
+          <div class="bar-row">
+            <span>{{ group.name }}</span>
+            <div class="bar-track">
+              <span class="bar-fill {{ 'is-warn' if group_spent > group_budget and group_budget else '' }}" style="width:{{ (((group_spent / group_budget) * 100)|round|int) if group_budget else 0 }}%"></span>
+            </div>
+            <strong>{{ (((group_spent / group_budget) * 100)|round|int) if group_budget else 0 }}%</strong>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Agreements</h2>
+        <a class="link-quiet" href="{{ url_for('agreements.new', project=project.id) }}">New</a>
+      </div>
+      {% if agreements %}
+        <ul class="mini-list">
+          {% for agreement in agreements %}
+            <li>
+              <span class="mini-icon">{{ icon('pen', 15) }}</span>
+              <div>
+                <p class="mini-title"><a href="{{ url_for('agreements.detail', agreement_id=agreement.id) }}">{{ agreement.title }}</a></p>
+                <p class="mini-meta">{{ agreement.contract_value_cents|money }} · {{ agreement.status|replace('_', ' ')|title }}</p>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted small">No agreement yet. Build one before work starts.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Documents</h2>
+        <a class="link-quiet" href="{{ url_for('documents.index', project=project.id) }}">Open vault</a>
+      </div>
+      {% if attachments %}
+        <ul class="mini-list">
+          {% for file in attachments[:5] %}
+            <li>
+              <span class="mini-icon">{{ icon('receipt' if file.kind == 'receipt' else 'folder', 15) }}</span>
+              <div>
+                <p class="mini-title"><a href="{{ url_for('documents.serve', attachment_id=file.id) }}" target="_blank" rel="noopener">{{ file.original_name }}</a></p>
+                <p class="mini-meta">{{ file.kind|title }} · {{ file.created_at|date }}</p>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted small">Approved plans, receipts and photos will appear here.</p>
+      {% endif %}
+    </div>
+
+    {% if activity %}
+      <div class="card">
+        <div class="card-head"><h2>Project log</h2></div>
+        <ul class="timeline">
+          {% for event in activity %}
+            <li>
+              <span class="timeline-dot"></span>
+              <div>
+                <p class="mini-title">{{ event.detail }}</p>
+                <p class="mini-meta">{{ event.user_name or 'System' }} · {{ event.created_at|date }}</p>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "app/base.html" %}
+{% block title %}New agreement · Vaka{% endblock %}
+
+{% block page_title %}New agreement{% endblock %}
+{% block page_subtitle %}<p class="page-subtitle">{{ project.name }} · scope, milestones and terms</p>{% endblock %}
+
+{% block content %}
+{% if error %}
+  <div class="form-error">{{ icon('alert', 17) }}<span>{{ error }}</span></div>
+{% endif %}
+
+<form method="post" action="{{ url_for('agreements.create') }}" class="agreement-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <input type="hidden" name="project_id" value="{{ project.id }}" />
+
+  <div class="split-grid">
+    <div class="card">
+      <div class="card-head"><h2>Agreement details</h2></div>
+
+      <div class="form">
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Agreement type</span>
+            <select class="select" name="type">
+              <option value="build_contract" {% if values.get('type') == 'build_contract' %}selected{% endif %}>Full build contract</option>
+              <option value="stage_scope" {% if values.get('type') == 'stage_scope' %}selected{% endif %}>Stage scope agreement</option>
+              <option value="variation" {% if values.get('type') == 'variation' %}selected{% endif %}>Variation order</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Contract value (USD)</span>
+            <input class="input" type="text" name="contract_value" value="{{ values.get('contract_value', '') }}" inputmode="decimal" required placeholder="85,000.00" data-money />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Title</span>
+          <input class="input" type="text" name="title" value="{{ values.get('title', 'Residential build contract — ' + project.name) }}" required maxlength="160" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Client's full name</span>
+          <input class="input" type="text" name="client_name" value="{{ values.get('client_name', '') }}" required maxlength="120" placeholder="As it appears on their ID" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Scope of works</span>
+          <textarea class="textarea" name="scope" rows="5" required placeholder="Design, council approval support, construction and handover of a three-bedroom house on Stand 1421, Greendale…">{{ values.get('scope', '') }}</textarea>
+        </label>
+
+        <div class="field">
+          <span class="field-label">Payment milestones</span>
+          <div class="milestone-list" data-milestones>
+            <div class="milestone-row">
+              <input class="input" type="text" name="milestone_label" placeholder="Signing and mobilisation" />
+              <input class="input" type="text" name="milestone_amount" inputmode="decimal" placeholder="0.00" data-money />
+            </div>
+            <div class="milestone-row">
+              <input class="input" type="text" name="milestone_label" placeholder="Foundation and slab" />
+              <input class="input" type="text" name="milestone_amount" inputmode="decimal" placeholder="0.00" data-money />
+            </div>
+            <div class="milestone-row">
+              <input class="input" type="text" name="milestone_label" placeholder="Roof and services" />
+              <input class="input" type="text" name="milestone_amount" inputmode="decimal" placeholder="0.00" data-money />
+            </div>
+            <div class="milestone-row">
+              <input class="input" type="text" name="milestone_label" placeholder="Practical completion" />
+              <input class="input" type="text" name="milestone_amount" inputmode="decimal" placeholder="0.00" data-money />
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" type="button" data-add-milestone>{{ icon('plus', 14) }} Add milestone</button>
+          <span class="field-hint" data-milestone-total>Milestone total: $0.00</span>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Terms</span>
+          <textarea class="textarea textarea-tall" name="terms" rows="10">{{ terms }}</textarea>
+          <span class="field-hint">Governing law defaults to Zimbabwe. Edit any clause your lawyer advises.</span>
+        </label>
+      </div>
+    </div>
+
+    <aside class="detail-side">
+      <div class="card">
+        <div class="card-head"><h2>Before you send it</h2></div>
+        <ul class="check-list compact">
+          <li>{{ icon('check', 16) }}<span>Scope matches the approved drawings</span></li>
+          <li>{{ icon('check', 16) }}<span>Milestones cover the whole contract value</span></li>
+          <li>{{ icon('check', 16) }}<span>Retention and variation clauses are clear</span></li>
+          <li>{{ icon('check', 16) }}<span>Client name matches their ID</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>How signing works</h2></div>
+        <ol class="upcoming-list">
+          <li><span class="upcoming-index">1</span><div><p class="mini-title">Save as awaiting signature</p><p class="mini-meta">The agreement is locked to the project record.</p></div></li>
+          <li><span class="upcoming-index">2</span><div><p class="mini-title">Client signs on screen</p><p class="mini-meta">Open the agreement on your phone or laptop.</p></div></li>
+          <li><span class="upcoming-index">3</span><div><p class="mini-title">Print or keep the signed copy</p><p class="mini-meta">The signature and timestamp are stored with it.</p></div></li>
+        </ol>
+      </div>
+
+      <div class="side-note">
+        {{ icon('alert', 16) }}
+        <p>This is a management record, not legal advice. Have a Zimbabwean lawyer review high-value contracts.</p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="sticky-actions">
+    <a class="btn btn-ghost" href="{{ url_for('agreements.index', project=project.id) }}">Cancel</a>
+    <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save agreement</button>
+  </div>
+</form>
+{% endblock %}

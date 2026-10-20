@@ -1,0 +1,53 @@
+<aside class="sidebar" id="sidebar" aria-label="Workspace">
+  <div class="sidebar-top">
+    {{ brand('/app') }}
+    <button class="icon-btn drawer-close" type="button" data-drawer-close aria-label="Close menu">{{ icon('close', 20) }}</button>
+  </div>
+
+  <nav class="sidebar-nav">
+    {% for item in nav_items[:5] %}
+      <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}">
+        {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
+      </a>
+    {% endfor %}
+  </nav>
+
+  <div class="sidebar-section">
+    <p class="sidebar-label">Tools</p>
+    <nav class="sidebar-nav">
+      {% for item in nav_items[5:] %}
+        <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}">
+          {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+  </div>
+
+  <div class="sidebar-section sidebar-projects">
+    <p class="sidebar-label">Your projects</p>
+    {% if projects %}
+      {% for item in projects[:4] %}
+        <a class="side-project" href="{{ url_for('projects.detail', project_id=item.id) }}">
+          <span class="project-dot tone-{{ loop.index0 % 4 + 1 }}"></span>
+          <span class="side-project-name">{{ item.name }}</span>
+        </a>
+      {% endfor %}
+    {% else %}
+      <p class="sidebar-empty">No projects yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="sidebar-foot">
+    <a class="user-card" href="{{ url_for('settings.index') }}">
+      <span class="avatar" style="background:{{ user.avatar_color }}">{{ user.name|initials }}</span>
+      <span class="user-card-text">
+        <span class="user-card-name">{{ user.name }}</span>
+        <span class="user-card-role">{{ 'Build manager' if user.role == 'manager' else 'Client' }}</span>
+      </span>
+    </a>
+    <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="icon-btn" type="submit" aria-label="Sign out" title="Sign out">{{ icon('logout', 18) }}</button>
+    </form>
+  </div>
+</aside>

@@ -1,0 +1,13 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="toast-stack" id="toast-stack">
+      {% for category, message in messages %}
+        <div class="notice notice-{{ 'error' if category == 'error' else 'success' }}" role="status">
+          {{ icon('alert' if category == 'error' else 'check', 18) }}
+          <p>{{ message }}</p>
+          <button class="notice-close" type="button" data-dismiss aria-label="Dismiss">{{ icon('close', 16) }}</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}

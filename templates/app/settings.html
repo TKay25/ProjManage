@@ -1,0 +1,126 @@
+{% extends "app/base.html" %}
+{% block title %}Settings · Vaka{% endblock %}
+
+{% block page_title %}Settings{% endblock %}
+{% block page_subtitle %}<p class="page-subtitle">Your profile, sign-in security and linked numbers</p>{% endblock %}
+
+{% block content %}
+<div class="split-grid">
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Your profile</h2></div>
+      <form class="form" method="post" action="{{ url_for('settings.update_profile') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <label class="field">
+          <span class="field-label">Full name</span>
+          <input class="input" type="text" name="name" value="{{ user.name }}" required maxlength="90" />
+        </label>
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Email address</span>
+            <input class="input" type="email" value="{{ user.email }}" readonly />
+            <span class="field-hint">Email changes need support for now.</span>
+          </label>
+          <label class="field">
+            <span class="field-label">WhatsApp number</span>
+            <input class="input" type="tel" name="phone" value="{{ user.phone or '' }}" placeholder="+263 77 123 4567" />
+            <span class="field-hint">Used to link WhatsApp messages to your account.</span>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Where do you live?</span>
+            <select class="select" name="country">
+              {% for country in ['United Kingdom', 'South Africa', 'United States', 'Canada', 'Australia', 'United Arab Emirates', 'Ireland', 'New Zealand', 'Botswana', 'Zimbabwe', 'Other'] %}
+                <option value="{{ country }}" {% if user.country == country %}selected{% endif %}>{{ country }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Avatar colour</span>
+            <select class="select" name="avatar_color">
+              {% for value, label in [('#0F5D46', 'Forest'), ('#C8963E', 'Brass'), ('#2A7A5E', 'Emerald'), ('#A9573C', 'Brick'), ('#3E6B8A', 'Slate'), ('#6B5B95', 'Plum')] %}
+                <option value="{{ value }}" {% if user.avatar_color == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save profile</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Change password</h2></div>
+      <form class="form" method="post" action="{{ url_for('settings.update_password') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <label class="field">
+          <span class="field-label">Current password</span>
+          <input class="input" type="password" name="current_password" autocomplete="current-password" required />
+        </label>
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">New password</span>
+            <input class="input" type="password" name="new_password" autocomplete="new-password" minlength="8" required />
+          </label>
+          <label class="field">
+            <span class="field-label">Confirm new password</span>
+            <input class="input" type="password" name="confirm_password" autocomplete="new-password" minlength="8" required />
+          </label>
+        </div>
+
+        <button class="btn btn-outline" type="submit">{{ icon('lock', 15) }} Update password</button>
+      </form>
+    </div>
+  </div>
+
+  <aside class="detail-side">
+    <div class="card">
+      <div class="card-head"><h2>Account</h2><span class="badge badge-soft">{{ 'Build manager' if user.role == 'manager' else 'Client' }}</span></div>
+      <dl class="fact-list">
+        <div><dt>Role</dt><dd>{{ 'Build manager' if user.role == 'manager' else 'Client / owner' }}</dd></div>
+        <div><dt>Member since</dt><dd>{{ user.created_at|date }}</dd></div>
+        <div><dt>Projects</dt><dd>{{ counts.projects }}</dd></div>
+        <div><dt>Managing</dt><dd>{{ counts.managed }}</dd></div>
+        <div><dt>Entries created</dt><dd>{{ counts.expenses }}</dd></div>
+      </dl>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Linked WhatsApp</h2></div>
+      {% if contacts %}
+        <ul class="mini-list">
+          {% for contact in contacts %}
+            <li>
+              <span class="mini-icon">{{ icon('message', 15) }}</span>
+              <div>
+                <p class="mini-title">{{ contact.name }}</p>
+                <p class="mini-meta">{{ display_phone(contact.phone) }}</p>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted small">No WhatsApp number linked yet. Add your number above, then message the Vaka business number.</p>
+      {% endif %}
+      <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('whatsapp.index') }}">Open WhatsApp inbox</a>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Install Vaka</h2></div>
+      <p class="muted small">Use Vaka like an app on your phone or desktop. It opens full screen and keeps the last project state offline.</p>
+      <button class="btn btn-outline btn-block btn-sm install-btn" type="button" id="install-btn">{{ icon('download', 15) }} Add to home screen</button>
+    </div>
+
+    <div class="side-note">
+      {{ icon('shield', 16) }}
+      <p>Vaka never stores card numbers or bank credentials. Keep project money in a bank account you control.</p>
+    </div>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+{% block title %}Vaka — build your home in Zimbabwe from anywhere{% endblock %}
+{% block body_class %}landing public{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow">{{ icon('globe', 14) }} For Zimbabweans building back home</p>
+      <h1 class="hero-title">
+        Your home in Zimbabwe,<br />
+        built as if you were <span class="accent">standing on site.</span>
+      </h1>
+      <p class="hero-lead">
+        Vaka manages your build from stand due diligence and council plan approval
+        to the Certificate of Occupation — with every deposit, expense and receipt
+        accounted for. Follow all of it from your phone, anywhere in the world.
+      </p>
+
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="/register">Start your project {{ icon('arrow-right', 18) }}</a>
+        <a class="btn btn-outline btn-lg" href="/login">{{ icon('play', 15) }} Explore the demo</a>
+      </div>
+
+      <p class="demo-hint">Demo login · <code>client@vaka.co.zw</code> · <code>Vaka2026!</code></p>
+
+      <ul class="hero-trust">
+        <li>{{ icon('shield', 16) }} Council &amp; statutory gates</li>
+        <li>{{ icon('wallet', 16) }} USD ledger + receipts</li>
+        <li>{{ icon('message', 16) }} WhatsApp updates</li>
+      </ul>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+      <div class="hero-glow"></div>
+
+      <div class="mock-project">
+        <div class="mock-project-head">
+          <div>
+            <p class="mock-label">Project</p>
+            <p class="mock-title">Greendale Family Home</p>
+          </div>
+          <span class="badge badge-live">On site</span>
+        </div>
+
+        <div class="mock-balance">
+          <p class="mock-label">Available balance</p>
+          <p class="mock-amount">$30,980<span>.00</span></p>
+          <p class="mock-sub">of $60,000 funded</p>
+        </div>
+
+        <div class="mock-progress">
+          <div class="mock-progress-head"><span>Build progress</span><strong>39%</strong></div>
+          <div class="progress"><span style="width:39%"></span></div>
+        </div>
+
+        <div class="mock-stage">
+          <span class="stage-dot is-active"></span>
+          <div>
+            <p class="mock-label">Current stage</p>
+            <p class="mock-stage-name">Superstructure brickwork</p>
+          </div>
+          <span class="mock-stage-count">9 / 19</span>
+        </div>
+
+        <ul class="mock-ledger">
+          <li>
+            <span class="ledger-icon ledger-out">{{ icon('receipt', 15) }}</span>
+            <span class="ledger-text"><strong>Roof trusses deposit</strong><small>Materials · 2 Oct</small></span>
+            <span class="ledger-amount">−$5,200</span>
+          </li>
+          <li>
+            <span class="ledger-icon ledger-in">{{ icon('wallet', 15) }}</span>
+            <span class="ledger-text"><strong>Third tranche</strong><small>Client deposit · 29 Jul</small></span>
+            <span class="ledger-amount ledger-in-text">+$15,000</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="float-card float-receipt">
+        <span class="float-icon">{{ icon('receipt', 18) }}</span>
+        <div>
+          <p class="float-title">Receipt attached</p>
+          <p class="float-sub">Halsted · $845.00</p>
+        </div>
+        {{ icon('check', 16) }}
+      </div>
+
+      <div class="float-card float-chat">
+        <span class="float-avatar">{{ icon('message', 16) }}</span>
+        <div>
+          <p class="float-title">WhatsApp update</p>
+          <p class="float-sub">“Slab passed council inspection ✅”</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container authority-strip">
+    <p class="authority-label">Built around the approvals that actually matter</p>
+    <div class="authority-list">
+      <span>Deeds Registry</span>
+      <span>City of Harare</span>
+      <span>Bulawayo City Council</span>
+      <span>EMA</span>
+      <span>ZINWA</span>
+      <span>ZESA / ZETDC</span>
+      <span>Council building inspectors</span>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="why">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">Why Vaka exists</p>
+      <h2>Distance is expensive. Uncertainty is worse.</h2>
+      <p class="lead">
+        Building from London, Johannesburg or Dubai usually means trusting a
+        cousin, a WhatsApp group and a notebook. Vaka turns that into a record
+        you can audit.
+      </p>
+    </div>
+
+    <div class="grid grid-4 value-grid">
+      <article class="feature-card">
+        <span class="feature-icon">{{ icon('wallet', 22) }}</span>
+        <h3>Every dollar accounted for</h3>
+        <p>Log each tranche you send, see exactly what it paid for, and keep the receipt attached. No more spreadsheets rebuilt from WhatsApp screenshots.</p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-icon">{{ icon('shield', 22) }}</span>
+        <h3>Zimbabwe's real approval gates</h3>
+        <p>Nineteen stages from title due diligence and council plan approval to ZESA and the Certificate of Occupation — with the regulator named at each gate.</p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-icon">{{ icon('folder', 22) }}</span>
+        <h3>One document file, forever</h3>
+        <p>Approved plans, council receipts, delivery notes, site photos and signed agreements live with the project, not in someone's phone gallery.</p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-icon">{{ icon('message', 22) }}</span>
+        <h3>Built around WhatsApp</h3>
+        <p>Your family on the ground may never open a dashboard. Vaka keeps the same record whether they message from WhatsApp or log in.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section section-sand" id="how">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">How it works</p>
+      <h2>Four steps from stand to keys.</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="step-number">01</span>
+        <h3>Set up the project</h3>
+        <p>Add the stand, budget in USD and target handover date. Vaka builds the full Zimbabwean stage plan and budget split automatically.</p>
+      </div>
+      <div class="step">
+        <span class="step-number">02</span>
+        <h3>Invite your build manager</h3>
+        <p>Your brother, a builder or a professional project manager gets a workspace login. You keep the owner view, they post progress and expenses.</p>
+      </div>
+      <div class="step">
+        <span class="step-number">03</span>
+        <h3>Fund and approve</h3>
+        <p>Send tranches when milestones are met. Each expense is tagged to a stage and needs a receipt before it leaves the balance.</p>
+      </div>
+      <div class="step">
+        <span class="step-number">04</span>
+        <h3>Handover with the full file</h3>
+        <p>Certificate of Occupation, warranties, snag list and every receipt — exported as a complete project record when you finally get the keys.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="stages">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">The Zimbabwe build sequence</p>
+      <h2>Nineteen stages. Five gates that stop a build.</h2>
+      <p class="lead">
+        Council plan approval, EMA clearance, water and sewer application, ZESA
+        connection and the Certificate of Occupation are tracked as regulatory
+        gates — not optional to-dos.
+      </p>
+    </div>
+
+    {% set ns = namespace(number=0) %}
+    <div class="stage-board">
+      {% for group in STAGE_GROUPS %}
+        <div class="stage-column">
+          <div class="stage-column-head">
+            <p class="stage-group">{{ group }}</p>
+            <span class="stage-count">{{ STAGES|selectattr('group', 'equalto', group)|list|length }} stages</span>
+          </div>
+          <ol class="stage-list">
+            {% for stage in STAGES if stage.group == group %}
+              {% set ns.number = ns.number + 1 %}
+              <li class="stage-item">
+                <span class="stage-index">{{ '%02d'|format(ns.number) }}</span>
+                <div>
+                  <p class="stage-name">{{ stage.name }}</p>
+                  {% if stage.authority %}
+                    <span class="stage-authority">{{ icon('shield', 12) }} {{ stage.authority }}</span>
+                  {% else %}
+                    <span class="stage-authority muted">Site works</span>
+                  {% endif %}
+                </div>
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+      {% endfor %}
+    </div>
+
+    <p class="micro-note">
+      {{ icon('alert', 14) }} Fees, forms and inspection rules differ by local
+      authority. Vaka is a management checklist, not legal advice.
+    </p>
+  </div>
+</section>
+
+<section class="section section-sand" id="money">
+  <div class="container money-grid">
+    <div class="money-copy">
+      <p class="eyebrow">Money, without the guesswork</p>
+      <h2>The balance is the whole story.</h2>
+      <p class="lead">
+        Vaka separates <strong>money you sent</strong> from <strong>money actually
+        spent</strong>. Every expense is tied to a stage, a supplier and a receipt —
+        so you can challenge a line item before the next tranche leaves your account.
+      </p>
+
+      <ul class="check-list">
+        <li>{{ icon('check', 18) }}<span>Funding tranches with bank or EcoCash references</span></li>
+        <li>{{ icon('check', 18) }}<span>Expenses tagged to the exact build stage</span></li>
+        <li>{{ icon('check', 18) }}<span>Receipt required before a cost is trusted</span></li>
+        <li>{{ icon('check', 18) }}<span>Budget vs actual per stage, always current</span></li>
+      </ul>
+
+      <a class="btn btn-primary" href="/register">Open your project ledger {{ icon('arrow-right', 17) }}</a>
+    </div>
+
+    <div class="money-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-label">Greendale Family Home</p>
+          <p class="panel-amount">$30,980.00</p>
+          <p class="panel-sub">available of $60,000.00 funded</p>
+        </div>
+        <span class="badge badge-soft">USD ledger</span>
+      </div>
+
+      <div class="panel-bars">
+        <div class="bar-row">
+          <span>Superstructure</span>
+          <div class="bar-track"><span class="bar-fill" style="width:72%"></span></div>
+          <strong>72%</strong>
+        </div>
+        <div class="bar-row">
+          <span>Foundation &amp; slab</span>
+          <div class="bar-track"><span class="bar-fill" style="width:100%"></span></div>
+          <strong>100%</strong>
+        </div>
+        <div class="bar-row">
+          <span>Roof &amp; openings</span>
+          <div class="bar-track"><span class="bar-fill is-warn" style="width:38%"></span></div>
+          <strong>38%</strong>
+        </div>
+        <div class="bar-row">
+          <span>Finishes</span>
+          <div class="bar-track"><span class="bar-fill is-idle" style="width:6%"></span></div>
+          <strong>6%</strong>
+        </div>
+      </div>
+
+      <ul class="panel-list">
+        <li><span>Client deposits received</span><strong class="pos">$60,000.00</strong></li>
+        <li><span>Materials &amp; deliveries</span><strong>−$14,900.00</strong></li>
+        <li><span>Labour &amp; site works</span><strong>−$6,600.00</strong></li>
+        <li><span>Statutory &amp; professional fees</span><strong>−$1,700.00</strong></li>
+        <li><span>Transport &amp; equipment</span><strong>−$620.00</strong></li>
+      </ul>
+
+      <div class="panel-foot">
+        <span class="receipt-thumb">{{ icon('receipt', 20) }}</span>
+        <div>
+          <p class="panel-label">Latest receipt</p>
+          <p class="panel-sub">Halsted Builders Express · INV-4471</p>
+        </div>
+        <span class="badge badge-success">Verified</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="whatsapp">
+  <div class="container wa-grid">
+    <div class="phone">
+      <div class="phone-top">
+        <span class="phone-avatar">{{ icon('message', 16) }}</span>
+        <div>
+          <p class="phone-name">Vaka assistant</p>
+          <p class="phone-status">online · replies instantly</p>
+        </div>
+      </div>
+      <div class="phone-body">
+        <div class="bubble bubble-in">Hi, how much have I used so far?</div>
+        <div class="bubble bubble-out">
+          <strong>Greendale Family Home</strong><br />
+          Received: $60,000.00<br />
+          Used: $29,020.00<br />
+          <strong>Available: $30,980.00</strong>
+        </div>
+        <div class="bubble bubble-in">Status</div>
+        <div class="bubble bubble-out">
+          Progress: 39% (9/19 stages)<br />
+          Now: Superstructure brickwork
+        </div>
+        <div class="bubble bubble-in">PAY 2500</div>
+        <div class="bubble bubble-out">
+          Logged a $2,500.00 deposit notification. Status: pending verification.
+        </div>
+      </div>
+      <div class="phone-input">Type a message…</div>
+    </div>
+
+    <div class="wa-copy">
+      <p class="eyebrow">WhatsApp-native</p>
+      <h2>Updates land where your family already chats.</h2>
+      <p class="lead">
+        The Vaka assistant answers balance and progress questions over WhatsApp,
+        logs deposits you mention, and hands the conversation to your build manager
+        when a human is needed.
+      </p>
+
+      <div class="command-grid">
+        <div class="command"><code>BALANCE</code><span>Money received vs spent</span></div>
+        <div class="command"><code>STATUS</code><span>Current stage and progress</span></div>
+        <div class="command"><code>PAY 500</code><span>Log a deposit notification</span></div>
+        <div class="command"><code>RECEIPT</code><span>How to attach proof</span></div>
+      </div>
+
+      <div class="callout">
+        {{ icon('sparkles', 18) }}
+        <p>
+          <strong>Chatbot infrastructure, ready for Meta.</strong> Point the webhook
+          at your project and messages flow into this same ledger — no second
+          system of record.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-sand" id="agreements">
+  <div class="container agreement-grid">
+    <div class="contract-card">
+      <div class="contract-head">
+        {{ logo_mark(30) }}
+        <div>
+          <p class="contract-title">Residential build contract</p>
+          <p class="contract-sub">Greendale Family Home · VK-2401</p>
+        </div>
+        <span class="badge badge-success">Signed</span>
+      </div>
+      <div class="contract-body">
+        <div class="contract-line"><span>Contract value</span><strong>$85,000.00</strong></div>
+        <div class="contract-line"><span>Payment schedule</span><strong>4 milestones</strong></div>
+        <div class="contract-line"><span>Retention</span><strong>5% until snag close</strong></div>
+        <div class="contract-line"><span>Governing law</span><strong>Zimbabwe</strong></div>
+        <div class="signature">
+          <p class="signature-name">Rudo Chikafu</p>
+          <p class="signature-line">Client signature · 2 March 2026</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="eyebrow">Agreements that survive the WhatsApp group</p>
+      <h2>Scope, milestones and signatures in one place.</h2>
+      <p class="lead">
+        Build the agreement inside Vaka: scope of works, contract value, payment
+        milestones, retention and governing law. Your client signs on screen; the
+        signed copy stays attached to the project forever.
+      </p>
+      <ul class="check-list">
+        <li>{{ icon('check', 18) }}<span>Payment schedule tied to real stages</span></li>
+        <li>{{ icon('check', 18) }}<span>Variations captured before work starts</span></li>
+        <li>{{ icon('check', 18) }}<span>Printable, signed record</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="suppliers">
+  <div class="container">
+    <div class="section-head section-head-row">
+      <div>
+        <p class="eyebrow">Source locally, confidently</p>
+        <h2>Links to the suppliers who actually stock it.</h2>
+        <p class="lead">
+          Cement, roof sheets, rebar, tiles, paint and electrical — start with
+          established Zimbabwean suppliers, then record the quote against your project.
+        </p>
+      </div>
+      <a class="btn btn-outline" href="/suppliers">Browse the directory {{ icon('arrow-right', 16) }}</a>
+    </div>
+
+    <div class="supplier-preview">
+      {% for supplier in suppliers %}
+        <article class="supplier-card">
+          <div class="supplier-top">
+            <span class="supplier-mark">{{ supplier.name[0] }}</span>
+            <span class="badge badge-soft">{{ supplier.category }}</span>
+          </div>
+          <h3>{{ supplier.name }}</h3>
+          <p class="supplier-city">{{ icon('map-pin', 13) }} {{ supplier.city }}</p>
+          <p class="supplier-desc">{{ supplier.description }}</p>
+          <a class="link-arrow" href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">
+            View catalogue {{ icon('external', 14) }}
+          </a>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container pwa-band">
+    <div class="pwa-icon">{{ icon('download', 26) }}</div>
+    <div>
+      <h2>Install it like an app. Use it like a ledger.</h2>
+      <p>
+        Vaka installs to your phone's home screen — no app store, no 300MB
+        download. Static screens load instantly, and if the signal drops on site
+        you get a clear offline state instead of a broken browser page.
+      </p>
+    </div>
+    <div class="pwa-actions">
+      <button class="btn btn-light install-btn" type="button" id="install-btn">
+        {{ icon('download', 17) }} Add to home screen
+      </button>
+      <span class="pwa-note">Works on iOS, Android and desktop</span>
+    </div>
+  </div>
+</section>
+
+<section class="section section-final">
+  <div class="container final-card">
+    <div class="final-brand">{{ logo_mark(46) }}</div>
+    <p class="eyebrow eyebrow-light">Start where you are</p>
+    <h2>Your first project workspace is free.</h2>
+    <p>
+      Set up the stand, invite your build manager and see the whole plan before
+      the first dollar moves.
+    </p>
+    <div class="final-actions">
+      <a class="btn btn-light btn-lg" href="/register">Create your workspace</a>
+      <a class="btn btn-ghost-light btn-lg" href="/login">Sign in</a>
+    </div>
+    <p class="final-note">Built in Zimbabwe · USD-first · PWA on every device</p>
+  </div>
+</section>
+{% endblock %}

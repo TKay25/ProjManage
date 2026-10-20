@@ -1,0 +1,10 @@
+HTTP/1.1 302 FOUND
+Server: Werkzeug/3.0.3 Python/3.14.4
+Date: Tue, 20 Oct 2026 08:50:12 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 259
+Location: /app/agreements/989db2816b924ff3a33d
+Vary: Cookie
+Set-Cookie: vaka_session=.eJxlzMtqAjEYhuFbCd86iNbq1Ow8UAqVCoowKCIx-eMMM5OEHCpWvHfRbdfvw3vD0bQyVhQh9jewBLFHzEpRjOBYOJU7soll3zqpSfdwuPP_bnoORC8Y5S_pHtuQ1axOLDmWKmKqrZ_RuMBifbYy5UDP1YHj6Cl00pJNEClk4lAxGAh85V3RjObOVtetX_tBmcvysz9cTsvl7Hv1s-oafxn1523114Aj1xoCH3JsJqfhpBgU9D42hZSnN9wf8pRMFg.atcrRA.P3cbx6duO53cMpruzvS0eqtsztE; Expires=Tue, 27 Oct 2026 08:50:12 GMT; HttpOnly; Path=/; SameSite=Lax
+Connection: close
+

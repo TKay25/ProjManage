@@ -1,0 +1,317 @@
+{% extends "app/base.html" %}
+{% block title %}Dashboard · Vaka{% endblock %}
+
+{% block page_title %}{{ greeting }}, {{ first_name }}{% endblock %}
+{% block page_subtitle %}
+  {% if project %}
+    <p class="page-subtitle">{{ project.name }} · {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}</p>
+  {% else %}
+    <p class="page-subtitle">Let's get your build onto Vaka.</p>
+  {% endif %}
+{% endblock %}
+
+{% block page_actions %}
+  {% if project %}
+    <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}#record">{{ icon('plus', 15) }} Record money</a>
+  {% endif %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}">{{ icon('plus', 15) }} New project</a>
+{% endblock %}
+
+{% block content %}
+{% if not project %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('building', 26) }}</span>
+      <h3>Create your first project</h3>
+      <p>Add the stand, budget and target date. Vaka builds the full Zimbabwe stage plan for you.</p>
+      <a class="btn btn-primary" href="{{ url_for('projects.new') }}">{{ icon('plus', 16) }} Create project</a>
+    </div>
+  </div>
+{% else %}
+  {% set funded_percent = ((totals.spent / totals.funded) * 100)|round|int if totals.funded else 0 %}
+  {% set max_value = ([1] + flow|map(attribute='funded')|list + flow|map(attribute='spent')|list)|max %}
+
+  {% if projects|length > 1 %}
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="toolbar-label">Viewing</span>
+        <form class="inline-form" method="get" action="{{ url_for('dashboard.index') }}">
+          <label class="field-inline">
+            <span class="sr-only">Project</span>
+            <select class="select select-sm" name="project" data-autosubmit>
+              {% for item in projects %}
+                <option value="{{ item.id }}" {% if item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <noscript><button class="btn btn-ghost btn-sm" type="submit">Switch</button></noscript>
+        </form>
+      </div>
+      <a class="link-quiet" href="{{ url_for('projects.index') }}">All projects {{ icon('arrow-right', 14) }}</a>
+    </div>
+  {% endif %}
+
+  <div class="kpi-grid">
+    <a class="kpi card-hover" href="{{ url_for('money.index', project=project.id) }}">
+      <div class="kpi-top">
+        <span class="kpi-label">Available balance</span>
+        <span class="kpi-icon kpi-icon-{{ 'negative' if totals.balance < 0 else 'positive' }}">{{ icon('wallet', 17) }}</span>
+      </div>
+      <p class="kpi-value {{ 'is-negative' if totals.balance < 0 }}">{{ totals.balance|money }}</p>
+      <p class="kpi-sub">{{ totals.funded|money }} received · {{ totals.spent|money }} spent</p>
+    </a>
+
+    <a class="kpi card-hover" href="{{ url_for('money.index', project=project.id, filter='funding') }}">
+      <div class="kpi-top">
+        <span class="kpi-label">Total received</span>
+        <span class="kpi-icon">{{ icon('trending-up', 17) }}</span>
+      </div>
+      <p class="kpi-value">{{ totals.funded|money }}</p>
+      <p class="kpi-sub">{{ transactions|selectattr('type', 'equalto', 'FUNDING')|list|length }} funding entries</p>
+    </a>
+
+    <a class="kpi card-hover" href="{{ url_for('money.index', project=project.id, filter='expense') }}">
+      <div class="kpi-top">
+        <span class="kpi-label">Total spent</span>
+        <span class="kpi-icon">{{ icon('receipt', 17) }}</span>
+      </div>
+      <p class="kpi-value">{{ totals.spent|money }}</p>
+      <p class="kpi-sub">{{ funded_percent }}% of funds used</p>
+    </a>
+
+    <a class="kpi card-hover" href="{{ url_for('projects.detail', project_id=project.id) }}">
+      <div class="kpi-top">
+        <span class="kpi-label">Build progress</span>
+        <span class="kpi-icon">{{ icon('building', 17) }}</span>
+      </div>
+      <p class="kpi-value">{{ project.progress }}%</p>
+      <p class="kpi-sub">{{ completed_count }} of {{ stages|length }} stages complete</p>
+    </a>
+  </div>
+
+  <div class="dash-grid">
+    <div class="dash-main">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Cash flow</h2>
+            <p class="card-sub">Last six months on {{ project.name }}</p>
+          </div>
+          <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">Open ledger {{ icon('arrow-right', 14) }}</a>
+        </div>
+
+        <div class="chart">
+          <div class="chart-legend">
+            <span><i class="dot dot-funded"></i> Received</span>
+            <span><i class="dot dot-spent"></i> Spent</span>
+          </div>
+          <div class="chart-area">
+            {% for line in [100, 75, 50, 25, 0] %}
+              <span class="chart-line" style="bottom:{{ line }}%"></span>
+            {% endfor %}
+            <div class="chart-groups">
+              {% for item in flow %}
+                <div class="chart-group">
+                  <div class="chart-bars">
+                    <span class="chart-bar bar-funded" style="height:{{ (((item.funded / max_value) * 100)|round|int) if item.funded else 3 }}%" title="Received {{ item.funded|money }}"></span>
+                    <span class="chart-bar bar-spent" style="height:{{ (((item.spent / max_value) * 100)|round|int) if item.spent else 3 }}%" title="Spent {{ item.spent|money }}"></span>
+                  </div>
+                  <span class="chart-label">{{ item.label }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-summary">
+          <div><span class="muted small">Received</span><strong>{{ totals.funded|money_compact }}</strong></div>
+          <div><span class="muted small">Spent</span><strong>{{ totals.spent|money_compact }}</strong></div>
+          <div><span class="muted small">Remaining</span><strong class="{{ 'neg' if totals.balance < 0 else 'pos' }}">{{ totals.balance|money_compact }}</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Latest money movements</h2>
+            <p class="card-sub">Receipts stay attached to every expense</p>
+          </div>
+          <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">View all {{ icon('arrow-right', 14) }}</a>
+        </div>
+
+        {% if transactions %}
+          <ul class="tx-list">
+            {% for tx in transactions %}
+              {% include "partials/tx_row.html" %}
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="empty">
+            <span class="empty-icon">{{ icon('wallet', 26) }}</span>
+            <h3>No money recorded yet</h3>
+            <p>Record the first client deposit to start the ledger.</p>
+            <a class="btn btn-primary" href="{{ url_for('money.index', project=project.id) }}#record">Record money</a>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if missing %}
+        <div class="card">
+          <div class="card-head">
+            <h2>Receipts to chase</h2>
+            <a class="link-quiet" href="{{ url_for('money.index', project=project.id, filter='missing') }}">View all</a>
+          </div>
+          <ul class="mini-list">
+            {% for tx in missing[:4] %}
+              <li>
+                <span class="mini-icon">{{ icon('receipt', 15) }}</span>
+                <div>
+                  <p class="mini-title">{{ tx.description }}</p>
+                  <p class="mini-meta">{{ tx.amount_cents|money }} · {{ tx.occurred_at|date }}</p>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+          <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('money.index', project=project.id, filter='missing') }}">Attach receipts</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="dash-side">
+      <div class="card stage-focus">
+        <div class="card-head">
+          <h2>Current stage</h2>
+          {% if current %}{{ badge(current.status) }}{% else %}<span class="badge badge-success">Complete</span>{% endif %}
+        </div>
+
+        {% if current %}
+          <div class="stage-focus-body">
+            {{ progress_ring(project.progress, 92) }}
+            <div>
+              <p class="stage-focus-name">{{ current.name }}</p>
+              <p class="stage-focus-meta">
+                Stage {{ current.position }} of {{ stages|length }}
+                {% if current_definition and current_definition.authority %}
+                  <br /><span class="authority-tag">{{ icon('shield', 12) }} {{ current_definition.authority }}</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+          {% if current_definition %}<p class="stage-focus-summary">{{ current_definition.summary }}</p>{% endif %}
+          <div class="stage-focus-foot">
+            <span class="muted small">Stage budget</span>
+            <strong>{{ current.budget_cents|money }}</strong>
+          </div>
+          <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('projects.detail', project_id=project.id) }}#stage-{{ current.key }}">
+            Open stage checklist {{ icon('arrow-right', 15) }}
+          </a>
+        {% else %}
+          <div class="complete-state">
+            {{ icon('check', 30) }}
+            <h3>All stages complete</h3>
+            <p>Time to close the snag list and hand over the keys.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Needs your attention</h2>
+          <span class="count-pill">{{ alerts|length }}</span>
+        </div>
+        {% if alerts %}
+          <ul class="alert-list">
+            {% for alert in alerts %}
+              <li class="alert-item alert-{{ alert.tone }}">
+                <span class="alert-icon">{{ icon(alert.icon, 16) }}</span>
+                <div>
+                  <p class="alert-title">{{ alert.title }}</p>
+                  <p class="alert-body">{{ alert.body }}</p>
+                </div>
+                {% if alert.href %}<a class="alert-link" href="{{ alert.href }}" aria-label="Open">{{ icon('chevron-right', 16) }}</a>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="all-clear">
+            <span>{{ icon('check', 18) }}</span>
+            <p>Everything is in order. No blocked stages or missing receipts.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if upcoming %}
+        <div class="card">
+          <div class="card-head"><h2>Coming up</h2></div>
+          <ol class="upcoming-list">
+            {% for stage in upcoming %}
+              <li>
+                <span class="upcoming-index">{{ loop.index }}</span>
+                <div>
+                  <p class="mini-title">{{ stage.name }}</p>
+                  <p class="mini-meta">
+                    {% if stage_by_key(stage.key) and stage_by_key(stage.key).authority %}
+                      {{ icon('shield', 11) }} {{ stage_by_key(stage.key).authority }}
+                    {% else %}
+                      Site works
+                    {% endif %}
+                    · {{ stage.budget_cents|money }}
+                  </p>
+                </div>
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+      {% endif %}
+
+      {% if activity %}
+        <div class="card">
+          <div class="card-head"><h2>Project log</h2></div>
+          <ul class="timeline">
+            {% for event in activity %}
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">{{ event.detail }}</p>
+                  <p class="mini-meta">{{ event.user_name or 'System' }} · {{ event.created_at|date }}</p>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+
+  <section class="section-block">
+    <div class="section-block-head">
+      <h2>Your projects</h2>
+      {% if projects|length > 1 %}<a class="link-quiet" href="{{ url_for('projects.index') }}">Manage {{ icon('arrow-right', 14) }}</a>{% endif %}
+    </div>
+    <div class="project-grid">
+      {% for item in projects %}
+        <a class="project-card {{ 'is-active' if item.id == project.id }}" href="{{ url_for('projects.detail', project_id=item.id) }}">
+          <div class="project-card-head">
+            <span class="project-code">{{ item.code }}</span>
+            {{ badge(item.status) }}
+          </div>
+          <h3>{{ item.name }}</h3>
+          <p class="project-location">{{ icon('map-pin', 13) }} {% if item.suburb %}{{ item.suburb }}, {% endif %}{{ item.city }}</p>
+          <div class="project-card-progress">
+            {{ progress_bar(item.progress) }}<span>{{ item.progress }}%</span>
+          </div>
+          <dl class="project-card-money">
+            <div><dt>Funded</dt><dd>{{ item.totals.funded|money }}</dd></div>
+            <div><dt>Spent</dt><dd>{{ item.totals.spent|money }}</dd></div>
+          </dl>
+        </a>
+      {% endfor %}
+      <a class="project-card project-card-new" href="{{ url_for('projects.new') }}">
+        <span class="project-new-icon">{{ icon('plus', 20) }}</span>
+        <h3>Add a project</h3>
+        <p>Start a new stand or rental build.</p>
+      </a>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,277 @@
+{% extends "app/base.html" %}
+{% block title %}Money · Vaka{% endblock %}
+
+{% block page_title %}Money{% endblock %}
+{% block page_subtitle %}
+  {% if project %}
+    <p class="page-subtitle">{{ project.name }} · every deposit, expense and receipt in one ledger</p>
+  {% endif %}
+{% endblock %}
+{% block page_actions %}
+  {% if project %}
+    <a class="btn btn-primary btn-sm" href="#record">{{ icon('plus', 15) }} Record money</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not project %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('wallet', 26) }}</span>
+      <h3>Create a project first</h3>
+      <p>Money is tracked against a project so the balance always means something.</p>
+      <a class="btn btn-primary" href="{{ url_for('projects.new') }}">{{ icon('plus', 16) }} Create project</a>
+    </div>
+  </div>
+{% else %}
+
+{% if projects|length > 1 %}
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="toolbar-label">Project</span>
+      <form class="inline-form" method="get" action="{{ url_for('money.index') }}">
+        <select class="select select-sm" name="project" data-autosubmit>
+          {% for item in projects %}
+            <option value="{{ item.id }}" {% if item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button class="btn btn-ghost btn-sm" type="submit">Switch</button></noscript>
+      </form>
+    </div>
+    <a class="link-quiet" href="{{ url_for('dashboard.index', project=project.id) }}">Dashboard {{ icon('arrow-right', 14) }}</a>
+  </div>
+{% endif %}
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-top">
+      <span class="kpi-label">Available balance</span>
+      <span class="kpi-icon kpi-icon-{{ 'negative' if totals.balance < 0 else 'positive' }}">{{ icon('wallet', 17) }}</span>
+    </div>
+    <p class="kpi-value {{ 'is-negative' if totals.balance < 0 }}" data-ledger-balance="{{ totals.balance }}">{{ totals.balance|money }}</p>
+    <p class="kpi-sub">Received minus everything spent</p>
+  </div>
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Total received</span><span class="kpi-icon">{{ icon('trending-up', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.funded|money }}</p>
+    <p class="kpi-sub">Client deposits and top-ups</p>
+  </div>
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Total spent</span><span class="kpi-icon">{{ icon('receipt', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.spent|money }}</p>
+    <p class="kpi-sub">{{ ((totals.spent / totals.funded) * 100)|round|int if totals.funded else 0 }}% of funds used</p>
+  </div>
+  <a class="kpi card-hover" href="{{ url_for('money.index', project=project.id, filter='missing') }}">
+    <div class="kpi-top"><span class="kpi-label">Missing receipts</span><span class="kpi-icon kpi-icon-warn">{{ icon('alert', 17) }}</span></div>
+    <p class="kpi-value">{{ missing_count }}</p>
+    <p class="kpi-sub">Expenses that still need proof</p>
+  </a>
+</div>
+
+<div class="money-layout">
+  <div class="money-ledger">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Ledger</h2>
+          <p class="card-sub">Newest first · receipts open in a new tab</p>
+        </div>
+        <div class="segmented">
+          {% for key, label in [('all', 'All'), ('funding', 'Received'), ('expense', 'Spent'), ('missing', 'No receipt')] %}
+            <a class="segment {{ 'is-active' if filter_type == key }}" href="{{ url_for('money.index', project=project.id, filter=key, stage=stage_filter) }}">{{ label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <form class="filter-bar" method="get" action="{{ url_for('money.index') }}">
+        <input type="hidden" name="project" value="{{ project.id }}" />
+        <input type="hidden" name="filter" value="{{ filter_type }}" />
+        <label class="search-field">
+          {{ icon('search', 16) }}
+          <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search description or reference" />
+        </label>
+        <select class="select select-sm" name="stage" data-autosubmit>
+          <option value="">All stages</option>
+          {% for stage in stages %}
+            <option value="{{ stage.key }}" {% if stage_filter == stage.key %}selected{% endif %}>{{ stage.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-outline btn-sm" type="submit">Filter</button>
+        {% if search or stage_filter %}
+          <a class="link-quiet" href="{{ url_for('money.index', project=project.id, filter=filter_type) }}">Clear</a>
+        {% endif %}
+      </form>
+
+      {% if transactions %}
+        <ul class="ledger-list">
+          {% for tx in transactions %}
+            {% set is_funding = tx.type == 'FUNDING' %}
+            {% set stage = stage_by_key(tx.stage_key) %}
+            <li class="ledger-row" id="tx-{{ tx.id }}">
+              <span class="tx-icon {{ 'tx-in' if is_funding else 'tx-out' }}">{{ icon('wallet' if is_funding else 'receipt', 17) }}</span>
+              <div class="ledger-main">
+                <p class="tx-title">{{ tx.description }}</p>
+                <p class="tx-meta">
+                  {{ category_label(tx.category) }}{% if stage %} · {{ stage.name }}{% endif %} · {{ method_label(tx.method) }}
+                </p>
+                <p class="tx-meta">
+                  {{ tx.occurred_at|date }}{% if tx.reference %} · Ref {{ tx.reference }}{% endif %}
+                </p>
+              </div>
+              <div class="ledger-actions">
+                <p class="tx-amount {{ 'is-in' if is_funding else '' }}">{{ '+' if is_funding else '−' }}{{ tx.amount_cents|money }}</p>
+                <div class="row-buttons">
+                  {% if tx.receipt_id %}
+                    <a class="btn btn-ghost btn-xs" href="{{ url_for('documents.serve', attachment_id=tx.receipt_id) }}" target="_blank" rel="noopener">{{ icon('eye', 13) }} Receipt</a>
+                  {% endif %}
+                  <details class="row-menu">
+                    <summary class="btn btn-ghost btn-xs" aria-label="Actions">{{ icon('settings', 13) }} Manage</summary>
+                    <div class="row-menu-panel">
+                      <form method="post" action="{{ url_for('money.attach_receipt', transaction_id=tx.id) }}" enctype="multipart/form-data" class="stack-sm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <label class="field">
+                          <span class="field-label">{{ 'Replace receipt' if tx.receipt_id else 'Attach receipt' }}</span>
+                          <input class="input input-file" type="file" name="receipt" accept="image/*,application/pdf" required />
+                        </label>
+                        <button class="btn btn-outline btn-sm btn-block" type="submit">{{ icon('upload', 14) }} Upload</button>
+                      </form>
+                      <form method="post" action="{{ url_for('money.delete', transaction_id=tx.id) }}" data-confirm="Delete this ledger entry? This cannot be undone.">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button class="btn btn-danger-ghost btn-sm btn-block" type="submit">{{ icon('trash', 14) }} Delete entry</button>
+                      </form>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="empty">
+          <span class="empty-icon">{{ icon('receipt', 26) }}</span>
+          <h3>No entries match</h3>
+          <p>Record a deposit or expense, or clear the filters.</p>
+          <a class="btn btn-primary" href="#record">{{ icon('plus', 15) }} Record money</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <aside class="money-side">
+    <div class="card" id="record">
+      <div class="card-head">
+        <h2>Record money</h2>
+        <span class="badge badge-soft">USD</span>
+      </div>
+
+      <form class="form" method="post" action="{{ url_for('money.create') }}" enctype="multipart/form-data" data-money-form data-balance="{{ totals.balance }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="project_id" value="{{ project.id }}" />
+
+        <div class="type-toggle">
+          <label class="type-option">
+            <input type="radio" name="type" value="EXPENSE" checked />
+            <span>{{ icon('receipt', 15) }} Money out</span>
+          </label>
+          <label class="type-option">
+            <input type="radio" name="type" value="FUNDING" />
+            <span>{{ icon('wallet', 15) }} Money in</span>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Amount (USD)</span>
+          <div class="money-input">
+            <span>$</span>
+            <input class="input" type="text" name="amount" inputmode="decimal" required placeholder="0.00" data-amount />
+          </div>
+          <span class="field-hint" data-balance-hint>Balance after this entry: {{ totals.balance|money }}</span>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Description</span>
+          <input class="input" type="text" name="description" maxlength="200" required placeholder="Cement, river sand and rebar" />
+        </label>
+
+        <div class="form-row expense-only">
+          <label class="field">
+            <span class="field-label">Category</span>
+            <select class="select" name="category">
+              {% for value, label in TRANSACTION_CATEGORIES if value != 'client_deposit' %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Method</span>
+            <select class="select" name="method">
+              {% for value, label in PAYMENT_METHODS %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Build stage</span>
+            <select class="select" name="stage_key">
+              <option value="">Not allocated</option>
+              {% for stage in stages %}
+                <option value="{{ stage.key }}" {% if need_stage is defined and need_stage == stage.key %}selected{% endif %}>{{ stage.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Date</span>
+            <input class="input" type="date" name="occurred_at" value="{{ today }}" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Reference (optional)</span>
+          <input class="input" type="text" name="reference" maxlength="80" placeholder="Bank ref, invoice or EcoCash code" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Receipt or bank slip</span>
+          <input class="input input-file" type="file" name="receipt" accept="image/*,application/pdf" data-receipt-input />
+          <span class="field-hint">JPG, PNG, WebP or PDF · up to 8MB</span>
+        </label>
+
+        <div class="upload-preview" data-upload-preview hidden>
+          <span class="upload-preview-icon">{{ icon('receipt', 18) }}</span>
+          <div>
+            <p class="mini-title" data-upload-name></p>
+            <p class="mini-meta" data-upload-size></p>
+          </div>
+          <button class="icon-btn" type="button" data-upload-clear aria-label="Remove file">{{ icon('close', 14) }}</button>
+        </div>
+
+        <button class="btn btn-primary btn-block" type="submit">{{ icon('check', 16) }} Save entry</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Spend by category</h2>
+        <span class="muted small">{{ totals.spent|money }} total</span>
+      </div>
+      {% if breakdown %}
+        <div class="panel-bars">
+          {% for row in breakdown %}
+            <div class="bar-row">
+              <span>{{ category_label(row.category) }}</span>
+              <div class="bar-track"><span class="bar-fill" style="width:{{ ((row.total / spent_total) * 100)|round|int }}%"></span></div>
+              <strong>{{ ((row.total / spent_total) * 100)|round|int }}%</strong>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted small">No expenses recorded yet.</p>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

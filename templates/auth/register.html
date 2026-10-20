@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Create your account · Vaka{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block chrome %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <div class="container auth-grid">
+    <aside class="auth-aside">
+      <a class="auth-brand" href="/">
+        {{ logo_mark(44) }}
+        <span><strong>Vaka</strong><small>Build from anywhere</small></span>
+      </a>
+
+      <div class="auth-quote">
+        <p class="eyebrow eyebrow-light">Built for the diaspora</p>
+        <h2>One build file your whole family can trust.</h2>
+        <p class="auth-quote-sub">
+          Start free. Add the stand, set the budget, and invite your build
+          manager when you are ready.
+        </p>
+      </div>
+
+      <ul class="auth-points">
+        <li>{{ icon('shield', 17) }} Council &amp; statutory stage gates</li>
+        <li>{{ icon('wallet', 17) }} USD funding vs spend, with receipts</li>
+        <li>{{ icon('message', 17) }} WhatsApp balance and status updates</li>
+        <li>{{ icon('folder', 17) }} Agreement, plans and handover file</li>
+      </ul>
+    </aside>
+
+    <div class="auth-card">
+      <div class="auth-head">
+        <p class="eyebrow">Create your account</p>
+        <h1>Start your build file</h1>
+        <p class="muted">Free to set up. Invite your build manager once you are in.</p>
+      </div>
+
+      <form class="form" method="post" action="{{ url_for('auth.register_post') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        {% if error %}
+          <div class="form-error">{{ icon('alert', 17) }}<span>{{ error }}</span></div>
+        {% endif %}
+
+        <label class="field">
+          <span class="field-label">Full name</span>
+          <input class="input" type="text" name="name" value="{{ values.get('name', '') }}" autocomplete="name" required placeholder="Rudo Chikafu" />
+        </label>
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Email address</span>
+            <input class="input" type="email" name="email" value="{{ values.get('email', '') }}" autocomplete="email" required placeholder="you@example.com" />
+          </label>
+          <label class="field">
+            <span class="field-label">WhatsApp number</span>
+            <input class="input" type="tel" name="phone" value="{{ values.get('phone', '') }}" autocomplete="tel" placeholder="+263 77 123 4567" />
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Where do you live?</span>
+            <select class="select" name="country">
+              {% for country in ['United Kingdom', 'South Africa', 'United States', 'Canada', 'Australia', 'United Arab Emirates', 'Ireland', 'New Zealand', 'Botswana', 'Zimbabwe', 'Other'] %}
+                <option value="{{ country }}" {% if values.get('country') == country %}selected{% endif %}>{{ country }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">I am a…</span>
+            <select class="select" name="role">
+              <option value="client" {% if values.get('role') != 'manager' %}selected{% endif %}>Client / project owner</option>
+              <option value="manager" {% if values.get('role') == 'manager' %}selected{% endif %}>Build manager / contractor</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Password</span>
+          <input class="input" type="password" name="password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters" />
+          <span class="field-hint">Use a password you do not use for banking.</span>
+        </label>
+
+        <label class="checkbox">
+          <input type="checkbox" name="terms" value="yes" required />
+          <span>I understand Vaka is a project management tool, not a bank, lender or legal adviser.</span>
+        </label>
+
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Create workspace {{ icon('arrow-right', 17) }}</button>
+      </form>
+
+      <div class="auth-foot">
+        <p>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

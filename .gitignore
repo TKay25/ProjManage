@@ -1,0 +1,12 @@
+# local database + uploaded documents
+prisma/*.db
+prisma/*.db-journal
+uploads/
+
+# next
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Artifacto — generated semantic artifacts (auto-updated by plugin)
+artifacts/
