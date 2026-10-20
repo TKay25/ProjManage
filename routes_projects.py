@@ -8,6 +8,7 @@ import web
 from auth import accessible_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query, touch_project
 from money import format_money, parse_money_to_cents
+from paging import offset, page_number, page_window
 from queries import (
     latest_activity,
     money_totals,
@@ -21,6 +22,8 @@ from stages import STAGE_GROUPS, STAGES, project_progress, stage_by_key, stage_b
 
 bp = Blueprint("projects", __name__)
 
+PAGE_SIZE = 12
+
 
 def _next_code() -> str:
     count = query("SELECT COUNT(*) AS count FROM projects", one=True)["count"]
@@ -31,7 +34,40 @@ def _next_code() -> str:
 @login_required
 def index():
     projects = projects_with_summary(accessible_projects(g.user))
-    return render_template("app/projects.html", title="Projects", active="projects", projects=projects)
+    search = (request.args.get("q") or "").strip()
+    status = request.args.get("status", "all")
+
+    if status != "all":
+        projects = [row for row in projects if row["status"] == status]
+
+    if search:
+        needle = search.lower()
+        projects = [
+            row
+            for row in projects
+            if needle in (row["name"] or "").lower()
+            or needle in (row["code"] or "").lower()
+            or needle in (row["suburb"] or "").lower()
+        ]
+
+    total_rows = len(projects)
+    page, page_count = page_window(page_number(), total_rows, PAGE_SIZE)
+    start = offset(page, PAGE_SIZE)
+    visible = projects[start : start + PAGE_SIZE]
+
+    return render_template(
+        "app/projects.html",
+        title="Projects",
+        active="projects",
+        projects=visible,
+        search=search,
+        status=status,
+        total_rows=total_rows,
+        page=page,
+        page_count=page_count,
+        pager_endpoint="projects.index",
+        pager_args={"q": search, "status": status},
+    )
 
 
 @bp.get("/app/projects/new")
@@ -125,7 +161,6 @@ def create():
             fragment=render_template("partials/project_card.html", project=created),
             target="[data-project-grid]",
             mode="prepend",
-            redirect_to=url_for("projects.detail", project_id=project_id),
         )
 
     flash("Project created. Vaka has added the full Zimbabwe stage plan.", "success")

@@ -26,19 +26,42 @@ def wants_json() -> bool:
     )
 
 
-def ok(message, *, fragment=None, target=None, mode="replace", fields=None, redirect_to=None, reload=False, status=200):
-    """Successful JSON response, optionally patching part of the current page."""
+def ok(
+    message,
+    *,
+    fragment=None,
+    target=None,
+    mode="replace",
+    fields=None,
+    html=None,
+    redirect_to=None,
+    reload=False,
+    status=200,
+    title=None,
+):
+    """Successful JSON response, optionally patching part of the current page.
+
+    A fragment without a target is content for a reader dialog: the client drops
+    it into the shared modal body instead of replacing part of the page. ``fields``
+    sets plain text; ``html`` swaps inner markup (badges, chips) where the styling
+    has to change too.
+    """
     payload = {"ok": True, "message": message}
-    if target:
-        payload["fragment"] = str(fragment or "")
-        payload["target"] = target
-        payload["mode"] = mode if mode in PATCH_MODES else "replace"
+    if fragment:
+        payload["fragment"] = str(fragment)
+        if target:
+            payload["target"] = target
+            payload["mode"] = mode if mode in PATCH_MODES else "replace"
     if fields:
         payload["fields"] = fields
+    if html:
+        payload["html"] = html
     if redirect_to:
         payload["redirect"] = redirect_to
     if reload:
         payload["reload"] = True
+    if title:
+        payload["title"] = title
     return jsonify(payload), status
 
 

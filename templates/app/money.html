@@ -9,6 +9,9 @@
 {% endblock %}
 {% block page_actions %}
   {% if project %}
+    <a class="btn btn-outline btn-sm" href="{{ url_for('money.export', project=project.id, filter=filter_type, q=search, stage=stage_filter) }}">
+      {{ icon('download', 15) }} Export CSV
+    </a>
     <a class="btn btn-primary btn-sm" href="{{ url_for('money.index', project=project.id) }}" data-modal-open="modal-money">
       {{ icon('plus', 15) }} Record money
     </a>
@@ -32,7 +35,7 @@
     <div class="toolbar-left">
       <span class="toolbar-label">Project</span>
       <form class="inline-form" method="get" action="{{ url_for('money.index') }}">
-        <select class="select select-sm" name="project" data-autosubmit>
+        <select class="select select-sm" name="project" data-autosubmit aria-label="Choose project">
           {% for item in projects %}
             <option value="{{ item.id }}" {% if item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
           {% endfor %}
@@ -76,11 +79,12 @@
       <div class="card-head">
         <div>
           <h2>Ledger</h2>
-          <p class="card-sub">Newest first · receipts open in a new tab</p>
+          <p class="card-sub">{{ total_rows }} {{ 'entry' if total_rows == 1 else 'entries' }} · newest first · receipts open in a new tab</p>
         </div>
         <div class="segmented">
           {% for key, label in [('all', 'All'), ('funding', 'Received'), ('expense', 'Spent'), ('missing', 'No receipt')] %}
-            <a class="segment {{ 'is-active' if filter_type == key }}" href="{{ url_for('money.index', project=project.id, filter=key, stage=stage_filter) }}">{{ label }}</a>
+            <a class="segment {{ 'is-active' if filter_type == key }}" href="{{ url_for('money.index', project=project.id, filter=key, stage=stage_filter, q=search) }}"
+               {% if filter_type == key %}aria-current="true"{% endif %}>{{ label }}</a>
           {% endfor %}
         </div>
       </div>
@@ -90,9 +94,9 @@
         <input type="hidden" name="filter" value="{{ filter_type }}" />
         <label class="search-field">
           {{ icon('search', 16) }}
-          <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search description or reference" />
+          <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search description or reference" aria-label="Search the ledger" />
         </label>
-        <select class="select select-sm" name="stage" data-autosubmit>
+        <select class="select select-sm" name="stage" data-autosubmit aria-label="Filter by stage">
           <option value="">All stages</option>
           {% for stage in stages %}
             <option value="{{ stage.key }}" {% if stage_filter == stage.key %}selected{% endif %}>{{ stage.name }}</option>
@@ -110,6 +114,7 @@
             {% include "partials/ledger_row.html" %}
           {% endfor %}
         </ul>
+        {% include "partials/pager.html" %}
       {% else %}
         <div class="empty">
           <span class="empty-icon">{{ icon('receipt', 26) }}</span>

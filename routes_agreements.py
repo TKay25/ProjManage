@@ -9,6 +9,7 @@ import web
 from auth import accessible_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query
 from money import parse_money_to_cents
+from ui import badge
 
 bp = Blueprint("agreements", __name__)
 
@@ -184,12 +185,17 @@ def create():
             one=True,
         )
         created["schedule"] = schedule
+        message = "Agreement saved and awaiting the client's signature."
+
+        # Pages that show agreements as a compact list re-read the project once.
+        if request.form.get("_return") == "page":
+            return web.ok(message, reload=True)
+
         return web.ok(
-            "Agreement saved and awaiting the client's signature.",
+            message,
             fragment=render_template("partials/agreement_card.html", agreement=created),
             target="[data-agreement-list]",
             mode="prepend",
-            redirect_to=url_for("agreements.detail", agreement_id=agreement_id),
         )
 
     flash("Agreement saved. Send it to the client for signature.", "success")
@@ -212,16 +218,29 @@ def detail(agreement_id):
     except json.JSONDecodeError:
         schedule = []
 
+    context = {
+        "project": project,
+        "agreement": agreement,
+        "author": author,
+        "schedule": schedule,
+        "scheduled_total": sum(item.get("amountCents", 0) for item in schedule),
+    }
+
+    # Clicking an agreement opens it in the shared reader dialog, so the list
+    # never navigates away. A direct visit still gets the full page.
+    if web.wants_json():
+        return web.ok(
+            "Agreement opened.",
+            fragment=render_template("partials/agreement_view.html", **context),
+            title=agreement["title"],
+        )
+
     return render_template(
         "app/agreement_detail.html",
         title=agreement["title"],
         active="agreements",
         projects=accessible_projects(g.user),
-        project=project,
-        agreement=agreement,
-        author=author,
-        schedule=schedule,
-        scheduled_total=sum(item.get("amountCents", 0) for item in schedule),
+        **context,
     )
 
 
@@ -265,6 +284,9 @@ def sign(agreement_id):
             fragment=render_template("partials/signature_panel.html", agreement=signed, user=g.user),
             target="[data-signature-panel]",
             mode="replace",
+            # Without these the dialog would still show "awaiting signature".
+            fields={"[data-agreement-status]": "Signed"},
+            html={"[data-agreement-badge]": str(badge(signed["status"]))},
         )
 
     flash(message, "success")
@@ -284,7 +306,11 @@ def void(agreement_id):
     log_event(g.user["id"], project["id"], "agreement.void", agreement["title"][:120])
 
     if web.wants_json():
-        return web.ok("Agreement marked as void.", fields={"[data-agreement-status]": "Void"})
+        return web.ok(
+            "Agreement marked as void.",
+            fields={"[data-agreement-status]": "Void"},
+            html={"[data-agreement-badge]": str(badge("void"))},
+        )
 
     flash("Agreement marked as void.", "success")
     return redirect(url_for("agreements.detail", agreement_id=agreement_id))

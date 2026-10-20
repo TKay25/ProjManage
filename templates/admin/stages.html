@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% block title %}Stage reference · Vaka{% endblock %}
+
+{% block page_title %}Stage reference{% endblock %}
+{% block page_subtitle %}<p class="page-subtitle">The Zimbabwean sequence every project is created with</p>{% endblock %}
+
+{% block admin_content %}
+{% for group in groups %}
+  <div class="card">
+    <div class="card-head">
+      <h2>{{ group }}</h2>
+      <span class="badge badge-soft">{{ STAGES|selectattr('group', 'equalto', group)|list|length }} stages</span>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Stage</th>
+            <th scope="col">Authority</th>
+            <th scope="col" class="align-right">Budget weight</th>
+            <th scope="col">Documents to collect</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for stage in STAGES if stage.group == group %}
+            <tr>
+              <td class="mini-meta">{{ '%02d'|format(loop.index) }}</td>
+              <td>
+                <p class="admin-strong">{{ stage.name }}</p>
+                <p class="mini-meta">{{ stage.summary }}</p>
+              </td>
+              <td>
+                {% if stage.authority %}
+                  <span class="badge badge-warn">{{ icon('shield', 11) }} {{ stage.authority }}</span>
+                {% else %}
+                  <span class="mini-meta">Site works</span>
+                {% endif %}
+              </td>
+              <td class="align-right">{{ stage.weight }}%</td>
+              <td class="mini-meta">{{ (stage.documents or [])|join(', ') or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endfor %}
+
+<p class="micro-note">
+  {{ icon('alert', 13) }} Fees, forms and inspection rules differ by local
+  authority. Confirm requirements with the council, EMA, ZINWA and ZESA.
+</p>
+{% endblock %}

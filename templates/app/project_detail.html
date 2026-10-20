@@ -145,7 +145,9 @@
             <li>
               <span class="mini-icon">{{ icon('pen', 15) }}</span>
               <div>
-                <p class="mini-title"><a href="{{ url_for('agreements.detail', agreement_id=agreement.id) }}">{{ agreement.title }}</a></p>
+                <p class="mini-title"><a href="{{ url_for('agreements.detail', agreement_id=agreement.id) }}"
+                   data-modal-remote="{{ url_for('agreements.detail', agreement_id=agreement.id) }}"
+                   data-modal-title="{{ agreement.title }}">{{ agreement.title }}</a></p>
                 <p class="mini-meta">{{ agreement.contract_value_cents|money }} · {{ agreement.status|replace('_', ' ')|title }}</p>
               </div>
             </li>
@@ -201,6 +203,7 @@
 {% block modals %}
   {% include "partials/modal_stage.html" %}
   {% include "partials/modal_money.html" %}
+  {% set agreement_return = "page" %}
   {% include "partials/modal_agreement.html" %}
   {% include "partials/modal_manager.html" %}
   {% include "partials/modal_budget.html" %}

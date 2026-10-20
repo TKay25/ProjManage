@@ -67,8 +67,6 @@ def index():
         selected=selected,
         messages=messages,
         configured=whatsapp_configured(),
-        webhook_url=request.url_root.rstrip("/") + "/api/whatsapp/webhook",
-        verify_token=current_app.config["WHATSAPP_VERIFY_TOKEN"],
         display_phone=display_phone,
     )
 
@@ -140,10 +138,11 @@ def send():
 @bp.get("/api/whatsapp/webhook")
 def webhook_verify():
     mode = request.args.get("hub.mode")
-    token = request.args.get("hub.verify_token")
+    token = request.args.get("hub.token") or request.args.get("hub.verify_token") or ""
     challenge = request.args.get("hub.challenge", "")
+    expected = current_app.config.get("WHATSAPP_VERIFY_TOKEN") or ""
 
-    if mode == "subscribe" and token == current_app.config["WHATSAPP_VERIFY_TOKEN"]:
+    if mode == "subscribe" and expected and hmac.compare_digest(token, expected):
         return challenge, 200, {"Content-Type": "text/plain"}
 
     return "Forbidden", 403

@@ -14,16 +14,43 @@ AVATAR_COLORS = ["#0F5D46", "#C8963E", "#2A7A5E", "#A9573C", "#3E6B8A", "#6B5B95
 ATTEMPTS = {}
 MAX_ATTEMPTS = 8
 WINDOW = timedelta(minutes=15)
+MAX_TRACKED_KEYS = 5000
 
 
-def _rate_limited(key: str) -> bool:
+def _prune_attempts(now: datetime):
+    """Keeps the in-memory throttle bounded; each worker has its own map."""
+    if len(ATTEMPTS) < MAX_TRACKED_KEYS:
+        return
+    for key, entry in list(ATTEMPTS.items()):
+        if now - entry["start"] > WINDOW:
+            del ATTEMPTS[key]
+
+
+def _is_blocked(key: str) -> bool:
+    """Only failed attempts are recorded, so a legitimate sign-in never counts."""
     now = datetime.now(timezone.utc)
+    entry = ATTEMPTS.get(key)
+    if not entry:
+        return False
+    if now - entry["start"] > WINDOW:
+        del ATTEMPTS[key]
+        return False
+    return entry["count"] >= MAX_ATTEMPTS
+
+
+def _register_failure(key: str):
+    now = datetime.now(timezone.utc)
+    _prune_attempts(now)
+
     entry = ATTEMPTS.get(key)
     if not entry or now - entry["start"] > WINDOW:
         ATTEMPTS[key] = {"start": now, "count": 1}
-        return False
-    entry["count"] += 1
-    return entry["count"] > MAX_ATTEMPTS
+    else:
+        entry["count"] += 1
+
+
+def _clear_attempts(key: str):
+    ATTEMPTS.pop(key, None)
 
 
 def _colour_for(email: str) -> str:
@@ -48,8 +75,9 @@ def login_post():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
     next_url = auth.safe_next(request.form.get("next", ""))
+    throttle_key = f"{request.remote_addr}:{email}"
 
-    if _rate_limited(f"{request.remote_addr}:{email}"):
+    if _is_blocked(throttle_key):
         return (
             render_template(
                 "auth/login.html",
@@ -64,6 +92,7 @@ def login_post():
     user = query("SELECT * FROM users WHERE email = ?", (email,), one=True)
 
     if not user or not auth.verify_password(password, user["password_hash"]):
+        _register_failure(throttle_key)
         return (
             render_template(
                 "auth/login.html",
@@ -75,6 +104,7 @@ def login_post():
             401,
         )
 
+    _clear_attempts(throttle_key)
     auth.login_user(user["id"])
     flash(f"Welcome back, {user['name'].split()[0]}.", "success")
     return redirect(next_url)

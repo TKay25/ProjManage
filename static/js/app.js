@@ -236,24 +236,6 @@
     });
   }
 
-  /* ---------- List filters (React-style local state) ---------- */
-
-  $$("[data-filter-group]").forEach((group) => {
-    const chips = $$("[data-filter]", group);
-    const cards = $$("[data-status]", document);
-
-    chips.forEach((chip) => {
-      chip.addEventListener("click", () => {
-        chips.forEach((item) => item.classList.remove("is-active"));
-        chip.classList.add("is-active");
-        const filter = chip.dataset.filter;
-        cards.forEach((card) => {
-          card.hidden = filter !== "all" && card.dataset.status !== filter;
-        });
-      });
-    });
-  });
-
   /* ---------- PWA install ---------- */
 
   let installPrompt = null;

@@ -6,12 +6,12 @@
 
 {% block content %}
 <div class="card">
-  <form class="filter-bar filter-bar-lg" method="get" action="{{ url_for('suppliers.index') }}">
+  <form class="filter-bar filter-bar-lg filter-bar--single" method="get" action="{{ url_for('suppliers.index') }}">
     <label class="search-field">
       {{ icon('search', 16) }}
-      <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search cement, roof sheets, tiles…" />
+      <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search cement, roof sheets, tiles…" aria-label="Search suppliers" />
     </label>
-    <select class="select select-sm" name="category" data-autosubmit>
+    <select class="select select-sm" name="category" data-autosubmit aria-label="Filter by category">
       <option value="">All categories</option>
       {% for item in categories %}
         <option value="{{ item }}" {% if category == item %}selected{% endif %}>{{ item }}</option>

@@ -1,14 +1,17 @@
 """Vaka — construction project management for Zimbabwe's diaspora.
 
-Flask application factory. Run with:
+Flask application factory. Run locally with:
     python app.py
+In production use a WSGI server:
+    gunicorn --bind 0.0.0.0:8000 'app:create_app()'
 """
 
 import os
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, g, render_template, request
+from flask import Flask, g, render_template, request, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
 import db
@@ -54,12 +57,17 @@ def create_app(config_object=Config):
     app = Flask(__name__)
     app.config.from_object(config_object)
 
+    if app.config.get("TRUST_PROXY"):
+        # Render/Fly/Heroku terminate TLS and forward X-Forwarded-* headers.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
     Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
     auth.init_app(app)
 
     from routes_agreements import DEFAULT_TERMS, bp as agreements_bp
+    from routes_admin import bp as admin_bp
     from routes_auth import bp as auth_bp
     from routes_dashboard import bp as dashboard_bp
     from routes_documents import bp as documents_bp
@@ -81,8 +89,22 @@ def create_app(config_object=Config):
         suppliers_bp,
         whatsapp_bp,
         settings_bp,
+        admin_bp,
     ):
         app.register_blueprint(blueprint)
+
+    def _asset_version() -> str:
+        """Cache-buster from the newest static file, so updated JS/CSS always lands."""
+        newest = 0.0
+        for path in (app.static_folder and Path(app.static_folder).rglob("*") or []):
+            if path.is_file():
+                newest = max(newest, path.stat().st_mtime)
+        return format(int(newest), "x")
+
+    asset_version = _asset_version()
+
+    def asset_url(filename: str) -> str:
+        return f"{url_for('static', filename=filename)}?v={asset_version}"
 
     app.jinja_env.globals.update(
         csrf_token=auth.csrf_token,
@@ -94,6 +116,7 @@ def create_app(config_object=Config):
         progress_ring=progress_ring,
         nav_items=NAV_ITEMS,
         tab_items=[item for item in NAV_ITEMS if item["key"] in {"dashboard", "projects", "money", "documents"}],
+        asset_url=asset_url,
         app_name=app.config["APP_NAME"],
         app_tagline=app.config["APP_TAGLINE"],
         current_year=datetime.now().year,
@@ -130,7 +153,57 @@ def create_app(config_object=Config):
 
     @app.context_processor
     def inject_globals():
-        return {"user": getattr(g, "user", None), "current_path": request.path}
+        return {
+            "user": getattr(g, "user", None),
+            "current_path": request.path,
+            "demo_mode": app.config.get("DEMO_MODE", False),
+        }
+
+    # ------------------------------------------------------------------
+    # Security headers
+    # ------------------------------------------------------------------
+
+    CSP = "; ".join(
+        [
+            "default-src 'self'",
+            # Signature images are submitted and replayed as data URLs.
+            "img-src 'self' data: blob:",
+            # The print sheet and a few layout-critical rules are inline.
+            "style-src 'self' 'unsafe-inline'",
+            "script-src 'self'",
+            "connect-src 'self'",
+            "font-src 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "object-src 'none'",
+        ]
+    )
+
+    @app.after_request
+    def harden_response(response):
+        headers = response.headers
+        headers.setdefault("Content-Security-Policy", CSP)
+        headers.setdefault("X-Content-Type-Options", "nosniff")
+        headers.setdefault("X-Frame-Options", "DENY")
+        headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=()",
+        )
+        headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+
+        if request.is_secure:
+            headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
+
+        # Client money and documents must never sit in a proxy or shared cache.
+        if request.path.startswith(("/app", "/admin")) or getattr(g, "user", None):
+            headers["Cache-Control"] = "no-store, private, must-revalidate"
+            headers["Pragma"] = "no-cache"
+
+        return response
 
     @app.errorhandler(400)
     @app.errorhandler(403)

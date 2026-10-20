@@ -19,8 +19,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Vaka" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}" />
+  <link rel="stylesheet" href="{{ asset_url('css/app.css') }}" />
+  <link rel="stylesheet" href="{{ asset_url('css/portal.css') }}" />
+  <link rel="stylesheet" href="{{ asset_url('css/transitions.css') }}" />
   {% block head_extra %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -38,8 +39,9 @@
     {% block footer %}{% include "partials/site_footer.html" %}{% endblock %}
   {% endblock %}
 
-  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/modal.js') }}" defer></script>
+  <script src="{{ asset_url('js/app.js') }}" defer></script>
+  <script src="{{ asset_url('js/nav.js') }}" defer></script>
+  <script src="{{ asset_url('js/modal.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

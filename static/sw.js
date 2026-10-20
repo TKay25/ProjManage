@@ -1,7 +1,7 @@
 /* Vaka service worker — app shell caching + offline fallback.
    Authenticated HTML is never cached, so a shared device cannot leak a project. */
 
-const VERSION = "vaka-v2";
+const VERSION = "vaka-v3";
 const STATIC_CACHE = `${VERSION}-static`;
 
 const PRECACHE = [
@@ -9,7 +9,10 @@ const PRECACHE = [
   "/manifest.webmanifest",
   "/static/css/app.css",
   "/static/css/portal.css",
+  "/static/css/transitions.css",
   "/static/js/app.js",
+  "/static/js/nav.js",
+  "/static/js/modal.js",
   "/static/js/signature.js",
   "/static/js/whatsapp.js",
   "/static/icons/icon-192.png",
@@ -66,12 +69,16 @@ self.addEventListener("fetch", (event) => {
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+            // Key by pathname so repeated cache-bust versions replace each other
+            // instead of growing the cache without bound.
+            caches.open(STATIC_CACHE).then((cache) => cache.put(url.pathname, copy));
           }
           return response;
         })
         .catch(async () => {
-          const cached = await caches.match(request);
+          // Pages request cache-busted URLs (/static/app.css?v=1712...), so the
+          // precache has to be matched with the query string ignored.
+          const cached = await caches.match(request, { ignoreSearch: true });
           return cached || Response.error();
         }),
     );

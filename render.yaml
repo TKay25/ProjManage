@@ -1,0 +1,41 @@
+# Render blueprint for Vaka.
+#
+# Deploy with: Render Dashboard → New → Blueprint → pick this repo.
+# The disk is what keeps the SQLite database and uploaded receipts alive;
+# without it every deploy starts from an empty workspace.
+
+services:
+  - type: web
+    name: vaka
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 8 --timeout 60 --access-logfile - wsgi:app
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # Set these in the dashboard; sync: false keeps them out of the repo.
+      - key: SECRET_KEY
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: SEED_DEMO
+        value: "false"
+      - key: DATABASE_FILE
+        value: /var/data/vaka.db
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+    disk:
+      name: vaka-data
+      mountPath: /var/data
+      sizeGB: 1

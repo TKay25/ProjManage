@@ -1,0 +1,80 @@
+{# The contract document itself. Shared by the full page and the modal reader so
+   there is only one place that renders an agreement. #}
+<div class="card contract-doc">
+  <div class="contract-doc-head">
+    <div class="contract-doc-brand">
+      {{ logo_mark(38) }}
+      <div>
+        <p class="contract-doc-title">{{ agreement.title }}</p>
+        <p class="muted small">{{ project.code }} · {{ project.name }}</p>
+      </div>
+    </div>
+    <span data-agreement-badge>{{ badge(agreement.status) }}</span>
+  </div>
+  <dl class="contract-doc-meta">
+    <div><dt>Contract value</dt><dd>{{ agreement.contract_value_cents|money }}</dd></div>
+    <div><dt>Client</dt><dd>{{ agreement.client_name }}</dd></div>
+    <div><dt>Prepared</dt><dd>{{ agreement.created_at|date }}</dd></div>
+    <div><dt>Signed</dt><dd>{{ agreement.signed_at|date if agreement.signed_at else 'Not yet' }}</dd></div>
+  </dl>
+
+  <section class="contract-section">
+    <h3>Scope of works</h3>
+    <p class="pre-wrap">{{ agreement.scope }}</p>
+  </section>
+
+  <section class="contract-section">
+    <h3>Payment schedule</h3>
+    {% if schedule %}
+      <table class="table">
+        <thead><tr><th scope="col">Milestone</th><th scope="col" class="align-right">Amount</th></tr></thead>
+        <tbody>
+          {% for item in schedule %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td class="align-right">{{ item.amountCents|money }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total scheduled</td>
+            <td class="align-right {{ 'neg' if scheduled_total != agreement.contract_value_cents }}">{{ scheduled_total|money }}</td>
+          </tr>
+        </tfoot>
+      </table>
+      {% if scheduled_total != agreement.contract_value_cents %}
+        <p class="micro-note">{{ icon('alert', 13) }} Milestones do not add up to the contract value. Adjust the schedule before signing.</p>
+      {% endif %}
+    {% else %}
+      <p class="muted">No milestones captured.</p>
+    {% endif %}
+  </section>
+
+  <section class="contract-section">
+    <h3>Terms</h3>
+    <p class="pre-wrap">{{ agreement.terms }}</p>
+  </section>
+
+  <section class="contract-section">
+    <h3>Signatures</h3>
+    <div class="signature-grid">
+      <div class="signature-block">
+        {% if agreement.client_signature %}
+          <img class="signature-img" src="{{ agreement.client_signature }}" alt="Client signature" />
+        {% elif agreement.signed_at %}
+          <p class="signature-name">{{ agreement.client_name }}</p>
+        {% else %}
+          <p class="signature-placeholder">Awaiting signature</p>
+        {% endif %}
+        <p class="signature-line">Client · {{ agreement.client_name }}</p>
+        <p class="mini-meta">{{ agreement.signed_at|datetime if agreement.signed_at else '' }}</p>
+      </div>
+      <div class="signature-block">
+        <p class="signature-name">{{ author.name if author else user.name }}</p>
+        <p class="signature-line">For Vaka / build team</p>
+        <p class="mini-meta">{{ agreement.created_at|date }}</p>
+      </div>
+    </div>
+  </section>
+</div>

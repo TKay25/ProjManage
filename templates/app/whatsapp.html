@@ -10,39 +10,24 @@
     <span class="integration-icon">{{ icon('message', 22) }}</span>
     <div>
       <div class="integration-title">
-        <h2>Meta Cloud API connection</h2>
+        <h2>WhatsApp connection</h2>
         {% if configured %}
-          <span class="badge badge-success">{{ icon('check', 12) }} Connected</span>
+          <span class="badge badge-success">{{ icon('check', 12) }} Live</span>
         {% else %}
           <span class="badge badge-warn">Simulator mode</span>
         {% endif %}
       </div>
       <p class="muted small">
         {% if configured %}
-          Outbound messages are being delivered through your WhatsApp Business number.
+          Messages reach clients through your WhatsApp Business number, and replies
+          land back in this inbox.
         {% else %}
-          Add WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID to .env to go live. Until then,
-          messages are stored locally so the full flow stays testable.
+          Credentials are not configured on this deployment, so messages are stored
+          locally and nothing is sent. The assistant still answers exactly as it
+          would in production.
         {% endif %}
       </p>
     </div>
-  </div>
-
-  <div class="integration-fields">
-    <label class="field">
-      <span class="field-label">Webhook callback URL</span>
-      <div class="copy-field">
-        <input class="input input-mono" type="text" value="{{ webhook_url }}" readonly />
-        <button class="icon-btn" type="button" data-copy="{{ webhook_url }}" aria-label="Copy webhook URL">{{ icon('folder', 15) }}</button>
-      </div>
-    </label>
-    <label class="field">
-      <span class="field-label">Verify token</span>
-      <div class="copy-field">
-        <input class="input input-mono" type="text" value="{{ verify_token }}" readonly />
-        <button class="icon-btn" type="button" data-copy="{{ verify_token }}" aria-label="Copy verify token">{{ icon('folder', 15) }}</button>
-      </div>
-    </label>
   </div>
 </div>
 

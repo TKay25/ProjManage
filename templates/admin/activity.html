@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% block title %}Activity log · Vaka{% endblock %}
+
+{% block page_title %}Activity log{% endblock %}
+{% block page_subtitle %}<p class="page-subtitle">{{ total_rows }} event{{ '' if total_rows == 1 else 's' }} · who changed what, across every workspace</p>{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.overview') }}">{{ icon('dashboard', 15) }} Overview</a>
+{% endblock %}
+
+{% block admin_content %}
+<form class="filter-bar filter-bar--single" method="get" action="{{ url_for('admin.activity') }}">
+  <label class="search-field">
+    {{ icon('search', 16) }}
+    <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search action, detail, person or project" aria-label="Search the activity log" />
+  </label>
+  <button class="btn btn-outline btn-sm" type="submit">Search</button>
+  {% if search %}
+    <a class="link-quiet" href="{{ url_for('admin.activity') }}">Clear</a>
+  {% endif %}
+</form>
+
+<div class="card">
+  {% if events %}
+    <ul class="timeline timeline-lg">
+      {% for event in events %}
+        <li>
+          <span class="timeline-dot"></span>
+          <div>
+            <p class="mini-title">{{ event.detail or event.action }}</p>
+            <p class="mini-meta">
+              {{ event.user_name or 'System' }}
+              {% if event.project_name %} · {{ event.project_name }} ({{ event.project_code }}){% endif %}
+              · {{ event.created_at|datetime }}
+              · <span class="log-action">{{ event.action }}</span>
+            </p>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+    {% include "partials/pager.html" %}
+  {% else %}
+    <div class="empty">
+      <span class="empty-icon">{{ icon('clock', 26) }}</span>
+      <h3>{{ 'No events match' if search else 'Nothing logged yet' }}</h3>
+      <p>{{ 'Try a different search term.' if search else 'Stage changes, expenses, receipts and agreements all appear here.' }}</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

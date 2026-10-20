@@ -1,0 +1,140 @@
+{% extends "admin/base.html" %}
+{% block title %}People · Vaka{% endblock %}
+
+{% block page_title %}People{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ counts.clients }} client{{ '' if counts.clients == 1 else 's' }} ·
+    {{ counts.managers }} build manager{{ '' if counts.managers == 1 else 's' }} ·
+    {{ counts.staff }} Vaka staff
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="#invite" data-modal-open="modal-invite">{{ icon('plus', 15) }} New account</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2>Everyone with a Vaka login</h2>
+      <p class="card-sub">Change a role to give build-manager or staff access</p>
+    </div>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th scope="col">Person</th>
+          <th scope="col">Role</th>
+          <th scope="col" class="align-right">Owns</th>
+          <th scope="col" class="align-right">Manages</th>
+          <th scope="col">Last sign-in</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for person in people %}
+          <tr>
+            <td>
+              <div class="person-cell">
+                <span class="avatar avatar-sm" style="background:{{ person.avatar_color }}">{{ person.name|initials }}</span>
+                <div>
+                  <p class="admin-strong">{{ person.name }}</p>
+                  <p class="mini-meta">{{ person.email }}</p>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge {{ 'badge-success' if person.role == 'admin' else ('badge-soft' if person.role == 'manager' else 'badge-muted') }}"
+                    data-role-badge="{{ person.id }}">{{ roles[person.role] }}</span>
+            </td>
+            <td class="align-right">{{ person.owned }}</td>
+            <td class="align-right">{{ person.managed }}</td>
+            <td class="mini-meta">{{ person.last_seen|relative if person.last_seen else 'Never' }}</td>
+            <td class="align-right">
+              {% if person.id == user.id %}
+                <span class="mini-meta">That's you</span>
+              {% else %}
+                <form method="post" action="{{ url_for('admin.update_role', user_id=person.id) }}" class="inline-form" data-ajax>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <select class="select select-sm" name="role" data-autosubmit aria-label="Role">
+                    {% for value, label in roles.items() %}
+                      <option value="{{ value }}" {% if person.role == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <noscript><button class="btn btn-outline btn-xs" type="submit">Save</button></noscript>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="side-note side-note-wide">
+  {{ icon('shield', 16) }}
+  <p>
+    Vaka staff can see and edit every project. Build managers only see the
+    projects assigned to them, and clients only their own. Change a role to
+    <strong>Build manager</strong> before assigning someone to a project.
+  </p>
+</div>
+{% endblock %}
+
+{% block modals %}
+<dialog class="modal modal--slim" id="modal-invite" aria-labelledby="modal-invite-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">New account</p>
+        <h2 id="modal-invite-title">Create a login</h2>
+        <p class="modal-sub">Useful for build managers on the ground who do not want to self-register.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('admin.invite_staff') }}" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">Full name</span>
+            <input class="input" type="text" name="name" required maxlength="90" placeholder="Tendai Moyo" data-modal-autofocus />
+          </label>
+          <label class="field">
+            <span class="field-label">Email address</span>
+            <input class="input" type="email" name="email" required placeholder="manager@example.com" />
+          </label>
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Role</span>
+              <select class="select" name="role">
+                <option value="manager">Build manager</option>
+                <option value="client">Client</option>
+                <option value="admin">Vaka staff</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Temporary password</span>
+              <input class="input" type="text" name="password" required minlength="8" placeholder="At least 8 characters" />
+            </label>
+          </div>
+          <p class="field-hint">Share the password through a secure channel; they can change it in Settings.</p>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('users', 15) }} <span data-submit-label>Create account</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
+{% endblock %}

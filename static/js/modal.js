@@ -50,15 +50,31 @@
 
   /* ---------- Modal controller ---------- */
 
+  const focusStack = [];
+
   const openModal = (id) => {
     const dialog = document.getElementById(id);
     if (!dialog || typeof dialog.showModal !== "function") return null;
 
-    if (!dialog.open) dialog.showModal();
+    if (!dialog.open) {
+      focusStack.push(document.activeElement);
+      dialog.showModal();
+    }
     document.body.classList.add("modal-open");
+    dialog.dispatchEvent(new CustomEvent("vaka:modalopen", { bubbles: true }));
 
-    const first = dialog.querySelector("[data-modal-autofocus]") || dialog.querySelector("input, select, textarea");
-    if (first) setTimeout(() => first.focus(), 60);
+    // Skip fields that live inside a nested (closed) dialog: focusing those
+    // would pull focus out of the dialog the user actually opened.
+    const marked = dialog.querySelector("[data-modal-autofocus]");
+    const field = $$("input, select, textarea", dialog).find((node) => node.closest("dialog") === dialog);
+    const first =
+      (marked && marked.closest("dialog") === dialog ? marked : null) ||
+      field ||
+      dialog.querySelector("[data-modal-close]") ||
+      dialog;
+    setTimeout(() => {
+      if (dialog.open) first.focus();
+    }, 60);
 
     return dialog;
   };
@@ -68,6 +84,8 @@
     dialog.close();
     const anyOpen = $$("dialog.modal[open]").length > 0;
     if (!anyOpen) document.body.classList.remove("modal-open");
+    const restore = focusStack.pop();
+    if (restore && restore.isConnected) restore.focus();
   };
 
   const closeAll = () => {
@@ -75,7 +93,105 @@
     document.body.classList.remove("modal-open");
   };
 
+  /* ---------- Remote reader ---------- */
+
+  // Lets a list open a record without leaving the page: the link keeps a real
+  // href so it still works without JavaScript.
+  let readerToken = 0;
+
+  const loadingMarkup = (label) =>
+    '<div class="modal-loading" role="status">' +
+    '<span class="modal-spinner" aria-hidden="true"></span>' +
+    `<p>${label}</p>` +
+    "</div>";
+
+  async function openRemote(opener) {
+    const dialog = document.getElementById("modal-view");
+    const url = opener.dataset.modalRemote;
+    if (!dialog || !url || typeof window.fetch !== "function") return;
+
+    const body = dialog.querySelector("[data-modal-body]");
+    const titleNode = dialog.querySelector("[data-modal-view-title]");
+    const eyebrowNode = dialog.querySelector("[data-modal-view-eyebrow]");
+
+    if (titleNode) titleNode.textContent = opener.dataset.modalTitle || "Loading";
+    if (eyebrowNode && opener.dataset.modalEyebrow) eyebrowNode.textContent = opener.dataset.modalEyebrow;
+    dialog.dataset.state = "loading";
+    if (body) {
+      body.setAttribute("aria-busy", "true");
+      body.innerHTML = loadingMarkup("Opening");
+    }
+    openModal("modal-view");
+
+    const token = ++readerToken;
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json", "X-Requested-With": "fetch" },
+        credentials: "same-origin",
+      });
+      if (token !== readerToken) return;
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!response.ok || !contentType.includes("application/json")) {
+        // Session expired or an error page: fall back to a real navigation.
+        closeModal(dialog);
+        window.location.assign(url);
+        return;
+      }
+
+      const data = await response.json();
+      if (token !== readerToken) return;
+
+      if (data.ok === false || !data.fragment) {
+        if (body) body.innerHTML = '<p class="modal-empty">That record could not be opened.</p>';
+        return;
+      }
+
+      if (titleNode && data.title) titleNode.textContent = data.title;
+      if (body) {
+        body.innerHTML = data.fragment;
+        body.setAttribute("aria-busy", "false");
+      }
+      dialog.dataset.src = url;
+      dialog.dataset.state = "ready";
+      document.dispatchEvent(new CustomEvent("vaka:fragment", { detail: { root: body, opener } }));
+    } catch (error) {
+      if (token !== readerToken) return;
+      console.error("[vaka] remote modal failed", error);
+      closeModal(dialog);
+      window.location.assign(url);
+    }
+  }
+
+  async function refreshReader(view) {
+    // Silent reload: after signing or voiding, the whole document has to agree
+    // with itself, not just the panel that was patched.
+    const url = view.dataset.src;
+    if (!url || !view.open) return;
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json", "X-Requested-With": "fetch" },
+        credentials: "same-origin",
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      const body = view.querySelector("[data-modal-body]");
+      if (!data || !data.fragment || !body || !view.open) return;
+      body.innerHTML = data.fragment;
+      document.dispatchEvent(new CustomEvent("vaka:fragment", { detail: { root: body } }));
+    } catch (error) {
+      // Keep whatever is on screen; the patched fields are already correct.
+      console.warn("[vaka] reader refresh failed", error);
+    }
+  }
+
   document.addEventListener("click", (event) => {
+    const remote = event.target.closest("[data-modal-remote]");    if (remote) {
+      event.preventDefault();
+      openRemote(remote);
+      return;
+    }
+
     const opener = event.target.closest("[data-modal-open]");
     if (opener) {
       const id = opener.dataset.modalOpen;
@@ -129,6 +245,11 @@
       if ($$("dialog.modal[open]").length === 0) document.body.classList.remove("modal-open");
       const form = dialog.querySelector("form[data-ajax]");
       if (form) resetForm(form);
+      if (dialog.id === "modal-view") {
+        const body = dialog.querySelector("[data-modal-body]");
+        if (body) body.innerHTML = "";
+        dialog.dataset.state = "idle";
+      }
     });
     dialog.addEventListener("click", (event) => {
       if (event.target === dialog) closeModal(dialog);
@@ -182,6 +303,14 @@
       });
     }
 
+    if (data.html) {
+      Object.entries(data.html).forEach(([selector, value]) => {
+        $$(selector).forEach((node) => {
+          node.innerHTML = value;
+        });
+      });
+    }
+
     if (!data.target) return;
 
     const container = $(data.target);
@@ -231,8 +360,10 @@
     });
 
     try {
-      const response = await fetch(form.action, {
-        method: form.method || "POST",
+      // form.method/form.action can be shadowed by controls named "method" or
+      // "action", so read the attributes instead of the properties.
+      const response = await fetch(form.getAttribute("action") || window.location.href, {
+        method: (form.getAttribute("method") || "POST").toUpperCase(),
         body: new FormData(form),
         headers: {
           Accept: "application/json",
@@ -257,6 +388,10 @@
 
       patch(data);
       closeModal(form.closest("dialog.modal"));
+
+      const view = document.getElementById("modal-view");
+      if (view && view.open && view.contains(form)) refreshReader(view);
+
       toast(data.message || "Saved.", "success");
 
       if (data.redirect) {
@@ -271,10 +406,8 @@
 
       document.dispatchEvent(new CustomEvent("vaka:saved", { detail: data }));
     } catch (error) {
-      showError(
-        form,
-        "We could not reach the server. Check your connection and try again.",
-      );
+      console.error("[vaka] form submit failed", error);
+      showError(form, "We could not save that. Check your connection and try again.");
     } finally {
       submitButtons.forEach((button) => {
         button.disabled = false;

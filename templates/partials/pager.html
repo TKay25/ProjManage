@@ -1,0 +1,22 @@
+{# Shared pager. Expects: page, page_count, pager_endpoint and pager_args. #}
+{% if page_count > 1 %}
+  <nav class="pager" aria-label="Pagination">
+    {% if page > 1 %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for(pager_endpoint, **dict(pager_args, page=page - 1)) }}" rel="prev">
+        {{ icon('arrow-left', 14) }} Previous
+      </a>
+    {% else %}
+      <span class="btn btn-ghost btn-sm is-disabled" aria-disabled="true">{{ icon('arrow-left', 14) }} Previous</span>
+    {% endif %}
+
+    <p class="pager-status">Page {{ page }} of {{ page_count }}</p>
+
+    {% if page < page_count %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for(pager_endpoint, **dict(pager_args, page=page + 1)) }}" rel="next">
+        Next {{ icon('arrow-right', 14) }}
+      </a>
+    {% else %}
+      <span class="btn btn-ghost btn-sm is-disabled" aria-disabled="true">Next {{ icon('arrow-right', 14) }}</span>
+    {% endif %}
+  </nav>
+{% endif %}

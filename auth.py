@@ -65,6 +65,20 @@ def login_required(view):
     return wrapped
 
 
+def admin_required(view):
+    """Vaka staff only — the admin portal manages every workspace."""
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+        if g.user["role"] != "admin":
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
 def login_user(user_id: str):
     session.clear()
     session["uid"] = user_id

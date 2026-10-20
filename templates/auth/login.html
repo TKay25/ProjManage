@@ -58,14 +58,17 @@
         <button class="btn btn-primary btn-block btn-lg" type="submit">Sign in {{ icon('arrow-right', 17) }}</button>
       </form>
 
-      <div class="demo-box">
-        <p class="demo-box-title">{{ icon('sparkles', 15) }} Demo workspace</p>
-        <p>
-          Client · <code>client@vaka.co.zw</code><br />
-          Manager · <code>manager@vaka.co.zw</code><br />
-          Password · <code>Vaka2026!</code>
-        </p>
-      </div>
+      {% if demo_mode %}
+        <div class="demo-box">
+          <p class="demo-box-title">{{ icon('sparkles', 15) }} Demo workspace</p>
+          <p>
+            Client · <code>client@vaka.co.zw</code><br />
+            Manager · <code>manager@vaka.co.zw</code><br />
+            Staff · <code>admin@vaka.co.zw</code><br />
+            Password · <code>Vaka2026!</code>
+          </p>
+        </div>
+      {% endif %}
 
       <div class="auth-foot">
         <p>New to Vaka? <a href="{{ url_for('auth.register') }}">Create an account</a></p>

@@ -1,0 +1,96 @@
+{% extends "admin/base.html" %}
+{% block title %}All projects · Vaka{% endblock %}
+
+{% block page_title %}All projects{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">{{ total_rows }} project{{ '' if total_rows == 1 else 's' }} · {{ total_funded|money }} received · {{ total_spent|money }} spent</p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.overview') }}">{{ icon('dashboard', 15) }} Overview</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="card">
+  <form class="filter-bar filter-bar-lg" method="get" action="{{ url_for('admin.projects') }}">
+    <label class="search-field">
+      {{ icon('search', 16) }}
+      <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search project, code, client or manager" aria-label="Search projects" />
+    </label>
+    <select class="select select-sm" name="status" data-autosubmit aria-label="Filter projects by status">
+      <option value="">Any status</option>
+      {% for value, label in PROJECT_STATUS_LABELS.items() %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-outline btn-sm" type="submit">Filter</button>
+    {% if search or status %}<a class="link-quiet" href="{{ url_for('admin.projects') }}">Clear</a>{% endif %}
+  </form>
+
+  {% if projects %}
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th scope="col">Project</th>
+            <th scope="col">Status</th>
+            <th scope="col">Client</th>
+            <th scope="col">Manager</th>
+            <th scope="col" class="align-right">Budget</th>
+            <th scope="col" class="align-right">Received</th>
+            <th scope="col" class="align-right">Spent</th>
+            <th scope="col" class="align-right">Available</th>
+            <th scope="col">Progress</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in projects %}
+            <tr class="{{ 'row-alert' if item.balance < 0 }}">
+              <td>
+                <p class="admin-strong">{{ item.name }}</p>
+                <p class="mini-meta">{{ item.code }} · {% if item.suburb %}{{ item.suburb }}, {% endif %}{{ item.city }}</p>
+              </td>
+              <td>{{ badge(item.status) }}</td>
+              <td>
+                <p>{{ item.owner_name or '—' }}</p>
+                <p class="mini-meta">{{ item.owner_email or '' }}</p>
+              </td>
+              <td>
+                {% if item.manager_name %}
+                  <p>{{ item.manager_name }}</p>
+                  <p class="mini-meta">{{ item.manager_email }}</p>
+                {% else %}
+                  <span class="badge badge-warn">Unassigned</span>
+                {% endif %}
+              </td>
+              <td class="align-right">{{ item.budget_cents|money }}</td>
+              <td class="align-right">{{ item.funded|money }}</td>
+              <td class="align-right">{{ item.spent|money }}</td>
+              <td class="align-right"><span class="{{ 'neg' if item.balance < 0 else 'pos' }}">{{ item.balance|money }}</span></td>
+              <td>
+                <div class="admin-progress">{{ progress_bar(item.progress) }}<span>{{ item.progress }}%</span></div>
+              </td>
+              <td class="align-right">
+                <a class="btn btn-ghost btn-xs" href="{{ url_for('projects.detail', project_id=item.id) }}">Open</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "partials/pager.html" %}
+  {% else %}
+    <div class="empty">
+      <span class="empty-icon">{{ icon('building', 26) }}</span>
+      <h3>No projects match</h3>
+      <p>Try a different status or clear the search.</p>
+      <a class="btn btn-primary" href="{{ url_for('admin.projects') }}">Reset filters</a>
+    </div>
+  {% endif %}
+</div>
+
+<p class="micro-note">
+  {{ icon('shield', 13) }} Opening a project gives you the same controls as the
+  client: stages, expenses, receipts, agreements and the document vault.
+</p>
+{% endblock %}

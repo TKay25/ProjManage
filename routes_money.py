@@ -1,14 +1,18 @@
 """Funding, expenses, receipts and the project ledger."""
 
+import csv
+import io
+import re
 from datetime import datetime
 
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, flash, g, make_response, redirect, render_template, request, url_for
 
 from auth import accessible_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query, touch_project
 from money import format_money, parse_money_to_cents
+from paging import offset, page_number, page_window
 from queries import category_breakdown, missing_receipts, money_totals, stage_rows, stage_spend
-from stages import TRANSACTION_CATEGORIES
+from stages import TRANSACTION_CATEGORIES, category_label, method_label, stage_name
 from storage import UploadError, delete_upload, save_upload
 import web
 
@@ -16,6 +20,22 @@ bp = Blueprint("money", __name__)
 
 VALID_CATEGORIES = {value for value, _label in TRANSACTION_CATEGORIES}
 VALID_METHODS = {"BANK_TRANSFER", "CARD", "ECOCASH", "INN_BUCKS", "CASH", "OTHER"}
+
+PAGE_SIZE = 25
+
+CSV_COLUMNS = [
+    "Date",
+    "Direction",
+    "Description",
+    "Category",
+    "Stage",
+    "Paid with",
+    "Reference",
+    "Money in",
+    "Money out",
+    "Balance",
+    "Receipt",
+]
 
 
 def _selected_project():
@@ -25,14 +45,8 @@ def _selected_project():
     return projects, project or (projects[0] if projects else None)
 
 
-@bp.get("/app/money")
-@login_required
-def index():
-    projects, project = _selected_project()
-
-    if not project:
-        return render_template("app/money.html", title="Money", active="money", projects=[], project=None)
-
+def _ledger_filters(project):
+    """The WHERE clause behind the ledger, shared by the page and the export."""
     filter_type = request.args.get("filter", "all")
     search = (request.args.get("q") or "").strip()
     stage_filter = request.args.get("stage", "")
@@ -55,14 +69,128 @@ def index():
         where.append("t.stage_key = ?")
         params.append(stage_filter)
 
+    return where, params, filter_type, search, stage_filter
+
+
+def _ledger_count(where, params) -> int:
+    row = query(
+        f"""SELECT COUNT(*) AS total
+            FROM transactions t
+            LEFT JOIN attachments a ON a.transaction_id = t.id
+            WHERE {' AND '.join(where)}""",
+        params,
+        one=True,
+    )
+    return int(row["total"] or 0)
+
+
+def _csv_amount(cents: int) -> str:
+    """Plain decimal for spreadsheets, using integer maths so nothing drifts."""
+    cents = int(cents or 0)
+    sign = "-" if cents < 0 else ""
+    cents = abs(cents)
+    return f"{sign}{cents // 100}.{cents % 100:02d}"
+
+
+def _csv_safe(value) -> str:
+    """Stops a description from being read as a spreadsheet formula."""
+    text = str(value or "")
+    if text[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + text
+    return text
+
+
+@bp.get("/app/money/export")
+@login_required
+def export():
+    """A statement a diaspora client can keep and open in Excel or Sheets."""
+    _projects, project = _selected_project()
+    if not project:
+        return redirect(url_for("money.index"))
+
+    where, params, _f, _s, _st = _ledger_filters(project)
+
+    rows = query(
+        f"""SELECT t.*, a.id AS receipt_id
+            FROM transactions t
+            LEFT JOIN attachments a ON a.transaction_id = t.id
+            WHERE {' AND '.join(where)}
+            ORDER BY t.occurred_at ASC, t.created_at ASC""",
+        params,
+    )
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, lineterminator="\r\n")
+    writer.writerow(CSV_COLUMNS)
+
+    balance = 0
+    money_in = 0
+    money_out = 0
+
+    for row in rows:
+        amount = int(row["amount_cents"] or 0)
+        is_funding = row["type"] == "FUNDING"
+        balance += amount if is_funding else -amount
+        if is_funding:
+            money_in += amount
+        else:
+            money_out += amount
+
+        writer.writerow(
+            [
+                (row["occurred_at"] or "")[:10],
+                "Money in" if is_funding else "Money out",
+                _csv_safe(row["description"]),
+                category_label(row["category"]),
+                stage_name(row["stage_key"]) if row["stage_key"] else "",
+                method_label(row["method"]),
+                _csv_safe(row["reference"]),
+                _csv_amount(amount) if is_funding else "",
+                "" if is_funding else _csv_amount(amount),
+                _csv_amount(balance),
+                "Yes" if row["receipt_id"] else "No",
+            ]
+        )
+
+    writer.writerow([])
+    writer.writerow(
+        ["", "", "Totals", "", "", "", "", _csv_amount(money_in), _csv_amount(money_out), _csv_amount(balance), ""]
+    )
+
+    slug = re.sub(r"[^a-z0-9]+", "-", project["name"].lower()).strip("-")[:40] or "project"
+    filename = f"vaka-ledger-{slug}-{datetime.now():%Y-%m-%d}.csv"
+
+    # The BOM keeps Excel from mangling accented supplier names.
+    response = make_response("\ufeff" + buffer.getvalue())
+    response.headers["Content-Type"] = "text/csv; charset=utf-8"
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@bp.get("/app/money")
+@login_required
+def index():
+    projects, project = _selected_project()
+
+    if not project:
+        return render_template("app/money.html", title="Money", active="money", projects=[], project=None)
+
+    filter_type = request.args.get("filter", "all")
+    search = (request.args.get("q") or "").strip()
+    stage_filter = request.args.get("stage", "")
+
+    where, params, filter_type, search, stage_filter = _ledger_filters(project)
+    total_rows = _ledger_count(where, params)
+    page, page_count = page_window(page_number(), total_rows, PAGE_SIZE)
+
     transactions = query(
         f"""SELECT t.*, a.id AS receipt_id, a.filename AS receipt_file
             FROM transactions t
             LEFT JOIN attachments a ON a.transaction_id = t.id
             WHERE {' AND '.join(where)}
             ORDER BY t.occurred_at DESC, t.created_at DESC
-            LIMIT 250""",
-        params,
+            LIMIT ? OFFSET ?""",
+        [*params, PAGE_SIZE, offset(page, PAGE_SIZE)],
     )
 
     totals = money_totals(project["id"])
@@ -86,6 +214,11 @@ def index():
         filter_type=filter_type,
         search=search,
         stage_filter=stage_filter,
+        page=page,
+        page_count=page_count,
+        total_rows=total_rows,
+        pager_endpoint="money.index",
+        pager_args={"project": project["id"], "filter": filter_type, "q": search, "stage": stage_filter},
         today=datetime.now().strftime("%Y-%m-%d"),
     )
 

@@ -15,14 +15,32 @@ os.environ["DATABASE_FILE"] = str(Path(_TEMP_DIR) / "test.db")
 os.environ["UPLOAD_DIR"] = str(Path(_TEMP_DIR) / "uploads")
 os.environ["SECRET_KEY"] = "test-secret-key-for-unit-tests-only"
 os.environ["SEED_DEMO"] = "true"
+os.environ["WHATSAPP_VERIFY_TOKEN"] = "test-verify-token"
 
 from app import create_app  # noqa: E402
+from config import Config  # noqa: E402
+
+
+def isolated_config(**overrides):
+    """A throwaway app config, independent of this process's environment."""
+
+    class Isolated(Config):
+        TESTING = True
+
+    for key, value in overrides.items():
+        setattr(Isolated, key, value)
+    return Isolated
+
+
+# One app for the whole module: faster, and safe because tests assert on
+# deltas rather than absolute counts.
+APP = create_app()
 
 
 class VakaTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = create_app()
+        cls.app = APP
         cls.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
 
     def setUp(self):
@@ -233,13 +251,23 @@ class MoneyLedger(VakaTestCase):
 class WhatsAppAssistant(VakaTestCase):
     def test_webhook_verification(self):
         response = self.client.get(
-            "/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=vaka-verify-token&hub.challenge=abc123"
+            "/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=test-verify-token&hub.challenge=abc123"
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, b"abc123")
 
     def test_webhook_rejects_wrong_token(self):
         response = self.client.get("/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=nope")
+        self.assertEqual(response.status_code, 403)
+
+    def test_webhook_fails_closed_without_configuration(self):
+        self.app.config["WHATSAPP_VERIFY_TOKEN"] = ""
+        try:
+            response = self.client.get(
+                "/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=&hub.challenge=abc"
+            )
+        finally:
+            self.app.config["WHATSAPP_VERIFY_TOKEN"] = "test-verify-token"
         self.assertEqual(response.status_code, 403)
 
     def test_balance_intent_returns_the_ledger(self):
@@ -271,6 +299,290 @@ class StageProgress(VakaTestCase):
         self.assertEqual(project_progress(half), 50)
 
         self.assertEqual(project_progress([]), 0)
+
+
+class ProductionSafety(unittest.TestCase):
+    """Guards the things that would be embarrassing — or costly — in production."""
+
+    def test_security_headers_are_set(self):
+        response = APP.test_client().get("/login")
+        self.assertEqual(response.headers.get("X-Frame-Options"), "DENY")
+        self.assertEqual(response.headers.get("X-Content-Type-Options"), "nosniff")
+        self.assertIn("default-src 'self'", response.headers.get("Content-Security-Policy", ""))
+        self.assertIn("frame-ancestors 'none'", response.headers.get("Content-Security-Policy", ""))
+
+    def test_authenticated_pages_are_not_cacheable(self):
+        client = APP.test_client()
+        with client.session_transaction() as session:
+            session["csrf"] = "test-token"
+
+        client.post(
+            "/login",
+            data={
+                "email": "client@vaka.co.zw",
+                "password": "Vaka2026!",
+                "csrf_token": "test-token",
+            },
+        )
+        response = client.get("/app")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response.headers.get("Cache-Control", ""))
+
+    def test_demo_accounts_are_not_created_without_opt_in(self):
+        """A forgotten env var must never ship published admin credentials."""
+        database = Path(_TEMP_DIR) / "clean.db"
+        config = isolated_config(
+            SEED_DEMO=False,
+            DEMO_MODE=False,
+            DATABASE=str(database),
+            UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "clean-uploads"),
+        )
+
+        from db import query
+
+        clean = create_app(config)
+        with clean.app_context():
+            users = query("SELECT email FROM users")
+            suppliers = query("SELECT COUNT(*) AS c FROM suppliers", one=True)["c"]
+
+        self.assertEqual(users, [])
+        # The supplier directory is reference data, not an account.
+        self.assertGreater(suppliers, 0)
+
+    def test_login_page_hides_credentials_when_demo_is_off(self):
+        config = isolated_config(
+            SEED_DEMO=False,
+            DEMO_MODE=False,
+            DATABASE=str(Path(_TEMP_DIR) / "clean-login.db"),
+            UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "clean-login-uploads"),
+        )
+
+        body = create_app(config).test_client().get("/login").get_data(as_text=True)
+
+        self.assertNotIn("Vaka2026!", body)
+        self.assertNotIn("client@vaka.co.zw", body)
+
+    def test_password_hashes_are_salted(self):
+        import auth
+
+        first = auth.hash_password("same-password")
+        second = auth.hash_password("same-password")
+        self.assertNotEqual(first, second)
+        self.assertTrue(auth.verify_password("same-password", first))
+        self.assertFalse(auth.verify_password("different", first))
+
+    def test_https_sets_hsts_and_secure_cookie(self):
+        """Behind a TLS proxy: HSTS on the response, Secure on the session cookie."""
+        config = isolated_config(
+            SEED_DEMO=True,
+            DATABASE=str(Path(_TEMP_DIR) / "https.db"),
+            UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "https-uploads"),
+            SESSION_COOKIE_SECURE=True,
+        )
+        client = create_app(config).test_client()
+
+        with client.session_transaction() as session:
+            session["csrf"] = "token"
+
+        response = client.post(
+            "/login",
+            base_url="https://vaka.test",
+            data={
+                "email": "client@vaka.co.zw",
+                "password": "Vaka2026!",
+                "csrf_token": "token",
+            },
+        )
+        cookie = response.headers.get("Set-Cookie", "")
+        self.assertIn("Secure", cookie)
+        self.assertIn("HttpOnly", cookie)
+
+        page = client.get("/app", base_url="https://vaka.test")
+        self.assertIn("max-age=31536000", page.headers.get("Strict-Transport-Security", ""))
+
+
+class AgreementReaderModal(VakaTestCase):
+    """Clicking an agreement opens it in the shared reader dialog."""
+
+    def _first_agreement_id(self):
+        from db import query
+
+        with self.app.app_context():
+            row = query("SELECT id FROM agreements ORDER BY created_at LIMIT 1", one=True)
+        self.assertIsNotNone(row, "seed data should include an agreement")
+        return row["id"]
+
+    def test_list_links_agreements_to_the_reader(self):
+        self.login()
+        page = self.client.get("/app/agreements").get_data(as_text=True)
+        self.assertIn("data-modal-remote=", page)
+        self.assertIn('id="modal-view"', page)
+
+    def test_detail_returns_a_fragment_for_the_dialog(self):
+        self.login()
+        agreement_id = self._first_agreement_id()
+
+        response = self.client.get(
+            f"/app/agreements/{agreement_id}",
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, "application/json")
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertTrue(payload["title"])
+        # A fragment must not carry page chrome, or the dialog would nest a page.
+        self.assertNotIn("<html", payload["fragment"].lower())
+        self.assertNotIn('id="modal-view"', payload["fragment"])
+        self.assertIn("contract-doc", payload["fragment"])
+
+    def test_detail_still_renders_a_full_page_without_javascript(self):
+        self.login()
+        agreement_id = self._first_agreement_id()
+
+        response = self.client.get(f"/app/agreements/{agreement_id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"<html", response.data.lower())
+
+
+class LoginThrottle(VakaTestCase):
+    """The throttle must count failures only, or clients lock themselves out."""
+
+    def setUp(self):
+        super().setUp()
+        import routes_auth
+
+        routes_auth.ATTEMPTS.clear()
+
+    def _post(self, password):
+        return self.client.post(
+            "/login",
+            data={
+                "email": "client@vaka.co.zw",
+                "password": password,
+                "csrf_token": self.csrf(),
+            },
+        )
+
+    def test_repeated_successful_logins_are_never_throttled(self):
+        for _ in range(12):
+            self.assertEqual(self._post("Vaka2026!").status_code, 302)
+
+    def test_failures_still_throttle(self):
+        codes = [self._post("definitely-not-the-password").status_code for _ in range(10)]
+        self.assertEqual(codes[0], 401)
+        self.assertEqual(codes[-1], 429)
+
+
+class LedgerExport(VakaTestCase):
+    """The CSV statement a diaspora client keeps for their own records."""
+
+    def _export_rows(self, query_string=""):
+        import csv
+        import io
+
+        response = self.client.get(f"/app/money/export{query_string}")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response.content_type)
+        self.assertIn("attachment; filename=", response.headers["Content-Disposition"])
+        return list(csv.reader(io.StringIO(response.data.decode("utf-8-sig"))))
+
+    def test_export_has_header_rows_and_totals(self):
+        self.login()
+        rows = self._export_rows()
+        self.assertEqual(rows[0][:4], ["Date", "Direction", "Description", "Category"])
+        self.assertIn("Balance", rows[0])
+        self.assertEqual(rows[-1][2], "Totals")
+        # Every data row must carry a running balance.
+        for row in rows[1:-2]:
+            self.assertNotEqual(row[rows[0].index("Balance")], "")
+
+    def test_export_neutralises_spreadsheet_formulas(self):
+        from db import execute, query
+
+        self.login()
+        with self.app.app_context():
+            # Export defaults to the newest project, so target that one explicitly.
+            project = query("SELECT id FROM projects ORDER BY created_at DESC LIMIT 1", one=True)
+            user = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            execute(
+                """INSERT INTO transactions
+                     (id, project_id, type, amount_cents, currency, category, stage_key,
+                      description, method, reference, occurred_at, created_by, created_at)
+                   VALUES ('tx-formula', ?, 'EXPENSE', 100, 'USD', 'materials', NULL,
+                           '=HYPERLINK("http://example.invalid","x")', 'CASH', NULL,
+                           '2026-03-01', ?, '2026-03-01T00:00:00')""",
+                (project["id"], user["id"]),
+            )
+
+        rows = self._export_rows(f"?project={project['id']}")
+        injected = [row for row in rows if "HYPERLINK" in "".join(row)]
+        self.assertTrue(injected)
+        self.assertTrue(injected[0][2].startswith("'"))
+
+    def test_page_out_of_range_clamps_instead_of_blank(self):
+        self.login()
+        response = self.client.get("/app/money?page=9999")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Ledger", response.data)
+
+
+class Accessibility(VakaTestCase):
+    """Cheap guards so the small things do not regress."""
+
+    def test_workspace_has_skip_link_and_main_landmark(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertIn('class="skip-link" href="#main"', page)
+        self.assertIn('<main class="content" id="main"', page)
+
+    def test_active_nav_item_is_marked_for_screen_readers(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertIn('aria-current="page"', page)
+
+    def test_table_headers_are_scoped(self):
+        self.login("admin@vaka.co.zw")
+        page = self.client.get("/admin/projects").get_data(as_text=True)
+        self.assertIn("<th scope=\"col\"", page)
+
+    def test_search_fields_have_accessible_names(self):
+        self.login()
+        page = self.client.get("/app/money").get_data(as_text=True)
+        self.assertIn('aria-label="Search the ledger"', page)
+
+
+    def test_signing_updates_badge_and_status_in_the_dialog(self):
+        from db import execute, now_iso, query
+
+        self.login()
+        with self.app.app_context():
+            project = query("SELECT id FROM projects ORDER BY created_at DESC LIMIT 1", one=True)
+            user = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            execute(
+                """INSERT INTO agreements
+                     (id, project_id, type, title, contract_value_cents, currency, scope, terms,
+                      payment_schedule, client_name, client_signature, signed_at, status, created_by, created_at)
+                   VALUES ('agr-sign-test', ?, 'build_contract', 'Signing test', 100000, 'USD',
+                           'Scope long enough to pass validation checks.', 'Terms.',
+                           '[]', 'Test Client', NULL, NULL, 'awaiting_signature', ?, ?)""",
+                (project["id"], user["id"], now_iso()),
+            )
+
+        response = self.client.post(
+            "/app/agreements/agr-sign-test/sign",
+            data={"csrf_token": self.csrf(), "signed_name": "Test Client", "signature": ""},
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+        )
+        payload = response.get_json()
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["target"], "[data-signature-panel]")
+        self.assertEqual(payload["fields"]["[data-agreement-status]"], "Signed")
+        # The badge must be swapped too, or the dialog contradicts itself.
+        self.assertIn("Signed", payload["html"]["[data-agreement-badge]"])
 
 
 class MoneyFormatting(unittest.TestCase):

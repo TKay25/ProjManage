@@ -1,5 +1,7 @@
 {% set schedule = agreement.schedule %}
-<a class="agreement-card" href="{{ url_for('agreements.detail', agreement_id=agreement.id) }}">
+<a class="agreement-card" href="{{ url_for('agreements.detail', agreement_id=agreement.id) }}"
+   data-modal-remote="{{ url_for('agreements.detail', agreement_id=agreement.id) }}"
+   data-modal-title="{{ agreement.title }}">
   <div class="agreement-card-top">
     <span class="agreement-icon">{{ icon('pen', 18) }}</span>
     {{ badge(agreement.status) }}

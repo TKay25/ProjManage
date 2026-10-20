@@ -39,7 +39,13 @@ class Config:
     SESSION_COOKIE_SECURE = os.environ.get("COOKIE_SECURE") == "1"
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
-    SEED_DEMO = os.environ.get("SEED_DEMO", "true").lower() not in {"false", "0", "no"}
+    # Demo data ships sample projects *and* accounts with published passwords,
+    # so it must be opted into explicitly. Never default this to true.
+    SEED_DEMO = os.environ.get("SEED_DEMO", "false").lower() in {"true", "1", "yes"}
+    DEMO_MODE = SEED_DEMO
+
+    # Render (and most PaaS) terminate TLS at the proxy.
+    TRUST_PROXY = os.environ.get("TRUST_PROXY", "1") == "1"
 
     # Templates re-render from disk so edits show up without a restart.
     TEMPLATES_AUTO_RELOAD = True
@@ -47,7 +53,8 @@ class Config:
 
     WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
     WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
-    WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "vaka-verify-token")
+    # No default: webhook verification fails closed until the environment sets it.
+    WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
     WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
 
     APP_NAME = "Vaka"

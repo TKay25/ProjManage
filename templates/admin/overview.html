@@ -1,0 +1,172 @@
+{% extends "admin/base.html" %}
+{% block title %}Staff overview · Vaka{% endblock %}
+
+{% block page_title %}Staff overview{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ counts.projects }} project{{ '' if counts.projects == 1 else 's' }} ·
+    {{ counts.clients }} client{{ '' if counts.clients == 1 else 's' }} ·
+    {{ counts.managers }} build manager{{ '' if counts.managers == 1 else 's' }}
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.projects') }}">{{ icon('building', 15) }} All projects</a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('admin.people') }}">{{ icon('users', 15) }} People</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Money received</span><span class="kpi-icon kpi-icon-positive">{{ icon('trending-up', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.funded|money }}</p>
+    <p class="kpi-sub">Across every client workspace</p>
+  </div>
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Money spent</span><span class="kpi-icon">{{ icon('receipt', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.spent|money }}</p>
+    <p class="kpi-sub">{{ ((totals.spent / totals.funded) * 100)|round|int if totals.funded else 0 }}% of funds used</p>
+  </div>
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Held in trust</span><span class="kpi-icon kpi-icon-{{ 'negative' if totals.balance < 0 else 'positive' }}">{{ icon('wallet', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.balance|money }}</p>
+    <p class="kpi-sub">Undisbursed client funds</p>
+  </div>
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Needs chasing</span><span class="kpi-icon kpi-icon-warn">{{ icon('alert', 17) }}</span></div>
+    <p class="kpi-value">{{ counts.missing }}</p>
+    <p class="kpi-sub">Expenses without receipts</p>
+  </div>
+</div>
+
+<div class="dash-grid">
+  <div class="dash-main">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Projects</h2>
+          <p class="card-sub">Newest activity first</p>
+        </div>
+        <a class="link-quiet" href="{{ url_for('admin.projects') }}">Open all {{ icon('arrow-right', 14) }}</a>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th scope="col">Project</th>
+              <th scope="col">Client</th>
+              <th scope="col">Manager</th>
+              <th scope="col" class="align-right">Balance</th>
+              <th scope="col">Progress</th>
+              <th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in projects[:8] %}
+              <tr>
+                <td>
+                  <p class="admin-strong">{{ item.name }}</p>
+                  <p class="mini-meta">{{ item.code }} · {% if item.suburb %}{{ item.suburb }}, {% endif %}{{ item.city }}</p>
+                </td>
+                <td>
+                  <p>{{ item.owner_name or '—' }}</p>
+                  <p class="mini-meta">{{ item.owner_email or '' }}</p>
+                </td>
+                <td>
+                  {% if item.manager_name %}
+                    <p>{{ item.manager_name }}</p>
+                    <p class="mini-meta">{{ item.manager_email }}</p>
+                  {% else %}
+                    <span class="badge badge-warn">Unassigned</span>
+                  {% endif %}
+                </td>
+                <td class="align-right">
+                  <span class="{{ 'neg' if item.balance < 0 else 'pos' }}">{{ item.balance|money }}</span>
+                  <p class="mini-meta">{{ item.funded|money }} in · {{ item.spent|money }} out</p>
+                </td>
+                <td>
+                  <div class="admin-progress">
+                    {{ progress_bar(item.progress) }}<span>{{ item.progress }}%</span>
+                  </div>
+                </td>
+                <td class="align-right">
+                  <a class="btn btn-ghost btn-xs" href="{{ url_for('projects.detail', project_id=item.id) }}">Open</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Recent activity</h2>
+        <a class="link-quiet" href="{{ url_for('admin.activity') }}">Full log {{ icon('arrow-right', 14) }}</a>
+      </div>
+      <ul class="timeline">
+        {% for event in events %}
+          <li>
+            <span class="timeline-dot"></span>
+            <div>
+              <p class="mini-title">{{ event.detail or event.action }}</p>
+              <p class="mini-meta">{{ event.user_name or 'System' }} · {% if event.project_name %}{{ event.project_name }} · {% endif %}{{ event.created_at|datetime }}</p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <aside class="dash-side">
+    <div class="card">
+      <div class="card-head">
+        <h2>Needs attention</h2>
+        <span class="count-pill">{{ attention|length }}</span>
+      </div>
+      {% if attention %}
+        <ul class="alert-list">
+          {% for alert in attention %}
+            <li class="alert-item alert-{{ alert.tone }}">
+              <span class="alert-icon">{{ icon(alert.icon, 16) }}</span>
+              <div>
+                <p class="alert-title">{{ alert.title }}</p>
+                <p class="alert-body">{{ alert.body }}</p>
+              </div>
+              <a class="alert-link" href="{{ alert.href }}" aria-label="Open">{{ icon('chevron-right', 16) }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="all-clear">
+          <span>{{ icon('check', 18) }}</span>
+          <p>Every workspace is clean: no blocked stages, no missing receipts, no overspend.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Team</h2>
+        <a class="link-quiet" href="{{ url_for('admin.people') }}">Manage</a>
+      </div>
+      <dl class="fact-list">
+        <div><dt>Clients</dt><dd>{{ counts.clients }}</dd></div>
+        <div><dt>Build managers</dt><dd>{{ counts.managers }}</dd></div>
+        <div><dt>Vaka staff</dt><dd>{{ counts.staff }}</dd></div>
+        <div><dt>Blocked stages</dt><dd class="{{ 'neg' if counts.blocked }}">{{ counts.blocked }}</dd></div>
+      </dl>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Staff tools</h2></div>
+      <div class="stack-sm">
+        <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('admin.projects') }}">{{ icon('building', 14) }} All projects</a>
+        <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('admin.people') }}">{{ icon('users', 14) }} People &amp; roles</a>
+        <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('admin.activity') }}">{{ icon('clock', 14) }} Activity log</a>
+        <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('admin.stages') }}">{{ icon('shield', 14) }} Stage reference</a>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

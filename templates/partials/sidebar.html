@@ -4,9 +4,10 @@
     <button class="icon-btn drawer-close" type="button" data-drawer-close aria-label="Close menu">{{ icon('close', 20) }}</button>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" aria-label="Main">
     {% for item in nav_items[:5] %}
-      <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}">
+      <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
+         {% if active == item.key %}aria-current="page"{% endif %}>
         {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
       </a>
     {% endfor %}
@@ -14,9 +15,10 @@
 
   <div class="sidebar-section">
     <p class="sidebar-label">Tools</p>
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" aria-label="Tools">
       {% for item in nav_items[5:] %}
-        <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}">
+        <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
+           {% if active == item.key %}aria-current="page"{% endif %}>
           {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
         </a>
       {% endfor %}
@@ -36,6 +38,26 @@
       <p class="sidebar-empty">No projects yet.</p>
     {% endif %}
   </div>
+
+  {% if user.role == 'admin' %}
+    <div class="sidebar-section">
+      <p class="sidebar-label">Vaka staff</p>
+      <nav class="sidebar-nav">
+        <a class="nav-link {% if active == 'admin' and admin_active == 'overview' %}is-active{% endif %}" href="{{ url_for('admin.overview') }}">
+          {{ icon('shield', 19) }}<span>Staff overview</span>
+        </a>
+        <a class="nav-link {% if admin_active == 'projects' %}is-active{% endif %}" href="{{ url_for('admin.projects') }}">
+          {{ icon('building', 19) }}<span>All projects</span>
+        </a>
+        <a class="nav-link {% if admin_active == 'people' %}is-active{% endif %}" href="{{ url_for('admin.people') }}">
+          {{ icon('users', 19) }}<span>People</span>
+        </a>
+        <a class="nav-link {% if admin_active == 'activity' %}is-active{% endif %}" href="{{ url_for('admin.activity') }}">
+          {{ icon('clock', 19) }}<span>Activity log</span>
+        </a>
+      </nav>
+    </div>
+  {% endif %}
 
   <div class="sidebar-foot">
     <a class="user-card" href="{{ url_for('settings.index') }}">

@@ -48,7 +48,7 @@
     <section class="contract-section">
       <h2>Payment schedule</h2>
       <table class="table">
-        <thead><tr><th>Milestone</th><th class="align-right">Amount</th></tr></thead>
+        <thead><tr><th scope="col">Milestone</th><th scope="col" class="align-right">Amount</th></tr></thead>
         <tbody>
           {% for item in schedule %}
             <tr><td>{{ item.label }}</td><td class="align-right">{{ item.amountCents|money }}</td></tr>

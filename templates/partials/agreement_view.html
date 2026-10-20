@@ -1,0 +1,39 @@
+{# Agreement body without the page chrome — reused by the modal reader and by the
+   full detail page. Expects: agreement, project, schedule, scheduled_total, author. #}
+<div class="detail-grid">
+  <div class="detail-main">
+    {% include "partials/agreement_document.html" %}
+  </div>
+
+  <aside class="detail-side">
+    {% include "partials/signature_panel.html" %}
+
+    <div class="card">
+      <div class="card-head"><h2>Actions</h2></div>
+      <div class="stack-sm">
+        <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('agreements.print_view', agreement_id=agreement.id) }}" target="_blank" rel="noopener">{{ icon('eye', 14) }} Open print view</a>
+        <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('documents.index', project=project.id) }}">{{ icon('folder', 14) }} Project documents</a>
+        {% if agreement.status != 'void' %}
+          <form method="post" action="{{ url_for('agreements.void', agreement_id=agreement.id) }}" data-confirm="Mark this agreement as void? The record stays in the project log." data-ajax>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button class="btn btn-danger-ghost btn-block btn-sm" type="submit">{{ icon('close', 14) }} Void agreement</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Record</h2></div>
+      <dl class="fact-list">
+        <div><dt>Prepared by</dt><dd>{{ author.name if author else user.name }}</dd></div>
+        <div><dt>Created</dt><dd>{{ agreement.created_at|datetime }}</dd></div>
+        <div><dt>Status</dt><dd data-agreement-status>{{ agreement.status|replace('_', ' ')|title }}</dd></div>
+        <div><dt>Currency</dt><dd>{{ agreement.currency }}</dd></div>
+      </dl>
+    </div>
+  </aside>
+</div>
+
+{% if agreement.status != 'signed' and agreement.status != 'void' %}
+  {% include "partials/modal_sign.html" %}
+{% endif %}

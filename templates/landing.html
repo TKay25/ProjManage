@@ -22,8 +22,9 @@
         <a class="btn btn-outline btn-lg" href="/login">{{ icon('play', 15) }} Explore the demo</a>
       </div>
 
-      <p class="demo-hint">Demo login · <code>client@vaka.co.zw</code> · <code>Vaka2026!</code></p>
-
+      {% if demo_mode %}
+        <p class="demo-hint">Demo login · <code>client@vaka.co.zw</code> · <code>Vaka2026!</code></p>
+      {% endif %}
       <ul class="hero-trust">
         <li>{{ icon('shield', 16) }} Council &amp; statutory gates</li>
         <li>{{ icon('wallet', 16) }} USD ledger + receipts</li>

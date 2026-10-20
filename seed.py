@@ -17,22 +17,42 @@ SEED_ASSETS = BASE_DIR / "static" / "img" / "seed"
 
 def ensure_seed():
     _seed_suppliers()
-    if current_app.config.get("SEED_DEMO", True):
+    if current_app.config.get("SEED_DEMO", False):
         _seed_demo()
+        _ensure_staff_account()
+
+
+def _ensure_staff_account():
+    """Keeps a Vaka staff login available on demo installs."""
+    existing = query("SELECT id FROM users WHERE role = 'admin' LIMIT 1", one=True)
+    if existing:
+        return
+
+    execute(
+        """INSERT INTO users (id, name, email, password_hash, role, phone, country, avatar_color, created_at)
+           VALUES (?, ?, ?, ?, 'admin', NULL, 'Zimbabwe', '#0B4F3C', ?)""",
+        (
+            new_id(),
+            "Vaka Staff",
+            "admin@vaka.co.zw",
+            auth.hash_password("Vaka2026!"),
+            "2026-02-18T08:00:00+00:00",
+        ),
+    )
 
 
 def _seed_suppliers():
-    existing = query("SELECT COUNT(*) AS count FROM suppliers", one=True)
-    if existing and existing["count"] > 0:
-        return
-
+    """Idempotent, so concurrent gunicorn workers cannot duplicate the directory."""
     for index, supplier in enumerate(SUPPLIERS):
+        supplier_id = "sup-" + "".join(
+            char for char in supplier["name"].lower() if char.isalnum()
+        )[:18]
         execute(
-            """INSERT INTO suppliers
+            """INSERT OR IGNORE INTO suppliers
                  (id, name, category, city, website, phone, address, description, tags, verified, position)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                new_id(),
+                supplier_id,
                 supplier["name"],
                 supplier["category"],
                 supplier["city"],

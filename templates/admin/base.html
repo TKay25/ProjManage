@@ -1,0 +1,14 @@
+{% extends "app/base.html" %}
+
+{% block content %}
+<div class="staff-ribbon">
+  {{ icon('shield', 14) }}
+  <span>Vaka staff portal</span>
+  <span class="sep">·</span>
+  <span>Every client and manager workspace</span>
+  <span class="sep">·</span>
+  <a href="/app">Back to my workspace</a>
+</div>
+
+{% block admin_content %}{% endblock %}
+{% endblock %}

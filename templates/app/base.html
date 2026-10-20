@@ -39,9 +39,30 @@
 
 {% block modals %}{% endblock %}
 
+{# Shared reader dialog. Any record with a JSON-capable detail route can open in
+   here by setting data-modal-remote on its link, so nothing has to redirect. #}
+<dialog class="modal modal--reader" id="modal-view" aria-labelledby="modal-view-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow" data-modal-view-eyebrow>Details</p>
+        <h2 id="modal-view-title" data-modal-view-title>Loading</h2>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+    <div class="modal-body modal-body--flush" data-modal-body></div>
+  </div>
+</dialog>
+
+{% block scripts %}
+  {# Loaded app-wide because the reader dialog can inject a signature pad. #}
+  <script src="{{ asset_url('js/signature.js') }}" defer></script>
+{% endblock %}
+
 <nav class="tabbar" aria-label="Sections">
   {% for item in tab_items %}
-    <a class="tab {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}">
+    <a class="tab {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
+       {% if active == item.key %}aria-current="page"{% endif %}>
       {{ icon(item.icon, 21) }}<span>{{ item.label }}</span>
     </a>
   {% endfor %}
