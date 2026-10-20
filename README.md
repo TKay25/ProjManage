@@ -75,9 +75,9 @@ $env:SEED_DEMO="true"; python app.py
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Client | `client@vaka.co.zw` | `Vaka2026!` |
-| Build manager | `manager@vaka.co.zw` | `Vaka2026!` |
-| YaVaKa staff | `admin@vaka.co.zw` | `Vaka2026!` |
+| Client | `client@yavaka.co.zw` | `YaVaKa2026!` |
+| Build manager | `manager@yavaka.co.zw` | `YaVaKa2026!` |
+| YaVaKa staff | `admin@yavaka.co.zw` | `YaVaKa2026!` |
 
 Set `SEED_DEMO=false` to start with an empty workspace (the supplier directory is
 always seeded). On a fresh install with demo seeding enabled, a staff account is

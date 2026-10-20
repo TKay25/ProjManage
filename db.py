@@ -177,6 +177,41 @@ def init_db():
     connection = get_db()
     connection.executescript(SCHEMA)
     connection.commit()
+    run_migrations(connection)
+
+
+def run_migrations(connection):
+    """Idempotent data migrations, tracked with PRAGMA user_version.
+
+    Runs on every boot, so a deploy can move existing rows. Anything here must
+    be safe to run against a fresh database as well as a populated one.
+    """
+    version = connection.execute("PRAGMA user_version").fetchone()[0]
+
+    if version < 1:
+        # The brand moved from Vaka to YaVaKa. Move the demo accounts with it,
+        # otherwise the sign-in page would advertise addresses and a password
+        # that no longer exist. OR IGNORE skips a row whose new address is
+        # already taken.
+        connection.execute(
+            "UPDATE OR IGNORE users "
+            "SET email = replace(email, '@vaka.co.zw', '@yavaka.co.zw') "
+            "WHERE email LIKE '%@vaka.co.zw'"
+        )
+
+        # Imported here to keep db.py free of an import cycle at module load.
+        from auth import hash_password
+        from seed import DEMO_ACCOUNTS, DEMO_PASSWORD
+
+        for address in DEMO_ACCOUNTS:
+            connection.execute(
+                "UPDATE users SET password_hash = ? WHERE email = ?",
+                (hash_password(DEMO_PASSWORD), address),
+            )
+
+        connection.execute("PRAGMA user_version = 1")
+
+    connection.commit()
 
 
 def init_app(app):

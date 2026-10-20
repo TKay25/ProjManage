@@ -58,7 +58,7 @@ class VakaTestCase(unittest.TestCase):
         with self.client.session_transaction() as session:
             return session["csrf"]
 
-    def login(self, email="client@vaka.co.zw", password="Vaka2026!"):
+    def login(self, email="client@yavaka.co.zw", password="YaVaKa2026!"):
         token = self.csrf()
         return self.client.post(
             "/login",
@@ -320,8 +320,8 @@ class ProductionSafety(unittest.TestCase):
         client.post(
             "/login",
             data={
-                "email": "client@vaka.co.zw",
-                "password": "Vaka2026!",
+                "email": "client@yavaka.co.zw",
+                "password": "YaVaKa2026!",
                 "csrf_token": "test-token",
             },
         )
@@ -360,8 +360,8 @@ class ProductionSafety(unittest.TestCase):
 
         body = create_app(config).test_client().get("/login").get_data(as_text=True)
 
-        self.assertNotIn("Vaka2026!", body)
-        self.assertNotIn("client@vaka.co.zw", body)
+        self.assertNotIn("YaVaKa2026!", body)
+        self.assertNotIn("client@yavaka.co.zw", body)
 
     def test_password_hashes_are_salted(self):
         import auth
@@ -389,8 +389,8 @@ class ProductionSafety(unittest.TestCase):
             "/login",
             base_url="https://vaka.test",
             data={
-                "email": "client@vaka.co.zw",
-                "password": "Vaka2026!",
+                "email": "client@yavaka.co.zw",
+                "password": "YaVaKa2026!",
                 "csrf_token": "token",
             },
         )
@@ -461,7 +461,7 @@ class LoginThrottle(VakaTestCase):
         return self.client.post(
             "/login",
             data={
-                "email": "client@vaka.co.zw",
+                "email": "client@yavaka.co.zw",
                 "password": password,
                 "csrf_token": self.csrf(),
             },
@@ -469,7 +469,7 @@ class LoginThrottle(VakaTestCase):
 
     def test_repeated_successful_logins_are_never_throttled(self):
         for _ in range(12):
-            self.assertEqual(self._post("Vaka2026!").status_code, 302)
+            self.assertEqual(self._post("YaVaKa2026!").status_code, 302)
 
     def test_failures_still_throttle(self):
         codes = [self._post("definitely-not-the-password").status_code for _ in range(10)]
@@ -545,7 +545,7 @@ class Accessibility(VakaTestCase):
         self.assertIn('aria-current="page"', page)
 
     def test_table_headers_are_scoped(self):
-        self.login("admin@vaka.co.zw")
+        self.login("admin@yavaka.co.zw")
         page = self.client.get("/admin/projects").get_data(as_text=True)
         self.assertIn("<th scope=\"col\"", page)
 
@@ -646,6 +646,66 @@ class RegistrationModal(VakaTestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertIn("/app/projects/new", response.headers["Location"])
+
+
+class BrandMigration(unittest.TestCase):
+    """The rename has to move existing demo rows, not just the source."""
+
+    def _app(self, name, seed_demo=False):
+        return create_app(
+            isolated_config(
+                SEED_DEMO=seed_demo,
+                DATABASE=str(Path(_TEMP_DIR) / f"{name}.db"),
+                UPLOAD_FOLDER=str(Path(_TEMP_DIR) / f"{name}-uploads"),
+            )
+        )
+
+    def test_moves_demo_accounts_to_the_new_domain(self):
+        import db
+
+        app = self._app("brand-migration")
+        with app.app_context():
+            connection = db.get_db()
+            connection.execute("PRAGMA user_version = 0")
+            connection.execute(
+                """INSERT INTO users (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES ('legacy', 'Legacy Client', 'client@vaka.co.zw', 'placeholder',
+                           'client', '#0F5D46', '2026-01-01T00:00:00+00:00')"""
+            )
+            connection.commit()
+
+            db.run_migrations(connection)
+
+            row = db.query("SELECT email, password_hash FROM users WHERE id = 'legacy'", one=True)
+            self.assertEqual(row["email"], "client@yavaka.co.zw")
+            # The displayed demo password is reset to the on-brand one, so the
+            # credentials on the sign-in page keep working.
+            import auth
+            from seed import DEMO_PASSWORD
+
+            self.assertTrue(auth.verify_password(DEMO_PASSWORD, row["password_hash"]))
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 1)
+
+            # Running again must not change anything.
+            db.run_migrations(connection)
+            self.assertEqual(
+                db.query("SELECT email FROM users WHERE id = 'legacy'", one=True)["email"],
+                "client@yavaka.co.zw",
+            )
+
+    def test_demo_login_works_with_the_new_credentials(self):
+        app = self._app("brand-login", seed_demo=True)
+        client = app.test_client()
+        from seed import DEMO_PASSWORD
+
+        page = client.get("/login").get_data(as_text=True)
+        token = re.search(r'name="csrf-token" content="([^"]+)"', page).group(1)
+        response = client.post(
+            "/login",
+            data={"email": "client@yavaka.co.zw", "password": DEMO_PASSWORD, "csrf_token": token},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(client.get("/app").status_code, 200)
 
 
 class MoneyFormatting(unittest.TestCase):

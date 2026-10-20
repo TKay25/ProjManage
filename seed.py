@@ -14,6 +14,11 @@ from suppliers import SUPPLIERS
 BASE_DIR = Path(__file__).resolve().parent
 SEED_ASSETS = BASE_DIR / "static" / "img" / "seed"
 
+# Printed on the sign-in page for demo installs, so it has to match the hashes
+# below and in db.run_migrations.
+DEMO_PASSWORD = "YaVaKa2026!"
+DEMO_ACCOUNTS = ("admin@yavaka.co.zw", "client@yavaka.co.zw", "manager@yavaka.co.zw")
+
 
 def ensure_seed():
     _seed_suppliers()
@@ -34,8 +39,8 @@ def _ensure_staff_account():
         (
             new_id(),
             "YaVaKa Staff",
-            "admin@vaka.co.zw",
-            auth.hash_password("Vaka2026!"),
+            "admin@yavaka.co.zw",
+            auth.hash_password(DEMO_PASSWORD),
             "2026-02-18T08:00:00+00:00",
         ),
     )
@@ -82,13 +87,13 @@ def _seed_demo():
     if existing and existing["count"] > 0:
         return
 
-    password_hash = auth.hash_password("Vaka2026!")
+    password_hash = auth.hash_password(DEMO_PASSWORD)
     client_id = new_id()
     manager_id = new_id()
 
     for user_id, name, email, role, phone, country, colour in [
-        (client_id, "Rudo Chikafu", "client@vaka.co.zw", "client", "263771234567", "United Kingdom", "#0F5D46"),
-        (manager_id, "Tendai Moyo", "manager@vaka.co.zw", "manager", "263772555001", "Zimbabwe", "#C8963E"),
+        (client_id, "Rudo Chikafu", "client@yavaka.co.zw", "client", "263771234567", "United Kingdom", "#0F5D46"),
+        (manager_id, "Tendai Moyo", "manager@yavaka.co.zw", "manager", "263772555001", "Zimbabwe", "#C8963E"),
     ]:
         execute(
             """INSERT INTO users (id, name, email, password_hash, role, phone, country, avatar_color, created_at)
