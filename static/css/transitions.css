@@ -201,6 +201,14 @@ body.is-leaving main {
   transition: opacity 0.18s ease;
 }
 
+body.app .shell-main {
+  transition: opacity 0.16s ease;
+}
+
+body.app.is-navigating .shell-main {
+  opacity: 0.84;
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root),
   ::view-transition-new(root),
@@ -218,6 +226,10 @@ body.is-leaving main {
   }
 
   .page-loader {
+    transition: none;
+  }
+
+  body.app .shell-main {
     transition: none;
   }
 }

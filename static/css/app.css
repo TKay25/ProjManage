@@ -2263,13 +2263,39 @@ h3 {
   margin: 52px 0 32px;
 }
 
-.auth-quote h2 {
+.auth-quote-statement {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 20px 4px 0;
   color: #fff;
   font-family: var(--font-serif);
+  font-style: italic;
   font-weight: 500;
-  font-size: 1.7rem;
-  line-height: 1.25;
-  margin-bottom: 16px;
+  font-size: clamp(1.45rem, 1.2rem + 0.7vw, 1.9rem);
+  line-height: 1.24;
+  letter-spacing: -0.025em;
+}
+
+.auth-quote-statement::before {
+  content: "“";
+  position: absolute;
+  top: -0.06em;
+  left: -0.08em;
+  color: var(--brass-300);
+  font-family: var(--font-serif);
+  font-size: 4.2rem;
+  font-style: normal;
+  line-height: 1;
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.auth-quote-statement::after {
+  content: "”";
+  display: inline-block;
+  margin-left: 0.08em;
+  color: var(--brass-300);
+  font-style: normal;
 }
 
 .auth-quote-sub {
@@ -2529,7 +2555,7 @@ h3 {
     margin: 28px 0 8px;
   }
 
-  .auth-quote h2 {
+  .auth-quote-statement {
     font-size: 1.35rem;
   }
 

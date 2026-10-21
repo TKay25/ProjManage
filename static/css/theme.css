@@ -419,7 +419,7 @@ dialog.modal--auth-register {
   margin: 38px 0 24px;
 }
 
-.modal-auth-aside .auth-quote h2 {
+.modal-auth-aside .auth-quote-statement {
   font-size: 1.48rem;
 }
 
@@ -510,7 +510,7 @@ dialog.modal--auth-register {
     display: none;
   }
 
-  .modal-auth-aside .auth-quote h2 {
+  .modal-auth-aside .auth-quote-statement {
     margin: 0;
     font-size: 1rem;
   }
@@ -525,7 +525,7 @@ dialog.modal--auth-register {
 }
 
 @media (max-width: 440px) {
-  .modal-auth-aside .auth-quote h2 {
+  .modal-auth-aside .auth-quote-statement {
     font-size: 0.9rem;
   }
 

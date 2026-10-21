@@ -67,8 +67,9 @@
 </dialog>
 
 {% block scripts %}
-  {# Loaded app-wide because the reader dialog can inject a signature pad. #}
+  {# Workspace scripts stay loaded across in-app page transitions. #}
   <script src="{{ asset_url('js/signature.js') }}" defer></script>
+  <script src="{{ asset_url('js/whatsapp.js') }}" defer></script>
 {% endblock %}
 
 <nav class="tabbar" aria-label="Sections">

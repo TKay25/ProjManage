@@ -268,10 +268,34 @@ body.app {
 
 .page-tagline {
   display: block;
-  margin-top: 3px;
+  margin-top: 7px;
+  padding-left: 9px;
+  border-left: 2px solid var(--brass-500);
   color: var(--forest-700);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-size: 0.96rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.page-tagline::before,
+.page-tagline::after {
+  color: var(--brass-600);
+  font-family: var(--font-serif);
+  font-size: 1.3em;
+  font-style: normal;
+  line-height: 0;
+}
+
+.page-tagline::before {
+  content: "“";
+  margin-right: 2px;
+}
+
+.page-tagline::after {
+  content: "”";
+  margin-left: 2px;
 }
 
 .page-actions {

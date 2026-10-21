@@ -281,7 +281,12 @@
     if (event.key === "Escape") closeAll();
   });
 
-  $$("dialog.modal").forEach((dialog) => {
+  const wiredDialogs = new WeakSet();
+
+  function wireDialog(dialog) {
+    if (wiredDialogs.has(dialog)) return;
+    wiredDialogs.add(dialog);
+
     dialog.addEventListener("close", () => {
       if ($$("dialog.modal[open]").length === 0) document.body.classList.remove("modal-open");
       const form = dialog.querySelector("form[data-ajax]");
@@ -295,7 +300,15 @@
     dialog.addEventListener("click", (event) => {
       if (event.target === dialog) closeModal(dialog);
     });
-  });
+  }
+
+  function wireDialogs(root = document) {
+    if (root.matches && root.matches("dialog.modal")) wireDialog(root);
+    root.querySelectorAll("dialog.modal").forEach(wireDialog);
+  }
+
+  wireDialogs();
+  document.addEventListener("vaka:pagechange", () => wireDialogs());
 
   function resetForm(form) {
     form.reset();
