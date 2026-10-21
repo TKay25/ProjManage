@@ -1,5 +1,6 @@
 """Project list, creation, detail and stage tracking."""
 
+import re
 from datetime import datetime
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
@@ -42,8 +43,18 @@ PROJECT_CODE_PREFIX = "YVK"
 
 
 def _next_code() -> str:
-    count = query("SELECT COUNT(*) AS count FROM projects", one=True)["count"]
-    return f"{PROJECT_CODE_PREFIX}-{datetime.now():%y}{count + 1:02d}"
+    """Sequential project number: YVK-0001, YVK-0002, ... YVK-9999.
+
+    Derived from the highest existing number rather than a row count, so
+    deleting a project never hands out a code that is already in use.
+    """
+    rows = query("SELECT code FROM projects")
+    highest = 0
+    for row in rows:
+        match = re.search(r"(\d+)\s*$", row["code"] or "")
+        if match:
+            highest = max(highest, int(match.group(1)))
+    return f"{PROJECT_CODE_PREFIX}-{highest + 1:04d}"
 
 
 @bp.get("/app/projects")

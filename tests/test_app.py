@@ -137,7 +137,7 @@ class ProjectAccess(VakaTestCase):
         from db import query
 
         with self.app.app_context():
-            project = query("SELECT id FROM projects WHERE code = 'YVK-2401'", one=True)
+            project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)
 
         self.assertEqual(self.client.get(f"/app/projects/{project['id']}").status_code, 404)
 
@@ -174,7 +174,7 @@ class MoneyLedger(VakaTestCase):
         from db import query
 
         with self.app.app_context():
-            return query("SELECT id FROM projects WHERE code = 'YVK-2401'", one=True)["id"]
+            return query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)["id"]
 
     def totals(self, project_id):
         from queries import money_totals
@@ -596,14 +596,54 @@ class RegistrationModal(VakaTestCase):
             client.get("/login").get_data(as_text=True),
         ).group(1)
 
-    def test_public_pages_carry_the_dialog_but_register_page_does_not(self):
-        for path in ["/", "/login", "/suppliers"]:
+    def test_public_pages_carry_the_dialogs_but_auth_pages_do_not(self):
+        for path in ["/", "/suppliers"]:
             page = self.client.get(path).get_data(as_text=True)
+            self.assertIn('id="modal-login"', page, path)
             self.assertIn('id="modal-register"', page, path)
             self.assertIn('data-modal-open="modal-register"', page, path)
+            self.assertIn('data-modal-open="modal-login"', page, path)
 
-        register = self.client.get("/register").get_data(as_text=True)
-        self.assertNotIn('id="modal-register"', register)
+        # The standalone auth pages already show their own form.
+        for path in ["/login", "/register"]:
+            page = self.client.get(path).get_data(as_text=True)
+            self.assertNotIn('id="modal-login"', page, path)
+            self.assertNotIn('id="modal-register"', page, path)
+
+    def test_the_two_dialogs_offer_a_way_to_each_other(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('data-modal-switch="modal-login"', page)
+        self.assertIn('data-modal-switch="modal-register"', page)
+
+    def test_sign_in_posts_json_so_the_dialog_never_navigates(self):
+        client = self.app.test_client()
+        page = client.get("/login").get_data(as_text=True)
+        token = re.search(r'name="csrf-token" content="([^"]+)"', page).group(1)
+
+        response = client.post(
+            "/login",
+            data={"email": "client@yavaka.co.zw", "password": "YaVaKa2026!", "csrf_token": token},
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertIn("redirect", payload)
+        # Same session, now signed in.
+        self.assertEqual(client.get("/app").status_code, 200)
+
+    def test_bad_password_returns_json_not_a_page(self):
+        client = self.app.test_client()
+        page = client.get("/login").get_data(as_text=True)
+        token = re.search(r'name="csrf-token" content="([^"]+)"', page).group(1)
+
+        response = client.post(
+            "/login",
+            data={"email": "client@yavaka.co.zw", "password": "wrong", "csrf_token": token},
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(response.get_json()["ok"])
 
     def test_validation_error_returns_json_so_the_dialog_stays_open(self):
         response = self.client.post(

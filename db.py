@@ -290,9 +290,21 @@ def run_migrations(connection):
     if version < 5:
         connection.execute("PRAGMA user_version = 5")
 
-    # Always run: project codes carry the current company initials. Rewriting
-    # only old-prefix rows keeps this safe to repeat, and catches codes that
-    # arrive from a restored backup.
+    if version < 6:
+        # Project codes are now sequential from the first project: YVK-0001,
+        # YVK-0002, ... Renumbered once, in creation order.
+        rows = connection.execute(
+            "SELECT id FROM projects ORDER BY created_at, rowid"
+        ).fetchall()
+        for index, row in enumerate(rows, start=1):
+            connection.execute(
+                "UPDATE projects SET code = ? WHERE id = ?",
+                (f"YVK-{index:04d}", row[0]),
+            )
+        connection.execute("PRAGMA user_version = 6")
+
+    # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
+    # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(
         "UPDATE OR IGNORE projects SET code = 'YVK-' || substr(code, 4) "
         "WHERE code LIKE 'VK-%' AND code NOT LIKE 'YVK-%'"

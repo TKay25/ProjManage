@@ -140,12 +140,12 @@ body.app .page-loader {
    travels smoothly around every corner rather than stepping. */
 .loader-trace {
   position: absolute;
-  top: -11px;
-  left: -11px;
-  /* The mark is a fixed 76px, so the frame is a fixed 98px square. Explicit
+  top: -8px;
+  left: -8px;
+  /* The mark is a fixed 76px, so the frame is a fixed 92px square. Explicit
      width and height keep the viewBox from collapsing to its intrinsic ratio. */
-  width: 98px;
-  height: 98px;
+  width: 92px;
+  height: 92px;
   /* The global `svg { max-width: 100% }` would clamp this to the parent's 76px. */
   max-width: none;
   overflow: visible;

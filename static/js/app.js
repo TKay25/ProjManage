@@ -236,6 +236,67 @@
     });
   }
 
+  /* ---------- Password reveal ---------- */
+
+  // Every password field gets a show/hide control, no template changes needed.
+  const revealMarkup =
+    '<button class="pw-toggle" type="button" aria-label="Show password" ' +
+    'aria-pressed="false" tabindex="-1">' +
+    '<svg class="icon pw-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ' +
+    'aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/>' +
+    '<circle cx="12" cy="12" r="3"/></svg>' +
+    '<svg class="icon pw-eye-off" width="17" height="17" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ' +
+    'aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/>' +
+    '<circle cx="12" cy="12" r="3"/><path d="m3 3 18 18"/></svg>' +
+    "</button>";
+
+  function enhancePasswordField(input) {
+    if (input.dataset.pwReady === "1") return;
+    const parent = input.parentElement;
+    if (!parent || parent.querySelector(".pw-toggle")) return;
+    input.dataset.pwReady = "1";
+
+    const wrap = document.createElement("span");
+    wrap.className = "pw-field";
+    parent.insertBefore(wrap, input);
+    wrap.appendChild(input);
+
+    const holder = document.createElement("span");
+    holder.innerHTML = revealMarkup;
+    const button = holder.firstElementChild;
+    wrap.appendChild(button);
+
+    button.addEventListener("click", () => {
+      const showing = input.getAttribute("type") === "text";
+      input.setAttribute("type", showing ? "password" : "text");
+      button.classList.toggle("is-on", !showing);
+      button.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      button.setAttribute("aria-pressed", String(!showing));
+      // Keep the caret where the user left it.
+      const end = input.value.length;
+      input.focus();
+      try {
+        input.setSelectionRange(end, end);
+      } catch (error) {
+        /* type change can reset selection in some browsers */
+      }
+    });
+  }
+
+  function enhancePasswords(root) {
+    (root || document).querySelectorAll('input[type="password"]').forEach(enhancePasswordField);
+  }
+
+  enhancePasswords();
+
+  // Fields injected later (dialogs, fragments) get the same treatment.
+  document.addEventListener("vaka:fragment", (event) =>
+    enhancePasswords((event.detail && event.detail.root) || document),
+  );
+  document.addEventListener("vaka:modalopen", (event) => enhancePasswords(event.target));
+
   /* ---------- Theme toggle ---------- */
 
   $$("[data-theme-toggle]").forEach((button) => {

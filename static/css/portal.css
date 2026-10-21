@@ -3480,3 +3480,55 @@ button.card-trigger {
     max-height: 200px;
   }
 }
+
+/* ---------- Password reveal ---------- */
+
+.pw-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.pw-field .input {
+  padding-right: 42px;
+}
+
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.pw-toggle:hover,
+.pw-toggle:focus-visible {
+  color: var(--forest-700);
+  background: rgba(15, 93, 70, 0.08);
+}
+
+.pw-toggle.is-on {
+  color: var(--forest-700);
+}
+
+.pw-toggle .pw-eye-off { display: none; }
+.pw-toggle.is-on .pw-eye { display: none; }
+.pw-toggle.is-on .pw-eye-off { display: block; }
+
+[data-theme="dark"] .pw-toggle:hover,
+[data-theme="dark"] .pw-toggle:focus-visible,
+[data-theme="dark"] .pw-toggle.is-on {
+  color: var(--forest-200);
+  background: rgba(180, 220, 200, 0.1);
+}
