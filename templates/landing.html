@@ -1,21 +1,22 @@
 {% extends "base.html" %}
-{% block title %}YaVaKa — your build in Zimbabwe, as if you were there{% endblock %}
+{% block title %}YaVaKa — independent build management for Zimbabweans abroad{% endblock %}
 {% block body_class %}landing public{% endblock %}
 
 {% block content %}
 <section class="hero">
   <div class="container hero-inner">
     <div class="hero-copy">
-      <p class="eyebrow">{{ icon('globe', 14) }} For Zimbabweans building back home</p>
+      <p class="eyebrow">{{ icon('globe', 14) }} Independent build management · Zimbabwe</p>
       <h1 class="hero-title">
-        Your build in Zimbabwe.<br />
-        <span class="accent">As if you were there.</span>
+        You can't be on site.<br />
+        <span class="accent">We can.</span>
       </h1>
       <p class="hero-lead">
-        Watch the stages, the money and the receipts move as they happen — not
-        weeks later in a phone call. Track the build yourself, or let YaVaKa
-        manage it on the ground: coordinating builders, chasing progress and
-        keeping every record within reach.
+        YaVaKa manages your Zimbabwe build while your contractor does the work:
+        we vet the builder, approve every payment—or make it ourselves when you
+        place the funds with us—chase the programme and settle the arguments.
+        Want us to build it instead? We do that too. Everything is logged as it
+        happens, so you can watch it from anywhere in the world.
       </p>
 
       <div class="hero-actions">
@@ -27,9 +28,9 @@
         <p class="demo-hint">Demo login · <code>client@yavaka.co.zw</code> · <code>YaVaKa2026!</code></p>
       {% endif %}
       <ul class="hero-trust">
-        <li>{{ icon('shield', 16) }} 19 stages, stand to handover</li>
-        <li>{{ icon('wallet', 16) }} Every dollar, receipted</li>
-        <li>{{ icon('message', 16) }} Updates by email &amp; WhatsApp</li>
+        <li>{{ icon('shield', 16) }} We vet the contractor</li>
+        <li>{{ icon('wallet', 16) }} We approve or make payments</li>
+        <li>{{ icon('globe', 16) }} You see it live, anywhere</li>
       </ul>
     </div>
 
@@ -112,39 +113,90 @@
   </div>
 </section>
 
+<section class="section problem-band" id="problem">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">The honest part</p>
+      <h2>Building from abroad isn't a distance problem.<br />It's a trust problem.</h2>
+      <p class="lead">
+        Almost every diaspora build stalls the same way. The money is real, the
+        intentions are good, and nobody with authority is standing on the site.
+      </p>
+    </div>
+
+    <div class="pain-grid">
+      <article class="pain-card">
+        <span class="pain-num">01</span>
+        <h3>The money finished. The house didn't.</h3>
+        <p>Tranche two cleared, the site went quiet, and no one could say exactly what the money touched.</p>
+      </article>
+      <article class="pain-card">
+        <span class="pain-num">02</span>
+        <h3>The photos always look good.</h3>
+        <p>A camera can make a weak mix look like progress. Nobody was checking the specification, the quantities or the curing.</p>
+      </article>
+      <article class="pain-card">
+        <span class="pain-num">03</span>
+        <h3>Your relative means well. He isn't an engineer.</h3>
+        <p>Family can watch a site. Reading a bill of quantities, testing concrete and holding retention is a different job.</p>
+      </article>
+      <article class="pain-card">
+        <span class="pain-num">04</span>
+        <h3>Then comes the diaspora price.</h3>
+        <p>The moment a contractor hears the client is abroad, the same cement costs a third more. Nobody is negotiating for you.</p>
+      </article>
+      <article class="pain-card">
+        <span class="pain-num">05</span>
+        <h3>The argument you cannot win.</h3>
+        <p>Delays, "extras", a threat to down tools. You argue on WhatsApp across time zones, and he can simply wait you out.</p>
+      </article>
+      <article class="pain-card">
+        <span class="pain-num">06</span>
+        <h3>Approvals nobody warned you about.</h3>
+        <p>Title, cession, council plans, EMA, ZINWA, ZESA. One missed gate stops the entire build while it is explained to you.</p>
+      </article>
+    </div>
+
+    <p class="problem-turn">
+      None of that is a paperwork problem. It's a <strong>presence</strong> problem.
+      <span>Somebody has to stand on that site, hold the money and take the calls. That somebody is us.</span>
+    </p>
+  </div>
+</section>
+
 <section class="section" id="why">
   <div class="container">
     <div class="section-head">
-      <p class="eyebrow">Why YaVaKa exists</p>
-      <h2>You may be miles away. Your project record shouldn't be.</h2>
+      <p class="eyebrow">What YaVaKa actually does</p>
+      <h2>We stand on the site so you don't have to fly home to check.</h2>
       <p class="lead">
-        Building from London, Johannesburg or Dubai should not mean piecing
-        together updates from chats, calls and scattered receipts. YaVaKa gives
-        you and your on-the-ground team one shared place to see what happened,
-        what it cost and what needs attention next.
+        YaVaKa manages builds that other contractors deliver — as your
+        independent manager, not their friend. We can also build your home
+        ourselves. Either way, one team answers for the money, the programme and
+        the finish.
       </p>
     </div>
 
     <div class="grid grid-4 value-grid">
       <article class="feature-card">
-        <span class="feature-icon">{{ icon('wallet', 22) }}</span>
-        <h3>Know where every dollar went.</h3>
-        <p>Record funds received, project payments and expenses in one USD ledger. Link costs to a build stage and attach the receipt, so the balance has a clear story—not a trail of screenshots.</p>
-      </article>
-      <article class="feature-card">
         <span class="feature-icon">{{ icon('shield', 22) }}</span>
-        <h3>Know what's next—and what must happen first.</h3>
-        <p>Follow a 19-stage Zimbabwe build sequence, from land and title checks to council approvals, services and handover. See the relevant authority at each statutory gate.</p>
+        <h3>We choose the builder.</h3>
+        <p>We check who has actually delivered, price the work against a real bill of quantities, and put the agreement in writing before a single bag of cement lands.</p>
       </article>
       <article class="feature-card">
-        <span class="feature-icon">{{ icon('folder', 22) }}</span>
-        <h3>Keep the proof with the project.</h3>
-        <p>Plans, approvals, invoices, receipts, site photos and signed agreements stay filed against the build and the stage they belong to—not buried in someone's phone gallery.</p>
+        <span class="feature-icon">{{ icon('wallet', 22) }}</span>
+        <h3>We approve payments — or we make them.</h3>
+        <p>Keep custody of your funds and we approve each release against verified progress. Place the funds with us and we pay the contractor ourselves. Either way it is logged the moment it happens.</p>
       </article>
       <article class="feature-card">
         <span class="feature-icon">{{ icon('message', 22) }}</span>
-        <h3>Turn updates into a record you can follow.</h3>
-        <p>Your team can share progress through YaVaKa's workspace and WhatsApp tools. Important project details stay connected to the same build record.</p>
+        <h3>We take the arguments.</h3>
+        <p>Delays, extra costs and disputes are our phone calls to make, not yours. You get the outcome and the record — not the 2am WhatsApp thread.</p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-icon">{{ icon('folder', 22) }}</span>
+        <h3>We keep the file that proves it.</h3>
+        <p>Approvals, quotes, invoices, receipts, site photos and signed agreements sit against the build and the stage they belong to.</p>
       </article>
     </div>
   </div>
@@ -237,15 +289,18 @@
       <p class="lead">
         See <strong>what came in</strong>, <strong>what went out</strong> and
         <strong>what remains</strong>—with expenses linked to the stage they serve.
-        When YaVaKa manages the build, our team coordinates builders and suppliers,
-        follows up on site and records project payments in the same ledger.
+        When YaVaKa manages the build we either approve each payment against
+        verified progress, or—if you place the funds with us—make the payment
+        ourselves. Every movement is logged as it happens, so you can watch it
+        from anywhere in the world.
       </p>
 
       <ul class="check-list">
         <li>{{ icon('check', 18) }}<span>Funding tranches with bank or EcoCash references</span></li>
+        <li>{{ icon('check', 18) }}<span>Payments approved by us—or paid by us—against proven progress</span></li>
         <li>{{ icon('check', 18) }}<span>Expenses tagged to the exact build stage</span></li>
         <li>{{ icon('check', 18) }}<span>Receipts attached to the costs they support</span></li>
-        <li>{{ icon('check', 18) }}<span>Budget vs actual per stage, always current</span></li>
+        <li>{{ icon('check', 18) }}<span>Every entry visible in real time, from anywhere</span></li>
       </ul>
 
       <a class="btn btn-primary" href="/register" data-modal-open="modal-register">Open your project ledger {{ icon('arrow-right', 17) }}</a>

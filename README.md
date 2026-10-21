@@ -164,9 +164,21 @@ All amounts are stored as **integer US cents** — never floats. Parse with
 balance is always `SUM(funding) - SUM(expense)` for the project, so it cannot
 drift from the ledger.
 
-For YaVaKa-managed builds, YaVaKa coordinates contractors and suppliers and
-records client funding and payments made on the project's behalf. The app keeps
-the auditable ledger; it does not itself hold funds as a bank or escrow service.
+For YaVaKa-managed builds, payment works one of two ways, at the client's
+choice:
+
+- **Client keeps custody.** The client (or their bank) holds the funds. YaVaKa
+  verifies progress and **approves** each payment before it is released.
+- **YaVaKa is the custodian.** The client places project funds with YaVaKa,
+  which **makes the payments** to contractors and suppliers on the project's
+  behalf.
+
+Either way, every approval, payment, expense and receipt is written to the
+project ledger as it happens. The client can open the record from anywhere in
+the world and see it in real time.
+
+The application itself is the auditable record, not a bank account: custody and
+release of funds happen under the client's written agreement, outside the app.
 
 ---
 
