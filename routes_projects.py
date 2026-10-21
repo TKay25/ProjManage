@@ -11,6 +11,7 @@ from workspaces import workspaces_for
 from money import format_money, parse_money_to_cents
 from paging import offset, page_number, page_window
 from queries import (
+    attachments_by_stage,
     latest_activity,
     money_totals,
     next_stage,
@@ -202,6 +203,7 @@ def detail(project_id):
     spend = stage_spend(project_id)
     totals = money_totals(project_id)
     current = next_stage(stages)
+    stage_files = attachments_by_stage(project_id)
 
     groups = []
     for group in STAGE_GROUPS:
@@ -218,6 +220,7 @@ def detail(project_id):
                     "spent": spent,
                     "variance": stage["budget_cents"] - spent,
                     "over": spent > stage["budget_cents"] > 0,
+                    "files": stage_files.get(stage["key"], []),
                 }
             )
         groups.append({"name": group, "stages": items})

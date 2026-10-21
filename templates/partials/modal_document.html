@@ -36,6 +36,21 @@
             </select>
           </label>
 
+          <label class="field">
+            <span class="field-label">Build stage (optional)</span>
+            <select class="select" name="stage_key">
+              <option value="">Not tied to a stage</option>
+              {% for group in stage_groups %}
+                <optgroup label="{{ group.name }}">
+                  {% for item in group.stages %}
+                    <option value="{{ item.key }}" {% if stage_key == item.key %}selected{% endif %}>{{ item.name }}</option>
+                  {% endfor %}
+                </optgroup>
+              {% endfor %}
+            </select>
+            <span class="field-hint">Choosing a stage files the document against that part of the build.</span>
+          </label>
+
           <label class="dropzone" data-dropzone>
             <input type="file" name="file" accept="image/*,application/pdf" required data-drop-input data-modal-autofocus />
             <span class="dropzone-icon">{{ icon('upload', 24) }}</span>

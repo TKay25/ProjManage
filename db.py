@@ -275,6 +275,18 @@ def run_migrations(connection):
            WHERE workspace_id IS NULL"""
     )
 
+    if version < 4:
+        # A file can belong to a build stage as well as a project, so a
+        # statutory approval sits next to the stage it satisfies and still
+        # shows up in the document vault.
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(attachments)")}
+        if "stage_key" not in columns:
+            connection.execute("ALTER TABLE attachments ADD COLUMN stage_key TEXT")
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_att_stage ON attachments(project_id, stage_key)"
+        )
+        connection.execute("PRAGMA user_version = 4")
+
     connection.commit()
 
 

@@ -54,6 +54,22 @@ def stage_spend(project_id: str) -> dict:
     return {row["stage_key"]: int(row["spent"]) for row in rows}
 
 
+def attachments_by_stage(project_id: str) -> dict:
+    """Files filed against a build stage, keyed by stage_key."""
+    rows = query(
+        """SELECT a.*, u.name AS uploader_name
+           FROM attachments a
+           LEFT JOIN users u ON u.id = a.uploader_id
+           WHERE a.project_id = ? AND a.stage_key IS NOT NULL
+           ORDER BY a.created_at DESC""",
+        (project_id,),
+    )
+    grouped = {}
+    for row in rows:
+        grouped.setdefault(row["stage_key"], []).append(row)
+    return grouped
+
+
 def category_breakdown(project_id: str):
     rows = query(
         """SELECT category, COALESCE(SUM(amount_cents), 0) AS total

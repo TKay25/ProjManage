@@ -3371,3 +3371,41 @@ button.card-trigger {
   font-size: 0.7rem;
 }
 
+
+/* ---------- Stage attachments ---------- */
+
+.stage-files {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stage-files:empty {
+  display: none;
+}
+
+.stage-files li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 93, 70, 0.045);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.stage-files a {
+  color: var(--forest-700);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.stage-files .mini-meta {
+  margin-left: auto;
+  white-space: nowrap;
+}

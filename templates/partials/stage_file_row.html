@@ -1,0 +1,7 @@
+{# One row in a stage's attachment list. Kept separate so an AJAX upload can
+   prepend exactly this markup into the right stage. #}
+<li>
+  {{ icon('receipt' if file.kind == 'receipt' else 'folder', 12) }}
+  <a href="{{ url_for('documents.serve', attachment_id=file.id) }}" target="_blank" rel="noopener">{{ file.original_name }}</a>
+  <span class="mini-meta">{{ file.kind|replace('_', ' ')|title }} · {{ file.created_at|date }}</span>
+</li>

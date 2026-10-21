@@ -1,0 +1,47 @@
+{# Files a document or receipt against a specific build stage. The same record
+   appears in the document vault, tagged with the stage. #}
+<dialog class="modal modal--slim" id="modal-stage-file" aria-labelledby="modal-stage-file-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Stage attachment</p>
+        <h2 id="modal-stage-file-title" data-modal-context-target>Add a file</h2>
+        <p class="modal-sub">Approvals, invoices and site photos for this stage. Everything also lands in Documents.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('documents.upload') }}" enctype="multipart/form-data" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="project_id" value="" />
+      <input type="hidden" name="stage_key" value="" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">File</span>
+            <input class="input" type="file" name="file" required
+                   accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" data-upload-input />
+            <span class="field-hint">PDF, image or spreadsheet. Up to 10MB.</span>
+          </label>
+
+          <label class="field">
+            <span class="field-label">What is it?</span>
+            <select class="select" name="kind">
+              {% for value, label in [('document', 'Document / approval'), ('receipt', 'Receipt'), ('photo', 'Site photo')] %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('upload', 16) }} <span data-submit-label>Upload file</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

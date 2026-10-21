@@ -11,6 +11,7 @@
     <p class="doc-name" title="{{ file.original_name }}">{{ file.original_name }}</p>
     <p class="mini-meta">{{ file.created_at|date }} · {{ (file.size / 1024)|round|int }}KB</p>
     {% if file.project_name %}<p class="mini-meta">{{ file.project_name }}</p>{% endif %}
+    {% if file.stage_name %}<p class="mini-meta">{{ icon('shield', 11) }} {{ file.stage_name }}</p>{% endif %}
     {% if file.transaction_description %}<p class="mini-meta">{{ icon('receipt', 11) }} {{ file.transaction_description }}</p>{% endif %}
   </div>
   <div class="doc-actions">

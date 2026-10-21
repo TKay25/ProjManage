@@ -708,6 +708,93 @@ class BrandMigration(unittest.TestCase):
         self.assertEqual(client.get("/app").status_code, 200)
 
 
+class StageAttachments(VakaTestCase):
+    """Files attached to a build stage also appear in the document vault."""
+
+    def _project(self):
+        from db import query
+
+        with self.app.app_context():
+            return query("SELECT id FROM projects ORDER BY created_at LIMIT 1", one=True)["id"]
+
+    def _png(self):
+        import io
+
+        return io.BytesIO(
+            bytes.fromhex(
+                "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+                "0000000a49444154789c6360000002000100ffff03000006000557bfabd4"
+                "0000000049454e44ae426082"
+            )
+        )
+
+    def _upload(self, project_id, stage_key, name):
+        return self.client.post(
+            "/app/documents/upload",
+            data={
+                "csrf_token": self.csrf(),
+                "project_id": project_id,
+                "kind": "document",
+                "stage_key": stage_key,
+                "file": (self._png(), name),
+            },
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+            content_type="multipart/form-data",
+        )
+
+    def test_stage_upload_lands_on_the_stage_and_in_documents(self):
+        self.login()
+        project_id = self._project()
+
+        response = self._upload(project_id, "plan_approval", "council-approval.png")
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["target"], '[data-stage-files="plan_approval"]')
+        self.assertEqual(payload["mode"], "prepend")
+        self.assertIn("council-approval.png", payload["fragment"])
+
+        detail = self.client.get(f"/app/projects/{project_id}").get_data(as_text=True)
+        self.assertIn("council-approval.png", detail)
+
+        documents = self.client.get(f"/app/documents?project={project_id}").get_data(as_text=True)
+        self.assertIn("council-approval.png", documents)
+        # The vault shows which stage the file belongs to.
+        self.assertIn("Council plan approval", documents)
+
+    def test_stage_filter_isolates_the_file(self):
+        self.login()
+        project_id = self._project()
+        self._upload(project_id, "foundation", "foundation-pour.png")
+
+        matching = self.client.get(
+            f"/app/documents?project={project_id}&stage=foundation"
+        ).get_data(as_text=True)
+        other = self.client.get(
+            f"/app/documents?project={project_id}&stage=superstructure"
+        ).get_data(as_text=True)
+
+        self.assertIn("foundation-pour.png", matching)
+        self.assertNotIn("foundation-pour.png", other)
+
+    def test_unknown_stage_is_ignored_rather_than_rejected(self):
+        from db import query
+
+        self.login()
+        project_id = self._project()
+
+        response = self._upload(project_id, "not_a_real_stage", "loose-file.png")
+        self.assertEqual(response.status_code, 200)
+        # Falls back to a plain project document.
+        self.assertEqual(response.get_json()["target"], "[data-doc-grid]")
+
+        with self.app.app_context():
+            row = query(
+                "SELECT stage_key FROM attachments WHERE original_name = 'loose-file.png'", one=True
+            )
+        self.assertIsNone(row["stage_key"])
+
+
 class MoneyFormatting(unittest.TestCase):
     def test_rounding_and_parsing(self):
         from money import format_money, parse_money_to_cents

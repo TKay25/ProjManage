@@ -49,9 +49,27 @@
               data-modal-value-notes="{{ stage.notes or '' }}">
         {{ icon('pen', 13) }} Update stage
       </button>
+      <button class="btn btn-ghost btn-xs" type="button"
+              data-modal-open="modal-stage-file"
+              data-modal-action="{{ url_for('documents.upload') }}"
+              data-modal-context="{{ stage.name }}"
+              data-modal-value-project_id="{{ project.id }}"
+              data-modal-value-stage_key="{{ stage.key }}">
+        {{ icon('upload', 13) }} Add file
+      </button>
       {% if definition.authority %}
         <span class="stage-gate">{{ icon('shield', 12) }} Statutory gate</span>
       {% endif %}
     </div>
+
+    {% if stage.files %}
+      <ul class="stage-files" data-stage-files="{{ stage.key }}">
+        {% for file in stage.files %}
+          {% include "partials/stage_file_row.html" %}
+        {% endfor %}
+      </ul>
+    {% else %}
+      <ul class="stage-files" data-stage-files="{{ stage.key }}"></ul>
+    {% endif %}
   </div>
 </article>

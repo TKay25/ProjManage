@@ -6,6 +6,7 @@ from flask import Blueprint, abort, current_app, flash, g, redirect, render_temp
 
 from auth import accessible_projects, can_manage_project, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query
+from stages import STAGE_GROUPS, stage_by_key
 from storage import UploadError, delete_upload, save_upload
 import web
 
@@ -40,14 +41,21 @@ def index():
         where.append("a.kind = ?")
         params.append(kind)
 
+    stage_key = request.args.get("stage", "")
+    if stage_key:
+        where.append("a.stage_key = ?")
+        params.append(stage_key)
+
     attachments = []
     if where:
         attachments = query(
-            f"""SELECT a.*, u.name AS uploader_name, p.name AS project_name, t.description AS transaction_description
+            f"""SELECT a.*, u.name AS uploader_name, p.name AS project_name,
+                       t.description AS transaction_description, s.name AS stage_name
                 FROM attachments a
                 LEFT JOIN users u ON u.id = a.uploader_id
                 LEFT JOIN projects p ON p.id = a.project_id
                 LEFT JOIN transactions t ON t.id = a.transaction_id
+                LEFT JOIN stages s ON s.project_id = a.project_id AND s.key = a.stage_key
                 WHERE {' AND '.join(where)}
                 ORDER BY a.created_at DESC
                 LIMIT 200""",
@@ -55,6 +63,15 @@ def index():
         )
 
     total_size = sum(item["size"] or 0 for item in attachments)
+
+    stage_groups = []
+    if project:
+        rows = {row["key"]: row for row in query(
+            "SELECT * FROM stages WHERE project_id = ? ORDER BY position", (project["id"],)
+        )}
+        for group in STAGE_GROUPS:
+            items = [row for key, row in rows.items() if stage_by_key(key) and stage_by_key(key)["group"] == group]
+            stage_groups.append({"name": group, "stages": items})
 
     return render_template(
         "app/documents.html",
@@ -65,6 +82,8 @@ def index():
         attachments=attachments,
         kinds=KINDS,
         kind=kind,
+        stage_key=stage_key,
+        stage_groups=stage_groups,
         total_size=total_size,
     )
 
@@ -77,6 +96,13 @@ def upload():
     if kind not in KINDS:
         kind = "document"
 
+    # Only accept a stage that actually belongs to this project.
+    stage_key = request.form.get("stage_key") or None
+    if stage_key and not query(
+        "SELECT 1 FROM stages WHERE project_id = ? AND key = ?", (project["id"], stage_key), one=True
+    ):
+        stage_key = None
+
     try:
         saved = save_upload(request.files.get("file"), kind)
     except UploadError as error:
@@ -88,8 +114,8 @@ def upload():
     attachment_id = new_id()
     execute(
         """INSERT INTO attachments
-             (id, project_id, transaction_id, uploader_id, kind, filename, original_name, mime_type, size, created_at)
-           VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)""",
+             (id, project_id, transaction_id, uploader_id, kind, filename, original_name, mime_type, size, stage_key, created_at)
+           VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             attachment_id,
             project["id"],
@@ -99,6 +125,7 @@ def upload():
             saved["original_name"],
             saved["mime_type"],
             saved["size"],
+            stage_key,
             now_iso(),
         ),
     )
@@ -107,16 +134,29 @@ def upload():
 
     if web.wants_json():
         file_row = query(
-            """SELECT a.*, u.name AS uploader_name, p.name AS project_name, NULL AS transaction_description
+            """SELECT a.*, u.name AS uploader_name, p.name AS project_name,
+                      NULL AS transaction_description, s.name AS stage_name
                FROM attachments a
                LEFT JOIN users u ON u.id = a.uploader_id
                LEFT JOIN projects p ON p.id = a.project_id
+               LEFT JOIN stages s ON s.project_id = a.project_id AND s.key = a.stage_key
                WHERE a.id = ?""",
             (attachment_id,),
             one=True,
         )
+        message = f"{KINDS[kind]} uploaded."
+
+        # Filed from a stage: drop it straight into that stage's file list.
+        if stage_key:
+            return web.ok(
+                message,
+                fragment=render_template("partials/stage_file_row.html", file=file_row),
+                target=f'[data-stage-files="{stage_key}"]',
+                mode="prepend",
+            )
+
         return web.ok(
-            f"{KINDS[kind]} uploaded.",
+            message,
             fragment=render_template("partials/doc_card.html", file=file_row, kinds=KINDS),
             target="[data-doc-grid]",
             mode="prepend",
