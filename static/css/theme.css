@@ -72,7 +72,13 @@
 [data-theme="dark"] .doc-card,
 [data-theme="dark"] .agreement-card,
 [data-theme="dark"] .project-card,
-[data-theme="dark"] .kpi-card,
+[data-theme="dark"] .kpi,
+[data-theme="dark"] .project-hero,
+[data-theme="dark"] .filter-bar-lg,
+[data-theme="dark"] .row-menu-panel,
+[data-theme="dark"] button.card-trigger,
+[data-theme="dark"] .wa-bubble.wa-in,
+[data-theme="dark"] .wa-composer,
 [data-theme="dark"] .empty,
 [data-theme="dark"] .wa-shell,
 [data-theme="dark"] .wa-chat,
@@ -91,6 +97,26 @@
 [data-theme="dark"] .doc-preview {
   background: var(--sand-200);
   border-color: var(--line);
+}
+
+[data-theme="dark"] .btn-outline,
+[data-theme="dark"] .btn-ghost,
+[data-theme="dark"] .btn-danger-ghost {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--forest-200);
+}
+
+[data-theme="dark"] .btn-outline:hover,
+[data-theme="dark"] .btn-ghost:hover {
+  background: rgba(180, 220, 200, 0.08);
+}
+
+/* Print previews stay white: they exist to be printed on paper. */
+[data-theme="dark"] .print-sheet,
+[data-theme="dark"] .print-body {
+  background: #fff;
+  color: #14201b;
 }
 
 [data-theme="dark"] .input,
@@ -165,6 +191,81 @@
 [data-theme="dark"] .chart-bar {
   stroke: var(--line-strong);
 }
+
+/* Accent text.
+
+   The dark forest tokens double as backgrounds elsewhere (sidebar, ribbon), so
+   they cannot simply be inverted. Anything that used them as *text* is lifted
+   to the light end of the scale here, or it would render near-black on a dark
+   card. `.kpi-value` was the worst offender. */
+[data-theme="dark"] .kpi-value,
+[data-theme="dark"] .panel-amount,
+[data-theme="dark"] .mock-amount,
+[data-theme="dark"] .signature-name,
+[data-theme="dark"] .stage-group,
+[data-theme="dark"] .all-clear,
+[data-theme="dark"] .side-note,
+[data-theme="dark"] a:hover,
+[data-theme="dark"] .link-quiet:hover,
+[data-theme="dark"] .side-project:hover,
+[data-theme="dark"] .btn-outline,
+[data-theme="dark"] .btn-outline:hover,
+[data-theme="dark"] .btn-ghost:hover,
+[data-theme="dark"] .icon-btn:hover,
+[data-theme="dark"] .chip:hover,
+[data-theme="dark"] .segment:hover,
+[data-theme="dark"] .nav-link:hover {
+  color: var(--forest-200);
+}
+
+/* Filled controls keep light text on the forest fill. */
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .btn-light,
+[data-theme="dark"] .btn-light:hover,
+[data-theme="dark"] .segment.is-active,
+[data-theme="dark"] .nav-link.is-active {
+  color: #eaf6f0;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: var(--forest-600);
+}
+
+[data-theme="dark"] code,
+[data-theme="dark"] .command code,
+[data-theme="dark"] .demo-box code,
+[data-theme="dark"] .demo-box-title {
+  color: var(--brass-300);
+  background: rgba(200, 150, 62, 0.12);
+}
+
+[data-theme="dark"] .notice-success {
+  color: var(--forest-200);
+}
+
+[data-theme="dark"] .status-choice input:checked + span,
+[data-theme="dark"] .type-option input:checked + span {
+  color: var(--forest-200);
+  border-color: var(--forest-500);
+}
+
+/* Tables and lists read better with a hairline, not a bright stripe. */
+[data-theme="dark"] .table tbody tr:hover,
+[data-theme="dark"] .ledger-row:hover {
+  background: rgba(180, 220, 200, 0.05);
+}
+
+[data-theme="dark"] .table th,
+[data-theme="dark"] .table td {
+  border-color: var(--line);
+}
+
+/* Charts drawn with light fills need a darker grid. */
+[data-theme="dark"] .chart-legend-dot,
+[data-theme="dark"] .project-dot {
+  filter: brightness(1.25);
+}
+
 
 [data-theme="dark"] .modal::backdrop {
   background: rgba(2, 8, 6, 0.7);

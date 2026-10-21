@@ -12,6 +12,7 @@ const PRECACHE = [
   "/static/css/theme.css",
   "/static/css/transitions.css",
   "/static/js/app.js",
+  "/static/js/theme.js",
   "/static/js/nav.js",
   "/static/js/modal.js",
   "/static/js/signature.js",

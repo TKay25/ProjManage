@@ -23,20 +23,8 @@
   <link rel="stylesheet" href="{{ asset_url('css/portal.css') }}" />
   <link rel="stylesheet" href="{{ asset_url('css/theme.css') }}" />
   <link rel="stylesheet" href="{{ asset_url('css/transitions.css') }}" />
-  <script>
-    // Runs before first paint so the workspace never flashes light then dark.
-    (function () {
-      try {
-        var saved = localStorage.getItem("yavaka-theme");
-        var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        if (saved === "dark" || (!saved && prefersDark)) {
-          document.documentElement.setAttribute("data-theme", "dark");
-        }
-      } catch (error) {
-        /* private mode: stay light */
-      }
-    })();
-  </script>
+  {# Synchronous: sets data-theme before the first paint so there is no flash. #}
+  <script src="{{ asset_url('js/theme.js') }}"></script>
   {% block head_extra %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">

@@ -42,6 +42,10 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Interaction | Action flows run in dialogs (new project, money, agreement, upload, stage update) with an AJAX form enhancer; sidebar navigation shows a branded overlay loader and uses the View Transitions API where supported |
 | Record reader | Clicking an agreement opens it in a wide dialog over the list, with signing inside the dialog; a direct link still renders the full page for printing and sharing |
 | Sign-up | The header "Get started", the landing CTAs and the login link open a registration dialog; `/register` still works standalone for direct links and no-JavaScript browsers |
+| Stage planning | A new project starts with the 19-stage Zimbabwe sequence pre-selected; untick stages the build does not need and the budget re-splits across what is left |
+| Search | One box in the topbar searches projects, ledger entries, documents, agreements and stage names, limited to builds the user can already open |
+| Themes | Light by default; the workspace follows the OS setting and the toggle in the topbar overrides it, applied before first paint so there is no flash |
+| Weekly digest | `POST /api/whatsapp/digest` with `X-Digest-Token` sends each client a progress-and-balance summary per active project |
 | Statements | `GET /app/money/export` streams a CSV of the ledger with a running balance, filtered to whatever the user is viewing; spreadsheet-formula cells are neutralised |
 | Search & paging | Server-side search and paging on the ledger, projects and staff activity, with page numbers clamped so a stale link never shows a blank screen |
 | Accessibility | Skip link, `aria-current` on navigation, labelled search and filter controls, scoped table headers, focus trapping and focus restore in dialogs |
@@ -180,6 +184,27 @@ YaVaKa never touches client money: it is a record, not a wallet, bank or escrow.
 3. In Meta → WhatsApp → Configuration, set the callback URL to
    `https://your-domain/api/whatsapp/webhook` and the same verify token.
 4. Subscribe to the `messages` field.
+
+### Weekly digest
+
+`POST /api/whatsapp/digest` sends every active project's owner a short
+progress-and-balance summary. It is protected by its own shared secret, so it is
+exempt from the browser CSRF check:
+
+```
+DIGEST_TOKEN=another-long-random-string
+```
+
+Call it from any scheduler (Render cron job, GitHub Actions, cron + curl):
+
+```bash
+curl -X POST https://your-domain/api/whatsapp/digest \
+   -H "X-Digest-Token: $DIGEST_TOKEN"
+```
+
+With no `DIGEST_TOKEN` the endpoint returns `403`, so an unconfigured deployment
+never messages anyone. In simulator mode (no `WHATSAPP_TOKEN`) the sends are
+queued locally instead of going out.
 
 Without credentials the app runs in **simulator mode**: `/app/whatsapp` lets you
 send messages as the client and see exactly what the assistant would reply, and
