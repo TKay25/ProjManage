@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350" role="img" aria-labelledby="title desc">
+  <title id="title">Your build in Zimbabwe. As if you were there.</title>
+  <desc id="desc">YaVaKa gives Zimbabweans abroad one clear record of the stages, money, receipts and site updates on their build back home.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#114f40"/>
+      <stop offset="1" stop-color="#092f2a"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffdf8" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#fffdf8" stop-opacity=".05"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1350" fill="url(#sky)"/>
+  <circle cx="944" cy="102" r="176" fill="#c8963e" opacity=".09"/>
+  <path d="M0 627c172-84 305-89 476-43s347 28 604-71v310H0Z" fill="#0b4035" opacity=".85"/>
+  <path d="M0 716c190-84 355-67 526-34s348 13 554-82v192H0Z" fill="#092f2a"/>
+  <g fill="none" stroke="#d8b36d" stroke-opacity=".22">
+    <path d="M-20 230c145-91 289-94 424-3s284 87 435 4 253-82 387-15"/>
+    <path d="M-20 249c145-91 289-94 424-3s284 87 435 4 253-82 387-15"/>
+  </g>
+
+  <g transform="translate(72 62)">
+    <rect width="54" height="54" rx="14" fill="#0f5d46"/>
+    <path d="m11 28 16-14 16 14" fill="none" stroke="#f7f4ef" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M16 30v13h22V30M22 43V32h9v11" fill="none" stroke="#c8963e" stroke-width="3" stroke-linejoin="round"/>
+    <text x="70" y="38" fill="#fffdf8" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" letter-spacing="-.5">YaVaKa</text>
+    <text x="72" y="62" fill="#d2ded7" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="2.2">BUILD FROM ANYWHERE</text>
+  </g>
+
+  <g transform="translate(74 169)">
+    <rect width="426" height="42" rx="21" fill="#fffdf8" opacity=".1"/>
+    <circle cx="22" cy="21" r="5" fill="#d7ad61"/>
+    <text x="41" y="27" fill="#f3e6cb" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1.7">FOR ZIMBABWEANS BUILDING BACK HOME</text>
+  </g>
+  <text x="72" y="322" fill="#fffdf8" font-family="Georgia, 'Times New Roman', serif" font-size="62" font-weight="700" letter-spacing="-1.6">Your build in Zimbabwe.</text>
+  <text x="72" y="400" fill="#e2b967" font-family="Georgia, 'Times New Roman', serif" font-size="62" font-weight="700" letter-spacing="-1.6">As if you were there.</text>
+  <text x="76" y="462" fill="#d5e1da" font-family="Arial, Helvetica, sans-serif" font-size="24">
+    <tspan x="76" dy="0">Stages, money, receipts and site updates—one record</tspan>
+    <tspan x="76" dy="34">you can open from anywhere, at any hour.</tspan>
+  </text>
+
+  <g transform="translate(66 620)">
+    <rect x="0" y="0" width="948" height="370" rx="30" fill="url(#glass)" stroke="#fffdf8" stroke-opacity=".16"/>
+    <path d="M0 290h948" stroke="#fffdf8" stroke-opacity=".13"/>
+    <path d="M0 324c161-61 287-31 427-20 152 13 294-27 521-81v147H0Z" fill="#072b27" opacity=".82"/>
+    <circle cx="773" cy="82" r="41" fill="#c8963e" opacity=".18"/>
+    <circle cx="773" cy="82" r="25" fill="#e0b45e" opacity=".75"/>
+    <path d="M622 192 779 89l156 103" fill="none" stroke="#f7f4ef" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M666 182v107h225V182M741 289v-69h75v69" fill="#f7f4ef" fill-opacity=".1" stroke="#f7f4ef" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M688 211h26v29h-26zM850 211h25v29h-25z" fill="#e0b45e" opacity=".86"/>
+    <path d="M580 290h365" stroke="#c8963e" stroke-width="6" stroke-linecap="round"/>
+    <path d="M602 313h321" stroke="#d8e1dc" stroke-opacity=".45" stroke-width="4" stroke-linecap="round"/>
+
+    <g transform="translate(36 46)">
+      <rect width="364" height="90" rx="18" fill="#fffdf8"/>
+      <circle cx="43" cy="45" r="21" fill="#e7f0eb"/>
+      <path d="m34 45 7 7 13-15" fill="none" stroke="#0f5d46" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="80" y="40" fill="#193c31" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1">BUILD STAGES</text>
+      <text x="80" y="66" fill="#58685e" font-family="Arial, Helvetica, sans-serif" font-size="17">Every stage, in order</text>
+    </g>
+    <g transform="translate(36 153)">
+      <rect width="364" height="90" rx="18" fill="#fffdf8"/>
+      <circle cx="43" cy="45" r="21" fill="#f5ebd6"/>
+      <path d="M35 45h17M43.5 36v18" fill="none" stroke="#a97926" stroke-width="3.5" stroke-linecap="round"/>
+      <text x="80" y="40" fill="#193c31" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1">MONEY + RECEIPTS</text>
+      <text x="80" y="66" fill="#58685e" font-family="Arial, Helvetica, sans-serif" font-size="17">Every dollar, accounted for</text>
+    </g>
+    <g transform="translate(36 260)">
+      <rect width="364" height="76" rx="18" fill="#fffdf8"/>
+      <circle cx="43" cy="38" r="21" fill="#e7f0eb"/>
+      <path d="M33 38h20M43 29v18" fill="none" stroke="#0f5d46" stroke-width="3.5" stroke-linecap="round"/>
+      <text x="80" y="34" fill="#193c31" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1">PEOPLE + PROGRESS</text>
+      <text x="80" y="59" fill="#58685e" font-family="Arial, Helvetica, sans-serif" font-size="17">Updates, not guesswork</text>
+    </g>
+  </g>
+
+  <g transform="translate(72 1050)">
+    <text x="0" y="0" fill="#fffdf8" font-family="Georgia, 'Times New Roman', serif" font-size="27" font-style="italic">“Distance is not the same as darkness.”</text>
+    <rect x="0" y="40" width="390" height="72" rx="18" fill="#c8963e"/>
+    <text x="30" y="86" fill="#142f27" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" letter-spacing=".4">SEE YOUR BUILD</text>
+    <path d="M318 76h25m-9-9 9 9-9 9" fill="none" stroke="#142f27" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="0" y="173" fill="#d9e2dc" font-family="Arial, Helvetica, sans-serif" font-size="19">yavaka.onrender.com</text>
+    <text x="1008" y="173" fill="#d9e2dc" font-family="Arial, Helvetica, sans-serif" font-size="15" text-anchor="end" letter-spacing="2">BUILT IN ZIMBABWE. WATCHED FROM ANYWHERE.</text>
+  </g>
+</svg>

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350" role="img" aria-labelledby="title desc">
+  <title id="title">On site in Zimbabwe. You, in the picture.</title>
+  <desc id="desc">When YaVaKa manages a build it coordinates builders, follows up on site and records project payments, progress and receipts.</desc>
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#143f35"/>
+      <stop offset="1" stop-color="#082e29"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c8963e"/>
+      <stop offset="1" stop-color="#e0b45e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1350" fill="url(#night)"/>
+  <circle cx="874" cy="307" r="160" fill="#c8963e" opacity=".14"/>
+  <path d="M0 590c190-40 333-58 516-12s365 51 564-28v239H0Z" fill="#124637"/>
+  <path d="M0 716c174-48 352-21 529 20s367 5 551-58v294H0Z" fill="#0b352e"/>
+  <path d="M0 927h1080v423H0Z" fill="#f7f4ef"/>
+  <g transform="translate(72 62)">
+    <rect width="54" height="54" rx="14" fill="#fffdf8" opacity=".12"/>
+    <path d="m11 28 16-14 16 14" fill="none" stroke="#f7f4ef" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M16 30v13h22V30M22 43V32h9v11" fill="none" stroke="#c8963e" stroke-width="3" stroke-linejoin="round"/>
+    <text x="70" y="38" fill="#fffdf8" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700">YaVaKa</text>
+    <text x="72" y="62" fill="#d2ded7" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="2.2">BUILD FROM ANYWHERE</text>
+  </g>
+  <g transform="translate(72 157)">
+    <rect width="324" height="42" rx="21" fill="#fffdf8" opacity=".1"/>
+    <circle cx="22" cy="21" r="5" fill="#d7ad61"/>
+    <text x="41" y="27" fill="#f3e6cb" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1.8">YAVAKA-MANAGED BUILDS</text>
+  </g>
+  <text x="72" y="286" fill="#fffdf8" font-family="Georgia, 'Times New Roman', serif" font-size="65" font-weight="700" letter-spacing="-1.6">
+    <tspan x="72" dy="0">On site in</tspan>
+    <tspan x="72" dy="79" fill="#e2b967">Zimbabwe.</tspan>
+  </text>
+  <text x="76" y="433" fill="#fffdf8" font-family="Georgia, 'Times New Roman', serif" font-size="51" font-style="italic">You, in the picture.</text>
+  <text x="76" y="493" fill="#d5e1da" font-family="Arial, Helvetica, sans-serif" font-size="22">
+    <tspan x="76" dy="0">When YaVaKa manages your build, we coordinate the people,</tspan>
+    <tspan x="76" dy="32">chase the site and record what actually happened.</tspan>
+  </text>
+
+  <g transform="translate(58 571)">
+    <rect width="964" height="340" rx="30" fill="#fffdf8" opacity=".08" stroke="#fffdf8" stroke-opacity=".18"/>
+    <path d="M0 254h964" stroke="#fffdf8" stroke-opacity=".12"/>
+    <path d="m66 238 157-137 159 137v38H66Z" fill="#e9dfcf"/>
+    <path d="m42 243 181-157 184 157" fill="none" stroke="#fffdf8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M100 225v-66h73v66m99 0v-65h72v65" fill="#759d85"/>
+    <path d="M192 276v-86h61v86" fill="#a66b42"/>
+    <path d="M64 278h335" stroke="url(#ground)" stroke-width="7" stroke-linecap="round"/>
+    <path d="M28 307h407" stroke="#fffdf8" stroke-opacity=".32" stroke-width="3" stroke-linecap="round"/>
+
+    <path d="M499 61v205" stroke="#e0b45e" stroke-width="3" stroke-dasharray="5 9" opacity=".8"/>
+    <g transform="translate(470 62)">
+      <circle cx="29" cy="17" r="16" fill="#e0b45e"/>
+      <path d="m22 17 5 5 10-11" fill="none" stroke="#183e32" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="60" y="0" width="388" height="74" rx="17" fill="#fffdf8"/>
+      <text x="84" y="29" fill="#183e32" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1">COORDINATION</text>
+      <text x="84" y="54" fill="#65746a" font-family="Arial, Helvetica, sans-serif" font-size="16">Builders and suppliers, one team</text>
+    </g>
+    <g transform="translate(470 153)">
+      <circle cx="29" cy="17" r="16" fill="#e0b45e"/>
+      <path d="m22 17 5 5 10-11" fill="none" stroke="#183e32" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="60" y="0" width="388" height="74" rx="17" fill="#fffdf8"/>
+      <text x="84" y="29" fill="#183e32" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1">BUILDER FOLLOW-UP</text>
+      <text x="84" y="54" fill="#65746a" font-family="Arial, Helvetica, sans-serif" font-size="16">Chased on site, not assumed</text>
+    </g>
+    <g transform="translate(470 244)">
+      <circle cx="29" cy="17" r="16" fill="#e0b45e"/>
+      <path d="m22 17 5 5 10-11" fill="none" stroke="#183e32" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="60" y="0" width="388" height="74" rx="17" fill="#fffdf8"/>
+      <text x="84" y="29" fill="#183e32" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1">PAYMENTS + PROOF</text>
+      <text x="84" y="54" fill="#65746a" font-family="Arial, Helvetica, sans-serif" font-size="16">Paid, receipted, filed</text>
+    </g>
+  </g>
+
+  <g transform="translate(72 980)">
+    <text x="0" y="0" fill="#183e32" font-family="Georgia, 'Times New Roman', serif" font-size="31" font-weight="700">A manager who answers.</text>
+    <text x="0" y="47" fill="#526359" font-family="Arial, Helvetica, sans-serif" font-size="22">A record that answers too.</text>
+    <text x="0" y="105" fill="#8a672c" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1.5">FROM STAND CHECKS TO HANDOVER</text>
+    <path d="M0 135h936" stroke="#d8d0c3" stroke-width="2"/>
+    <text x="0" y="191" fill="#183e32" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-style="italic">“You’re not funding a build. You’re building it—from here.”</text>
+    <rect x="0" y="223" width="414" height="72" rx="18" fill="#0f5d46"/>
+    <text x="28" y="269" fill="#fffdf8" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">START A MANAGED BUILD</text>
+    <path d="M360 258h25m-9-9 9 9-9 9" fill="none" stroke="#e2b967" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="0" y="343" fill="#65746a" font-family="Arial, Helvetica, sans-serif" font-size="18">yavaka.onrender.com</text>
+    <text x="1008" y="343" fill="#65746a" font-family="Arial, Helvetica, sans-serif" font-size="15" text-anchor="end" letter-spacing="2">FROM STAND CHECKS TO HANDOVER.</text>
+  </g>
+</svg>

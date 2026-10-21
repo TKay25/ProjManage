@@ -71,7 +71,7 @@ class PublicPages(VakaTestCase):
     def test_landing_page(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"See every step from anywhere.", response.data)
+        self.assertIn(b"As if you were there.", response.data)
 
     def test_public_pages_render(self):
         for path in ["/login", "/register", "/suppliers", "/offline", "/manifest.webmanifest"]:
