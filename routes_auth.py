@@ -78,36 +78,39 @@ def login_post():
     next_url = auth.safe_next(request.form.get("next", ""))
     throttle_key = f"{request.remote_addr}:{email}"
 
-    if _is_blocked(throttle_key):
+    def failure(message, status):
+        if web.wants_json():
+            return web.fail(message, status=status)
         return (
             render_template(
                 "auth/login.html",
                 title="Welcome back",
                 email=email,
-                error="Too many attempts. Wait 15 minutes and try again.",
+                error=message,
                 next=next_url,
             ),
-            429,
+            status,
         )
+
+    if _is_blocked(throttle_key):
+        return failure("Too many attempts. Wait 15 minutes and try again.", 429)
 
     user = query("SELECT * FROM users WHERE email = ?", (email,), one=True)
 
     if not user or not auth.verify_password(password, user["password_hash"]):
         _register_failure(throttle_key)
-        return (
-            render_template(
-                "auth/login.html",
-                title="Welcome back",
-                email=email,
-                error="That email and password do not match.",
-                next=next_url,
-            ),
-            401,
-        )
+        return failure("That email and password do not match.", 401)
 
     _clear_attempts(throttle_key)
     auth.login_user(user["id"])
-    flash(f"Welcome back, {user['name'].split()[0]}.", "success")
+    message = f"Welcome back, {user['name'].split()[0]}."
+
+    if web.wants_json():
+        # The dialog hands off to a page load, so flash rather than toast.
+        flash(message, "success")
+        return web.ok(message, redirect_to=next_url or url_for("dashboard.index"))
+
+    flash(message, "success")
     return redirect(next_url)
 
 

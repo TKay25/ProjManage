@@ -2,8 +2,9 @@
   {% if messages %}
     <div class="toast-stack" id="toast-stack">
       {% for category, message in messages %}
-        <div class="notice notice-{{ 'error' if category == 'error' else 'success' }}" role="status">
-          {{ icon('alert' if category == 'error' else 'check', 18) }}
+        {% set tone = category if category in ['error', 'info'] else 'success' %}
+        <div class="notice notice-{{ tone }}" role="{{ 'alert' if tone == 'error' else 'status' }}" data-tone="{{ tone }}">
+          {{ icon('alert' if tone == 'error' else 'check', 18) }}
           <p>{{ message }}</p>
           <button class="notice-close" type="button" data-dismiss aria-label="Dismiss">{{ icon('close', 16) }}</button>
         </div>

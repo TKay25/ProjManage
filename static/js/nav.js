@@ -8,27 +8,21 @@
   "use strict";
 
   const SHOW_DELAY = 140; // ms before the overlay appears
-  const MARKUP = `
-    <div class="page-progress" aria-hidden="true"></div>
-    <div class="page-loader" role="status" aria-live="polite" aria-label="Loading page">
-      <div class="loader-mark">
-        <span class="loader-ring" aria-hidden="true"></span>
-        <svg class="logo-mark" width="56" height="56" viewBox="0 0 64 64" role="img" aria-label="YaVaKa">
-          <rect width="64" height="64" rx="15" fill="#0F5D46"/>
-          <path d="M12 32 32 15l20 17" fill="none" stroke="#F7F4EF" stroke-width="4.2"
-                stroke-linecap="round" stroke-linejoin="round"/>
-          <rect x="17" y="34" width="5.5" height="15" rx="2.4" fill="#C8963E"/>
-          <rect x="26.5" y="29" width="5.5" height="20" rx="2.4" fill="#E3B968"/>
-          <rect x="36" y="24" width="5.5" height="25" rx="2.4" fill="#C8963E"/>
-        </svg>
-      </div>
-      <p class="loader-text">Loading</p>
-      <p class="loader-sub">YaVaKa · build from anywhere</p>
-    </div>`;
 
+  // The markup is server-rendered (partials/page_loader.html) so the logo lives
+  // in exactly one place. This fallback only matters if a page somehow lacks it.
   const mount = () => {
     if (document.querySelector(".page-loader")) return;
-    document.body.insertAdjacentHTML("beforeend", MARKUP);
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div class="page-progress" aria-hidden="true"></div>' +
+        '<div class="page-loader" role="status" aria-live="polite" aria-label="Loading page">' +
+        '<div class="loader-mark"><span class="loader-frame" aria-hidden="true">' +
+        '<span class="loader-corner loader-corner-1"></span><span class="loader-corner loader-corner-2"></span>' +
+        '<span class="loader-corner loader-corner-3"></span><span class="loader-corner loader-corner-4"></span>' +
+        "</span></div>" +
+        '<p class="loader-text">Loading</p></div>',
+    );
   };
 
   let timer = null;
@@ -75,6 +69,7 @@
     if (anchor.hasAttribute("download")) return false;
     // Modals and other in-page actions handle their own clicks.
     if (anchor.hasAttribute("data-modal-open") || anchor.hasAttribute("data-modal-close")) return false;
+    if (anchor.hasAttribute("data-modal-switch")) return false;
     if (anchor.dataset.noLoader === "1") return false;
 
     const url = new URL(anchor.href, window.location.href);

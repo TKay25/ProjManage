@@ -90,15 +90,17 @@ def icon(name: str, size: int = 20, css_class: str = "") -> Markup:
 
 
 def logo_mark(size: int = 40, css_class: str = "") -> Markup:
+    # The bar/roof classes are inert everywhere except the loader, where they
+    # drive the build-up animation (see transitions.css).
     return Markup(
         f'<svg class="logo-mark {css_class}" width="{size}" height="{size}" viewBox="0 0 64 64" '
         'role="img" aria-label="YaVaKa">'
         '<rect width="64" height="64" rx="15" fill="#0F5D46"/>'
-        '<path d="M12 32 32 15l20 17" fill="none" stroke="#F7F4EF" stroke-width="4.2" '
+        '<path class="logo-roof" d="M12 32 32 15l20 17" fill="none" stroke="#F7F4EF" stroke-width="4.2" '
         'stroke-linecap="round" stroke-linejoin="round"/>'
-        '<rect x="17" y="34" width="5.5" height="15" rx="2.4" fill="#C8963E"/>'
-        '<rect x="26.5" y="29" width="5.5" height="20" rx="2.4" fill="#E3B968"/>'
-        '<rect x="36" y="24" width="5.5" height="25" rx="2.4" fill="#C8963E"/>'
+        '<rect class="logo-bar logo-bar-1" x="17" y="34" width="5.5" height="15" rx="2.4" fill="#C8963E"/>'
+        '<rect class="logo-bar logo-bar-2" x="26.5" y="29" width="5.5" height="20" rx="2.4" fill="#E3B968"/>'
+        '<rect class="logo-bar logo-bar-3" x="36" y="24" width="5.5" height="25" rx="2.4" fill="#C8963E"/>'
         "</svg>"
     )
 

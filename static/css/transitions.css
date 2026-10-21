@@ -59,7 +59,8 @@
   100% { transform: translateX(280%); width: 30%; }
 }
 
-/* Overlay */
+/* Overlay — matches the backdrop behind modal dialogs: dark and blurred, so
+   the page recedes instead of washing out. */
 
 .page-loader {
   position: fixed;
@@ -70,15 +71,16 @@
   align-items: center;
   justify-content: center;
   gap: 18px;
-  background: rgba(247, 244, 239, 0.82);
-  backdrop-filter: blur(6px);
+  background: rgba(7, 30, 22, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.22s ease;
 }
 
 body.app .page-loader {
-  background: rgba(247, 244, 239, 0.86);
+  background: rgba(7, 30, 22, 0.5);
 }
 
 .page-loader.is-visible {
@@ -104,18 +106,58 @@ body.app .page-loader {
   50% { transform: scale(1.06); }
 }
 
-.loader-ring {
-  position: absolute;
-  inset: -8px;
-  border-radius: 26px;
-  border: 2px solid transparent;
-  border-top-color: var(--brass-500);
-  border-right-color: var(--forest-500);
-  animation: loader-spin 0.9s linear infinite;
+/* The three bars inside the mark build upward in sequence, so the loader
+   animates the brand rather than spinning an anonymous ring next to it. */
+.loader-mark .logo-bar {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: loader-bar 1.35s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
-@keyframes loader-spin {
-  to { transform: rotate(360deg); }
+.loader-mark .logo-bar-1 { animation-delay: 0s; }
+.loader-mark .logo-bar-2 { animation-delay: 0.16s; }
+.loader-mark .logo-bar-3 { animation-delay: 0.32s; }
+
+@keyframes loader-bar {
+  0%, 100% { transform: scaleY(0.42); opacity: 0.55; }
+  35% { transform: scaleY(1); opacity: 1; }
+  65% { transform: scaleY(1); opacity: 1; }
+}
+
+/* The roof line sweeps in once per cycle, like a pencil drawing it. */
+.loader-mark .logo-roof {
+  stroke-dasharray: 60;
+  animation: loader-roof 1.35s ease-in-out infinite;
+}
+
+@keyframes loader-roof {
+  0% { stroke-dashoffset: 60; opacity: 0.4; }
+  45%, 100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* A single gold-to-green line tracing the perimeter of the mark. The dash is
+   one fifth of the path, and the offset animates linearly so the segment
+   travels smoothly around every corner rather than stepping. */
+.loader-trace {
+  position: absolute;
+  top: -11px;
+  left: -11px;
+  /* The mark is a fixed 76px, so the frame is a fixed 98px square. Explicit
+     width and height keep the viewBox from collapsing to its intrinsic ratio. */
+  width: 98px;
+  height: 98px;
+  /* The global `svg { max-width: 100% }` would clamp this to the parent's 76px. */
+  max-width: none;
+  overflow: visible;
+}
+
+.loader-trace rect {
+  animation: loader-trace-run 2.6s linear infinite;
+}
+
+@keyframes loader-trace-run {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
 }
 
 .loader-text {
@@ -123,12 +165,12 @@ body.app .page-loader {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--forest-800);
+  color: #eaf6f0;
 }
 
 .loader-sub {
   font-size: 0.72rem;
-  color: var(--ink-faint);
+  color: rgba(234, 246, 240, 0.62);
   margin-top: -10px;
 }
 
@@ -165,7 +207,12 @@ body.is-leaving main {
   body.app .content > *,
   body.public main > section,
   .loader-mark .logo-mark,
-  .loader-ring,
+  .loader-mark .logo-bar,
+  .loader-mark .logo-roof,
+  .loader-frame,
+  .loader-corner,
+  .btn-spinner,
+  .toast-stack .notice,
   .page-progress::after {
     animation: none !important;
   }

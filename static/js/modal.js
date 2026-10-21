@@ -29,21 +29,48 @@
 
   function toast(message, category = "success") {
     if (!message) return;
+
+    const stack = toastStack();
+    const tone = category === "error" ? "error" : category === "info" ? "info" : "success";
+
+    // Identical message already on screen: restart its timer instead of stacking.
+    const duplicate = Array.from(stack.children).find(
+      (node) => node.dataset.message === message && node.dataset.tone === tone,
+    );
+    if (duplicate) {
+      duplicate.remove();
+    }
+
+    // Never let the stack take over the screen.
+    while (stack.children.length >= 4) stack.firstElementChild.remove();
+
     const notice = document.createElement("div");
-    notice.className = `notice notice-${category === "error" ? "error" : "success"}`;
-    notice.setAttribute("role", "status");
+    notice.className = `notice notice-${tone}`;
+    notice.dataset.message = message;
+    notice.dataset.tone = tone;
+    notice.setAttribute("role", tone === "error" ? "alert" : "status");
     notice.innerHTML =
       `<svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
       `stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` +
-      `${iconPath[category === "error" ? "error" : "success"]}</svg>` +
+      `${iconPath[tone === "error" ? "error" : "success"]}</svg>` +
       "<p></p>" +
       '<button class="notice-close" type="button" aria-label="Dismiss">&times;</button>';
 
     notice.querySelector("p").textContent = message;
-    notice.querySelector("button").addEventListener("click", () => notice.remove());
+    notice.querySelector("button").addEventListener("click", () => {
+      notice.classList.add("is-leaving");
+      setTimeout(() => notice.remove(), 240);
+    });
 
-    toastStack().appendChild(notice);
-    setTimeout(() => notice.isConnected && notice.remove(), 6000);
+    stack.appendChild(notice);
+
+    // Errors stay longer: they usually need reading.
+    const life = tone === "error" ? 9000 : 6000;
+    setTimeout(() => {
+      if (!notice.isConnected) return;
+      notice.classList.add("is-leaving");
+      setTimeout(() => notice.remove(), 240);
+    }, life);
   }
 
   window.vakaToast = toast;
@@ -186,6 +213,20 @@
   }
 
   document.addEventListener("click", (event) => {
+    // Swap one auth dialog for the other without closing and reopening.
+    const switcher = event.target.closest("[data-modal-switch]");
+    if (switcher) {
+      event.preventDefault();
+      const target = document.getElementById(switcher.dataset.modalSwitch);
+      if (!target) return;
+      $$("dialog.modal[open]").forEach((dialog) => {
+        if (dialog !== target) dialog.close();
+      });
+      document.body.classList.remove("modal-open");
+      openModal(target.id);
+      return;
+    }
+
     const remote = event.target.closest("[data-modal-remote]");    if (remote) {
       event.preventDefault();
       openRemote(remote);
@@ -262,10 +303,10 @@
     $$("[data-upload-preview]", form).forEach((preview) => {
       preview.hidden = true;
     });
-    $$("[data-submit-label]", form).forEach((label) => {
-      if (label.dataset.defaultLabel) label.textContent = label.dataset.defaultLabel;
-    });
-    form.querySelectorAll("[data-ajax-submit]").forEach((button) => {
+    // Restore any button that was left mid-spinner, then make sure the form is
+    // usable again (a failed save can leave them disabled).
+    form.querySelectorAll("button[type='submit'], [data-ajax-submit]").forEach((button) => {
+      stopBusy(button);
       button.disabled = false;
     });
   }
@@ -334,6 +375,54 @@
     else container.replaceWith(node);
   }
 
+  /* ---------- Busy states ---------- */
+
+  // A button that is working shows a spinner and keeps its width, so the
+  // layout does not jump while the request is in flight.
+  function startBusy(button, text) {
+    if (!button || button.dataset.busy === "1") return;
+    button.dataset.busy = "1";
+    button.dataset.wasDisabled = button.disabled ? "1" : "";
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.classList.add("is-loading");
+
+    const label = button.querySelector("[data-submit-label]");
+    const target = label || button;
+    if (!target.dataset.idleHtml) target.dataset.idleHtml = target.innerHTML;
+
+    const labelText = text || (label ? label.dataset.busyText || label.textContent : "");
+    target.innerHTML =
+      '<span class="btn-spinner" aria-hidden="true"></span>' +
+      (labelText ? `<span class="btn-busy-text">${labelText}</span>` : "");
+  }
+
+  function stopBusy(button) {
+    if (!button || button.dataset.busy !== "1") return;
+    const label = button.querySelector("[data-submit-label]");
+    const target = label || button;
+    if (target.dataset.idleHtml) target.innerHTML = target.dataset.idleHtml;
+
+    button.classList.remove("is-loading");
+    button.removeAttribute("aria-busy");
+    button.disabled = button.dataset.wasDisabled === "1";
+    delete button.dataset.busy;
+    delete button.dataset.wasDisabled;
+  }
+
+  window.vakaBusy = { start: startBusy, stop: stopBusy };
+
+  // The thin bar at the top of the window, for work that outlives one button.
+  const progressBar = () => document.querySelector(".page-progress");
+  window.vakaProgress = {
+    start() {
+      progressBar()?.classList.add("is-active");
+    },
+    stop() {
+      progressBar()?.classList.remove("is-active");
+    },
+  };
+
   /* ---------- AJAX form submission ---------- */
 
   document.addEventListener("submit", async (event) => {
@@ -349,15 +438,15 @@
     event.preventDefault();
     clearError(form);
 
-    const submitButtons = form.querySelectorAll("[data-ajax-submit]");
-    const label = form.querySelector("[data-submit-label]");
-    if (label) {
-      label.dataset.defaultLabel = label.dataset.defaultLabel || label.textContent;
-      label.textContent = "Saving…";
-    }
-    submitButtons.forEach((button) => {
-      button.disabled = true;
-    });
+    const submitter =
+      event.submitter ||
+      form.querySelector("[data-ajax-submit]") ||
+      form.querySelector("button[type='submit']");
+    const buttons = Array.from(form.querySelectorAll("button[type='submit'], [data-ajax-submit]"));
+    const busyText = form.dataset.busyText || "Saving…";
+
+    buttons.forEach((button) => startBusy(button, busyText));
+    window.vakaProgress.start();
 
     try {
       // form.method/form.action can be shadowed by controls named "method" or
@@ -409,12 +498,8 @@
       console.error("[vaka] form submit failed", error);
       showError(form, "We could not save that. Check your connection and try again.");
     } finally {
-      submitButtons.forEach((button) => {
-        button.disabled = false;
-      });
-      if (label && label.dataset.defaultLabel) {
-        label.textContent = label.dataset.defaultLabel;
-      }
+      buttons.forEach(stopBusy);
+      window.vakaProgress.stop();
     }
   });
 

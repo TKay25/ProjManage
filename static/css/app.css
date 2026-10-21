@@ -717,37 +717,84 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: 380px;
+  width: min(380px, calc(100vw - 36px));
+  pointer-events: none;
 }
 
 .notice {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 12px 14px 12px 15px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
+  border-left-width: 3px;
   background: #fff;
   box-shadow: var(--shadow-lg);
   font-size: 0.86rem;
   line-height: 1.45;
-  animation: slide-in 0.25s ease both;
+  animation: toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.notice.is-leaving {
+  animation: toast-out 0.22s ease both;
 }
 
 .notice p {
   flex: 1;
+  margin: 0;
+}
+
+.notice .icon {
+  flex: none;
+  margin-top: 1px;
 }
 
 .notice-success {
   border-color: rgba(22, 116, 90, 0.3);
+  border-left-color: var(--success);
   background: #f2fbf7;
   color: var(--forest-800);
 }
 
 .notice-error {
   border-color: rgba(179, 64, 47, 0.3);
+  border-left-color: var(--brick);
   background: #fdf4f2;
   color: #8f2f22;
+}
+
+.notice-info {
+  border-color: rgba(15, 93, 70, 0.22);
+  border-left-color: var(--forest-600);
+  background: var(--forest-50);
+  color: var(--forest-800);
+}
+
+/* Thin bar that drains as the toast auto-dismisses. */
+.notice::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: left;
+  background: currentColor;
+  opacity: 0.25;
+  animation: toast-timer 6s linear both;
+}
+
+.notice-error::after {
+  animation-duration: 9s;
+}
+
+@keyframes toast-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
 }
 
 .notice-close {
@@ -757,10 +804,66 @@ h3 {
   opacity: 0.6;
   cursor: pointer;
   padding: 2px;
+  flex: none;
 }
 
 .notice-close:hover {
   opacity: 1;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(14px); }
+}
+
+@media (max-width: 560px) {
+  .toast-stack {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+  }
+}
+
+/* ---------- Button busy state ---------- */
+
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0.85;
+  animation: btn-spin 0.62s linear infinite;
+}
+
+.btn.is-loading {
+  cursor: progress;
+  opacity: 0.92;
+}
+
+/* Keep the button from collapsing to spinner-width mid-click. */
+.btn.is-loading [data-submit-label],
+.btn.is-loading .btn-busy-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.btn.is-loading .btn-busy-text {
+  opacity: 0.9;
+}
+
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes slide-in {

@@ -67,6 +67,10 @@
       </div>
 
       <div class="modal-foot">
+        <p class="modal-note">
+          Already have an account?
+          <a href="{{ url_for('auth.login') }}" data-modal-switch="modal-login">Sign in</a>
+        </p>
         <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
         <button class="btn btn-primary" type="submit" data-ajax-submit>
           {{ icon('check', 16) }} <span data-submit-label>Create workspace</span>

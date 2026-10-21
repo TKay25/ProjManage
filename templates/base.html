@@ -42,14 +42,17 @@
     {% block footer %}{% include "partials/site_footer.html" %}{% endblock %}
   {% endblock %}
 
-  {# Every public page can raise the registration dialog, except the standalone
-     /register page which already shows the form. #}
-  {% if request.endpoint != 'auth.register' %}
+  {# Every public page can raise the sign-in and registration dialogs, except the
+     standalone auth pages that already show the forms. #}
+  {% if request.endpoint not in ['auth.register', 'auth.login'] %}
+    {% include "partials/modal_login.html" %}
     {% include "partials/modal_register.html" %}
   {% endif %}
 
   <script src="{{ asset_url('js/app.js') }}" defer></script>
   <script src="{{ asset_url('js/nav.js') }}" defer></script>
   <script src="{{ asset_url('js/modal.js') }}" defer></script>
-  {% block scripts %}{% endblock %}</body>
+  {% include "partials/page_loader.html" %}
+  {% block scripts %}{% endblock %}
+</body>
 </html>

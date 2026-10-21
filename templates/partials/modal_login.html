@@ -1,0 +1,58 @@
+{# Sign-in dialog. Same form as /login, which still works for direct visits and
+   when JavaScript is off. #}
+<dialog class="modal modal--slim" id="modal-login" aria-labelledby="modal-login-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Welcome back</p>
+        <h2 id="modal-login-title">Sign in to your build</h2>
+        <p class="modal-sub">Track stages, funding and receipts from anywhere.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <form class="modal-form" method="post" action="{{ url_for('auth.login_post') }}" data-ajax>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="next" value="{{ request.args.get('next', '') }}" />
+
+      <div class="modal-body">
+        <div class="form">
+          <label class="field">
+            <span class="field-label">Email address</span>
+            <input class="input" type="email" name="email" autocomplete="email" required
+                   placeholder="you@example.com" data-modal-autofocus />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Password</span>
+            <input class="input" type="password" name="password" autocomplete="current-password" required
+                   placeholder="Your password" />
+          </label>
+
+          {% if demo_mode %}
+            <div class="demo-box">
+              <p class="demo-box-title">{{ icon('sparkles', 15) }} Demo workspace</p>
+              <p>
+                Client · <code>client@yavaka.co.zw</code><br />
+                Manager · <code>manager@yavaka.co.zw</code><br />
+                Staff · <code>admin@yavaka.co.zw</code><br />
+                Password · <code>YaVaKa2026!</code>
+              </p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <p class="modal-note">
+          New to {{ app_name }}?
+          <a href="{{ url_for('auth.register') }}" data-modal-switch="modal-register">Create an account</a>
+        </p>
+        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" data-ajax-submit>
+          {{ icon('check', 16) }} <span data-submit-label>Sign in</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

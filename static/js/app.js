@@ -34,10 +34,9 @@
   /* ---------- Notices ---------- */
 
   const dismiss = (notice) => {
-    notice.style.transition = "opacity .2s ease, transform .2s ease";
-    notice.style.opacity = "0";
-    notice.style.transform = "translateY(-6px)";
-    setTimeout(() => notice.remove(), 220);
+    if (!notice || notice.classList.contains("is-leaving")) return;
+    notice.classList.add("is-leaving");
+    setTimeout(() => notice.remove(), 240);
   };
 
   $$("[data-dismiss]").forEach((button) => {
@@ -48,9 +47,10 @@
   });
 
   $$(".toast-stack .notice").forEach((notice) => {
+    const life = notice.dataset.tone === "error" ? 9000 : 6500;
     setTimeout(() => {
       if (notice.isConnected) dismiss(notice);
-    }, 6500);
+    }, life);
   });
 
   /* ---------- Auto-submit selects ---------- */
