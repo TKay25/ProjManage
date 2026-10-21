@@ -1,81 +1,86 @@
 {# Registration dialog, available on every public page so "Get started",
    "Create an account" and the landing CTAs never navigate away. The same form
    still lives at /register for direct visits and no-JavaScript browsers. #}
-<dialog class="modal" id="modal-register" aria-labelledby="modal-register-title">
-  <div class="modal-panel">
-    <header class="modal-head">
-      <div>
-        <p class="eyebrow">Create your account</p>
-        <h2 id="modal-register-title">Start your build file</h2>
-        <p class="modal-sub">Free to set up. Invite your build manager once you are in.</p>
-      </div>
-      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
-    </header>
+<dialog class="modal modal--auth modal--auth-register" id="modal-register" aria-labelledby="modal-register-title">
+  <div class="modal-panel modal-panel--auth">
+    {% include "partials/auth_modal_aside.html" %}
 
-    <form class="modal-form" method="post" action="{{ url_for('auth.register_post') }}" data-ajax>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-
-      <div class="modal-body">
-        <div class="form">
-          <label class="field">
-            <span class="field-label">Full name</span>
-            <input class="input" type="text" name="name" autocomplete="name" required maxlength="90"
-                   placeholder="Rudo Chikafu" data-modal-autofocus />
-          </label>
-
-          <div class="form-row">
-            <label class="field">
-              <span class="field-label">Email address</span>
-              <input class="input" type="email" name="email" autocomplete="email" required placeholder="you@example.com" />
-            </label>
-            <label class="field">
-              <span class="field-label">WhatsApp number</span>
-              <input class="input" type="tel" name="phone" autocomplete="tel" placeholder="+263 77 123 4567" />
-            </label>
-          </div>
-
-          <div class="form-row">
-            <label class="field">
-              <span class="field-label">Where do you live?</span>
-              <select class="select" name="country">
-                {% for country in ['United Kingdom', 'South Africa', 'United States', 'Canada', 'Australia', 'United Arab Emirates', 'Ireland', 'New Zealand', 'Botswana', 'Zimbabwe', 'Other'] %}
-                  <option value="{{ country }}">{{ country }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="field">
-              <span class="field-label">I am a…</span>
-              <select class="select" name="role">
-                <option value="client" selected>Client / project owner</option>
-                <option value="manager">Build manager / contractor</option>
-              </select>
-            </label>
-          </div>
-
-          <label class="field">
-            <span class="field-label">Password</span>
-            <input class="input" type="password" name="password" autocomplete="new-password" required minlength="8"
-                   placeholder="At least 8 characters" />
-            <span class="field-hint">Use a password you do not use for banking.</span>
-          </label>
-
-          <label class="checkbox">
-            <input type="checkbox" name="terms" value="yes" required />
-            <span>I understand YaVaKa is a project management tool, not a bank, lender or legal adviser.</span>
-          </label>
+    <section class="modal-auth-main">
+      <header class="modal-head">
+        <div>
+          <p class="eyebrow">Create your account</p>
+          <h2 id="modal-register-title">Start your build file</h2>
+          <p class="modal-sub">Free to set up. Invite your build manager once you are in.</p>
         </div>
-      </div>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+      </header>
 
-      <div class="modal-foot">
-        <p class="modal-note">
-          Already have an account?
-          <a href="{{ url_for('auth.login') }}" data-modal-switch="modal-login">Sign in</a>
-        </p>
-        <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
-        <button class="btn btn-primary" type="submit" data-ajax-submit>
-          {{ icon('check', 16) }} <span data-submit-label>Create workspace</span>
-        </button>
-      </div>
-    </form>
+      <form class="modal-form" method="post" action="{{ url_for('auth.register_post') }}" data-ajax>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="modal-body">
+          <div class="form">
+            <label class="field">
+              <span class="field-label">Full name</span>
+              <input class="input" type="text" name="name" autocomplete="name" required maxlength="90"
+                     placeholder="Rudo Chikafu" data-modal-autofocus />
+            </label>
+
+            <div class="form-row">
+              <label class="field">
+                <span class="field-label">Email address</span>
+                <input class="input" type="email" name="email" autocomplete="email" required placeholder="you@example.com" />
+              </label>
+              <label class="field">
+                <span class="field-label">WhatsApp number</span>
+                <input class="input" type="tel" name="phone" autocomplete="tel" placeholder="+263 77 123 4567" />
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label class="field">
+                <span class="field-label">Where do you live?</span>
+                <select class="select" name="country">
+                  {% for country in ['United Kingdom', 'South Africa', 'United States', 'Canada', 'Australia', 'United Arab Emirates', 'Ireland', 'New Zealand', 'Botswana', 'Zimbabwe', 'Other'] %}
+                    <option value="{{ country }}">{{ country }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">I am a…</span>
+                <select class="select" name="role">
+                  <option value="client" selected>Client / project owner</option>
+                  <option value="manager">Build manager / contractor</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="field-label">Password</span>
+              <input class="input" type="password" name="password" autocomplete="new-password" required minlength="8"
+                     placeholder="At least 8 characters" />
+              <span class="field-hint">Use a password you do not use for banking.</span>
+            </label>
+
+            <label class="checkbox">
+              <input type="checkbox" name="terms" value="yes" required />
+              <span>I understand YaVaKa is a project management tool, not a bank, lender or legal adviser.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="modal-note modal-auth-switch">
+            <span>Already have an account?</span>
+            <a class="btn btn-outline btn-sm auth-switch-btn" href="{{ url_for('auth.login') }}"
+               data-modal-switch="modal-login">Sign in</a>
+          </div>
+          <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+          <button class="btn btn-primary" type="submit" data-ajax-submit>
+            {{ icon('check', 16) }} <span data-submit-label>Create workspace</span>
+          </button>
+        </div>
+      </form>
+    </section>
   </div>
 </dialog>

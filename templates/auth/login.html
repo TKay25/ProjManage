@@ -71,7 +71,11 @@
       {% endif %}
 
       <div class="auth-foot">
-        <p>New to YaVaKa? <a href="{{ url_for('auth.register') }}" data-modal-open="modal-register">Create an account</a></p>
+        <p>
+          <span>New to YaVaKa?</span>
+          <a class="btn btn-outline btn-sm" href="{{ url_for('auth.register') }}"
+             data-modal-open="modal-register">Create an account</a>
+        </p>
       </div>
     </div>
   </div>

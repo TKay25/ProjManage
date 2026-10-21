@@ -2350,6 +2350,14 @@ h3 {
   text-align: center;
 }
 
+.auth-foot p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .auth-foot a {
   font-weight: 650;
 }

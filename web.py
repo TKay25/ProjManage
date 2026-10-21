@@ -35,6 +35,8 @@ def ok(
     fields=None,
     html=None,
     redirect_to=None,
+    open_modal=None,
+    modal_notice=None,
     reload=False,
     status=200,
     title=None,
@@ -58,6 +60,10 @@ def ok(
         payload["html"] = html
     if redirect_to:
         payload["redirect"] = redirect_to
+    if open_modal:
+        payload["open_modal"] = open_modal
+    if modal_notice:
+        payload["modal_notice"] = modal_notice
     if reload:
         payload["reload"] = True
     if title:

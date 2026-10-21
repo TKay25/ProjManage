@@ -476,12 +476,26 @@
       }
 
       patch(data);
-      closeModal(form.closest("dialog.modal"));
+      if (data.open_modal) {
+        closeModal(form.closest("dialog.modal"));
+        const nextDialog = openModal(data.open_modal);
+        if (nextDialog && data.modal_notice) {
+          const notice = nextDialog.querySelector("[data-modal-success]");
+          const text = notice && notice.querySelector("[data-modal-success-text]");
+          if (notice) {
+            if (text) text.textContent = data.modal_notice;
+            else notice.textContent = data.modal_notice;
+            notice.hidden = false;
+          }
+        }
+      } else {
+        closeModal(form.closest("dialog.modal"));
+      }
 
       const view = document.getElementById("modal-view");
       if (view && view.open && view.contains(form)) refreshReader(view);
 
-      toast(data.message || "Saved.", "success");
+      if (!data.modal_notice) toast(data.message || "Saved.", "success");
 
       if (data.redirect) {
         window.location.assign(data.redirect);

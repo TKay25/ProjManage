@@ -168,17 +168,16 @@ def register_post():
         ),
     )
 
-    auth.login_user(user_id)
-    message = "Welcome to YaVaKa. Create your first project to get started."
-
-    # Flash in both paths: the dialog hands off to a page load, so the toast
-    # would be gone before it could be read.
-    flash(message, "success")
-
+    message = "Account created successfully. Sign in with your new credentials."
     if web.wants_json():
-        return web.ok(message, redirect_to=url_for("projects.new"))
+        return web.ok(
+            message,
+            open_modal="modal-login",
+            modal_notice=message,
+        )
 
-    return redirect(url_for("projects.new"))
+    flash(message, "success")
+    return redirect(url_for("auth.login"))
 
 
 @bp.post("/logout")

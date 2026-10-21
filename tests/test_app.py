@@ -119,8 +119,11 @@ class ProjectAccess(VakaTestCase):
     def test_user_cannot_open_another_users_project(self):
         self.login()
 
-        token = self.csrf()
-        self.client.post(
+        outsider = self.app.test_client()
+        outsider.get("/login")
+        with outsider.session_transaction() as session:
+            token = session["csrf"]
+        outsider.post(
             "/register",
             data={
                 "name": "Outsider Account",
@@ -133,13 +136,21 @@ class ProjectAccess(VakaTestCase):
                 "csrf_token": token,
             },
         )
+        outsider.post(
+            "/login",
+            data={
+                "email": "outsider@example.com",
+                "password": "Outsider2026!",
+                "csrf_token": token,
+            },
+        )
 
         from db import query
 
         with self.app.app_context():
             project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)
 
-        self.assertEqual(self.client.get(f"/app/projects/{project['id']}").status_code, 404)
+        self.assertEqual(outsider.get(f"/app/projects/{project['id']}").status_code, 404)
 
     def test_new_project_creates_all_stages(self):
         self.login()
@@ -614,6 +625,9 @@ class RegistrationModal(VakaTestCase):
         page = self.client.get("/").get_data(as_text=True)
         self.assertIn('data-modal-switch="modal-login"', page)
         self.assertIn('data-modal-switch="modal-register"', page)
+        self.assertEqual(page.count('class="auth-aside modal-auth-aside"'), 2)
+        self.assertIn('class="btn btn-outline btn-sm auth-switch-btn"', page)
+        self.assertIn('>Create an account</a>', page)
 
     def test_sign_in_posts_json_so_the_dialog_never_navigates(self):
         client = self.app.test_client()
@@ -657,7 +671,7 @@ class RegistrationModal(VakaTestCase):
         self.assertFalse(payload["ok"])
         self.assertIn("8 characters", payload["message"])
 
-    def test_successful_signup_returns_a_redirect_instead_of_a_page(self):
+    def test_successful_signup_opens_login_modal_without_signing_in(self):
         client = self.app.test_client()
         email = f"modal-{os.urandom(4).hex()}@example.com"
         response = client.post(
@@ -670,12 +684,18 @@ class RegistrationModal(VakaTestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
         self.assertTrue(payload["ok"])
-        self.assertEqual(payload["redirect"], "/app/projects/new")
-        # The dialog hands off to a real page load, so the welcome flash must
-        # survive the hop and land on the destination page.
-        landing = client.get("/app/projects/new")
-        self.assertEqual(landing.status_code, 200)
-        self.assertIn(b"Welcome to YaVaKa", landing.data)
+        self.assertEqual(payload["open_modal"], "modal-login")
+        self.assertIn("created successfully", payload["modal_notice"])
+        self.assertNotIn("redirect", payload)
+        # Creating an account no longer signs the user in automatically.
+        self.assertEqual(client.get("/app").status_code, 302)
+        # The new credentials work in the sign-in flow.
+        login_response = client.post(
+            "/login",
+            data={"email": email, "password": "Str0ngPassw0rd!", "csrf_token": self._csrf(client)},
+        )
+        self.assertEqual(login_response.status_code, 302)
+        self.assertEqual(client.get("/app").status_code, 200)
 
     def test_signup_without_javascript_still_redirects(self):
         response = self.client.post(
@@ -685,7 +705,9 @@ class RegistrationModal(VakaTestCase):
                   "password": "Str0ngPassw0rd!", "terms": "yes"},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/app/projects/new", response.headers["Location"])
+        self.assertIn("/login", response.headers["Location"])
+        login_page = self.client.get(response.headers["Location"])
+        self.assertIn(b"created successfully", login_page.data)
 
 
 class BrandMigration(unittest.TestCase):
