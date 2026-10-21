@@ -2,7 +2,10 @@
    when JavaScript is off. #}
 <dialog class="modal modal--auth modal--auth-login" id="modal-login" aria-labelledby="modal-login-title">
   <div class="modal-panel modal-panel--auth">
-    {% include "partials/auth_modal_aside.html" %}
+    {% with auth_headline='I stopped asking for photos of the receipt. I could see it.',
+            auth_support='Track the work, money and proof from wherever you are. Your distance should not leave you guessing.' %}
+      {% include "partials/auth_modal_aside.html" %}
+    {% endwith %}
 
     <section class="modal-auth-main">
       <header class="modal-head">

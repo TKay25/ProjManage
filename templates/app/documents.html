@@ -3,7 +3,10 @@
 
 {% block page_title %}Documents{% endblock %}
 {% block page_subtitle %}
-  <p class="page-subtitle">{{ attachments|length }} file{{ '' if attachments|length == 1 else 's' }} · {{ (total_size / 1048576)|round(1) }}MB stored</p>
+  <p class="page-subtitle">
+    {{ attachments|length }} file{{ '' if attachments|length == 1 else 's' }} · {{ (total_size / 1048576)|round(1) }}MB stored
+    <span class="page-tagline">The right proof, with the right build—not lost in someone's camera roll.</span>
+  </p>
 {% endblock %}
 {% block page_actions %}
   {% if projects %}
@@ -28,7 +31,7 @@
       <div class="card-head">
         <div>
           <h2>Project file</h2>
-          <p class="card-sub">Plans, approvals, receipts and site photos</p>
+          <p class="card-sub">Plans, approvals, receipts and site photos—kept with the project.</p>
         </div>
         <form class="inline-form" method="get" action="{{ url_for('documents.index') }}">
           {% if project %}<input type="hidden" name="project" value="{{ project.id }}" />{% endif %}
@@ -77,7 +80,7 @@
         <div class="empty">
           <span class="empty-icon">{{ icon('folder', 26) }}</span>
           <h3>No documents yet</h3>
-          <p>Upload approved plans, council receipts, delivery notes or site photos.</p>
+          <p>Save the evidence of progress here: approved plans, council receipts, delivery notes and site photos.</p>
           <a class="btn btn-primary" href="{{ url_for('documents.index') }}" data-modal-open="modal-document">{{ icon('upload', 15) }} Upload a file</a>
         </div>
       {% endif %}

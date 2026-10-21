@@ -2,7 +2,12 @@
 {% block title %}Agreements · YaVaKa{% endblock %}
 
 {% block page_title %}Agreements{% endblock %}
-{% block page_subtitle %}<p class="page-subtitle">Scope, payment milestones and signatures, stored with the project</p>{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    Scope, payment milestones and signatures, stored with the project
+    <span class="page-tagline">Put the agreement in writing before the first brick.</span>
+  </p>
+{% endblock %}
 {% block page_actions %}
   {% if projects %}
     <a class="btn btn-primary btn-sm" href="{{ url_for('agreements.new', project=project.id if project else '') }}"
@@ -39,7 +44,7 @@
     <div class="empty">
       <span class="empty-icon">{{ icon('pen', 26) }}</span>
       <h3>No agreements yet</h3>
-      <p>Set out scope, contract value and payment milestones, then capture the client's signature.</p>
+      <p>Agree the work, value and payment milestones up front. Keep the signed record with the build so everyone can refer to the same terms.</p>
       <a class="btn btn-primary" href="{{ url_for('agreements.new', project=project.id if project else '') }}"
          data-modal-open="modal-agreement">{{ icon('plus', 16) }} Build an agreement</a>
     </div>

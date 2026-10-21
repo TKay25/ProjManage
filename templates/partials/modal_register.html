@@ -3,7 +3,10 @@
    still lives at /register for direct visits and no-JavaScript browsers. #}
 <dialog class="modal modal--auth modal--auth-register" id="modal-register" aria-labelledby="modal-register-title">
   <div class="modal-panel modal-panel--auth">
-    {% include "partials/auth_modal_aside.html" %}
+    {% with auth_headline='From first land check to front-door keys, keep the whole build in view.',
+            auth_support='Bring your family, build manager and project records together around one clear plan.' %}
+      {% include "partials/auth_modal_aside.html" %}
+    {% endwith %}
 
     <section class="modal-auth-main">
       <header class="modal-head">

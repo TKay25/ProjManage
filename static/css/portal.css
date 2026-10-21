@@ -266,6 +266,14 @@ body.app {
   color: var(--ink-soft);
 }
 
+.page-tagline {
+  display: block;
+  margin-top: 3px;
+  color: var(--forest-700);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .page-actions {
   display: flex;
   gap: 8px;

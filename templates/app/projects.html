@@ -2,7 +2,12 @@
 {% block title %}Projects · YaVaKa{% endblock %}
 
 {% block page_title %}Projects{% endblock %}
-{% block page_subtitle %}<p class="page-subtitle">{{ total_rows }} {{ 'archived project' if archived else 'project' }}{{ '' if total_rows == 1 else 's' }}{{ '' if archived else ' in your workspace' }}</p>{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ total_rows }} {{ 'archived project' if archived else 'project' }}{{ '' if total_rows == 1 else 's' }}{{ '' if archived else ' in your workspace' }}
+    <span class="page-tagline">Every build, its own plan, people, money and paper trail.</span>
+  </p>
+{% endblock %}
 {% block page_actions %}
   <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 15) }} New project</a>
 {% endblock %}
@@ -63,7 +68,7 @@
     <div class="empty">
       <span class="empty-icon">{{ icon('building', 26) }}</span>
       <h3>No projects yet</h3>
-      <p>Add your stand, budget and target date. YaVaKa builds the Zimbabwe stage plan automatically.</p>
+      <p>Start with the stand and budget. YaVaKa gives the people on the ground—and the family abroad—a shared plan to follow.</p>
       <a class="btn btn-primary" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 16) }} Create your first project</a>
     </div>
   </div>

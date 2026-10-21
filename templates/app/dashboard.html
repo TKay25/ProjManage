@@ -4,9 +4,12 @@
 {% block page_title %}{{ greeting }}, {{ first_name }}{% endblock %}
 {% block page_subtitle %}
   {% if project %}
-    <p class="page-subtitle">{{ project.name }} · {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}</p>
+    <p class="page-subtitle">
+      {{ project.name }} · {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}
+      <span class="page-tagline">See what moved, what it cost and what needs attention next.</span>
+    </p>
   {% else %}
-    <p class="page-subtitle">Let's get your build onto YaVaKa.</p>
+    <p class="page-subtitle">Let's get your build onto YaVaKa.<span class="page-tagline">Build back home without building blind.</span></p>
   {% endif %}
 {% endblock %}
 
@@ -25,7 +28,7 @@
     <div class="empty">
       <span class="empty-icon">{{ icon('building', 26) }}</span>
       <h3>Create your first project</h3>
-      <p>Add the stand, budget and target date. YaVaKa builds the full Zimbabwe stage plan for you.</p>
+      <p>Add the stand, budget and target date. YaVaKa lays out the build stages so you and your team can see what comes next.</p>
       <a class="btn btn-primary" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 16) }} Create project</a>
     </div>
   </div>
@@ -97,7 +100,7 @@
         <div class="card-head">
           <div>
             <h2>Cash flow</h2>
-            <p class="card-sub">Last six months on {{ project.name }}</p>
+            <p class="card-sub">Money in, money out—one timeline for {{ project.name }}.</p>
           </div>
           <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">Open ledger {{ icon('arrow-right', 14) }}</a>
         </div>
@@ -136,7 +139,7 @@
         <div class="card-head">
           <div>
             <h2>Latest money movements</h2>
-            <p class="card-sub">Receipts stay attached to every expense</p>
+            <p class="card-sub">Keep the proof beside the payment, not buried in a chat.</p>
           </div>
           <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">View all {{ icon('arrow-right', 14) }}</a>
         </div>
@@ -151,7 +154,7 @@
           <div class="empty">
             <span class="empty-icon">{{ icon('wallet', 26) }}</span>
             <h3>No money recorded yet</h3>
-            <p>Record the first client deposit to start the ledger.</p>
+            <p>Record the first funds received and give every future project payment a clear place in the ledger.</p>
             <a class="btn btn-primary" href="{{ url_for('money.index', project=project.id) }}#record">Record money</a>
           </div>
         {% endif %}
@@ -237,7 +240,7 @@
         {% else %}
           <div class="all-clear">
             <span>{{ icon('check', 18) }}</span>
-            <p>Everything is in order. No blocked stages or missing receipts.</p>
+            <p>Nothing is flagged right now. Keep the updates and receipts coming so everyone stays on the same page.</p>
           </div>
         {% endif %}
       </div>

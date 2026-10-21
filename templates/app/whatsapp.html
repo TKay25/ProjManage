@@ -2,7 +2,12 @@
 {% block title %}WhatsApp · YaVaKa{% endblock %}
 
 {% block page_title %}WhatsApp{% endblock %}
-{% block page_subtitle %}<p class="page-subtitle">The same ledger, over the app your family already uses</p>{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    The same project record, through the app your family already uses
+    <span class="page-tagline">A quick message can bring the build back into view.</span>
+  </p>
+{% endblock %}
 
 {% block content %}
 <div class="card integration-card">
@@ -20,11 +25,11 @@
       <p class="muted small">
         {% if configured %}
           Messages reach clients through your WhatsApp Business number, and replies
-          land back in this inbox.
+          return to this inbox—connected to the project conversation.
         {% else %}
           Credentials are not configured on this deployment, so messages are stored
-          locally and nothing is sent. The assistant still answers exactly as it
-          would in production.
+          locally and nothing is sent. You can test how project questions and
+          replies are handled before connecting a live WhatsApp Business number.
         {% endif %}
       </p>
     </div>
@@ -86,7 +91,7 @@
       {% else %}
         <div class="wa-empty">
           {{ icon('message', 24) }}
-          <p>No messages in this conversation yet.</p>
+          <p>No messages yet. Start the conversation and bring the project update into one place.</p>
         </div>
       {% endif %}
     </div>

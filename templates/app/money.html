@@ -4,7 +4,10 @@
 {% block page_title %}Money{% endblock %}
 {% block page_subtitle %}
   {% if project %}
-    <p class="page-subtitle">{{ project.name }} · every deposit, expense and receipt in one ledger</p>
+    <p class="page-subtitle">
+      {{ project.name }} · every deposit, expense and receipt in one ledger
+      <span class="page-tagline">Money sent. Money spent. Balance explained.</span>
+    </p>
   {% endif %}
 {% endblock %}
 {% block page_actions %}
@@ -54,12 +57,12 @@
       <span class="kpi-icon kpi-icon-{{ 'negative' if totals.balance < 0 else 'positive' }}">{{ icon('wallet', 17) }}</span>
     </div>
     <p class="kpi-value {{ 'is-negative' if totals.balance < 0 }}" data-kpi-balance>{{ totals.balance|money }}</p>
-    <p class="kpi-sub">Received minus everything spent</p>
+    <p class="kpi-sub">Funds received less recorded project payments</p>
   </div>
   <div class="kpi">
     <div class="kpi-top"><span class="kpi-label">Total received</span><span class="kpi-icon">{{ icon('trending-up', 17) }}</span></div>
     <p class="kpi-value" data-kpi-funded>{{ totals.funded|money }}</p>
-    <p class="kpi-sub">Client deposits and top-ups</p>
+    <p class="kpi-sub">Funds received for this build</p>
   </div>
   <div class="kpi">
     <div class="kpi-top"><span class="kpi-label">Total spent</span><span class="kpi-icon">{{ icon('receipt', 17) }}</span></div>
@@ -79,7 +82,7 @@
       <div class="card-head">
         <div>
           <h2>Ledger</h2>
-          <p class="card-sub">{{ total_rows }} {{ 'entry' if total_rows == 1 else 'entries' }} · newest first · receipts open in a new tab</p>
+          <p class="card-sub">{{ total_rows }} {{ 'entry' if total_rows == 1 else 'entries' }} · newest first · keep each cost tied to its proof</p>
         </div>
         <div class="segmented">
           {% for key, label in [('all', 'All'), ('funding', 'Received'), ('expense', 'Spent'), ('missing', 'No receipt')] %}
@@ -119,7 +122,7 @@
         <div class="empty">
           <span class="empty-icon">{{ icon('receipt', 26) }}</span>
           <h3>No entries match</h3>
-          <p>Record a deposit or expense, or clear the filters.</p>
+          <p>Every recorded movement makes the balance easier to explain. Add a deposit or project expense, or clear the filters.</p>
           <a class="btn btn-primary" href="{{ url_for('money.index', project=project.id) }}" data-modal-open="modal-money">{{ icon('plus', 15) }} Record money</a>
         </div>
       {% endif %}

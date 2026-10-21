@@ -6,9 +6,9 @@
 
   <div class="auth-quote">
     <p class="eyebrow eyebrow-light">Built for the diaspora</p>
-    <h2>“I stopped asking for photos of the receipt. I could see it.”</h2>
+    <h2>{{ auth_headline|default('I stopped asking for photos of the receipt. I could see it.') }}</h2>
     <p class="auth-quote-sub">
-      Every stage, every dollar and every document in one place — even when you are 8,000km away.
+      {{ auth_support|default('Every stage, every dollar and every document in one place — even when you are 8,000km away.') }}
     </p>
   </div>
 

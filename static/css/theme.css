@@ -386,6 +386,10 @@ select option {
   color: #e8efeb;
 }
 
+[data-theme="dark"] .page-tagline {
+  color: var(--forest-300);
+}
+
 /* ---------- Auth dialogs ---------- */
 
 dialog.modal--auth {

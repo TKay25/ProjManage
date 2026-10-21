@@ -7,7 +7,8 @@
     {% if term %}
       {{ total }} result{{ '' if total == 1 else 's' }} for “{{ term }}”
     {% else %}
-      Projects, ledger entries, documents, agreements and stages
+      <span>Projects, ledger entries, documents, agreements and stages</span>
+      <span class="page-tagline">One search across the full story of your build.</span>
     {% endif %}
   </p>
 {% endblock %}
@@ -27,7 +28,7 @@
     <div class="empty">
       <span class="empty-icon">{{ icon('search', 26) }}</span>
       <h3>Search across your builds</h3>
-      <p>Find a project by name, code or suburb; a payment by description or reference; a file by name; or a stage.</p>
+      <p>Find a project by name, code or suburb; a payment by description or reference; a file by name; or a stage. The details you need should never be buried in a chat.</p>
     </div>
   </div>
 {% elif total == 0 %}

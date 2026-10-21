@@ -6,6 +6,7 @@
   <p class="page-subtitle">
     {{ project.code }} · {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}
     {% if project.stand_number %} · {{ project.stand_number }}{% endif %}
+    <span class="page-tagline">From the first approval to the final handover, keep every decision connected to this build.</span>
   </p>
 {% endblock %}
 {% block page_actions %}
@@ -50,7 +51,7 @@
       <div class="card-head">
         <div>
           <h2>Build stages</h2>
-          <p class="card-sub">{{ completed_count }} of {{ stages|length }} complete · <span data-progress-value>{{ progress }}%</span> weighted progress</p>
+          <p class="card-sub">{{ completed_count }} of {{ stages|length }} complete · <span data-progress-value>{{ progress }}%</span> weighted progress · a clear next step for everyone on the team</p>
         </div>
         <span class="badge badge-soft">{{ stages|length }} stages</span>
       </div>
@@ -73,7 +74,7 @@
       <div class="card-head">
         <div>
           <h2>Money activity</h2>
-          <p class="card-sub">Latest five movements on this project</p>
+          <p class="card-sub">A visible trail of funds received and project costs.</p>
         </div>
         <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">Open ledger {{ icon('arrow-right', 14) }}</a>
       </div>
@@ -87,7 +88,7 @@
         <div class="empty">
           <span class="empty-icon">{{ icon('wallet', 26) }}</span>
           <h3>No money recorded</h3>
-          <p>Record the first deposit to start tracking this build.</p>
+          <p>Record funds received and make the first project payment visible to the team.</p>
         </div>
       {% endif %}
     </div>
@@ -156,7 +157,7 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p class="muted small">No agreement yet. Build one before work starts.</p>
+        <p class="muted small">Agree the scope and milestones before work starts. Keep the signed terms with the build.</p>
       {% endif %}
     </div>
 
@@ -178,7 +179,7 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p class="muted small">Approved plans, receipts and photos will appear here.</p>
+        <p class="muted small">Put the proof beside the progress. Plans, receipts and site photos uploaded to this project appear here.</p>
       {% endif %}
     </div>
 
