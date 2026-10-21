@@ -145,7 +145,7 @@ class ProjectAccess(VakaTestCase):
             },
         )
 
-        from db import query
+        from db import execute, query
 
         with self.app.app_context():
             project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)
@@ -995,6 +995,238 @@ class DigestEndpoint(VakaTestCase):
         self.assertIn(project["name"], body)
         self.assertIn("Progress:", body)
         self.assertIn("Balance:", body)
+
+
+class ProjectUpdateNotifications(VakaTestCase):
+    def setUp(self):
+        super().setUp()
+        self.original_token = self.app.config.get("NOTIFICATIONS_TOKEN", "")
+
+    def tearDown(self):
+        self.app.config["NOTIFICATIONS_TOKEN"] = self.original_token
+
+    def test_dispatch_requires_a_configured_shared_token(self):
+        self.app.config["NOTIFICATIONS_TOKEN"] = ""
+        self.assertEqual(self.client.post("/api/notifications/dispatch").status_code, 403)
+        self.app.config["NOTIFICATIONS_TOKEN"] = "notifications-secret"
+        self.assertEqual(
+            self.client.post(
+                "/api/notifications/dispatch",
+                headers={"X-Notifications-Token": "wrong"},
+            ).status_code,
+            403,
+        )
+
+    def test_dispatch_accepts_the_shared_token_without_browser_csrf(self):
+        from unittest.mock import patch
+
+        self.app.config["NOTIFICATIONS_TOKEN"] = "notifications-secret"
+        with patch("routes_notifications.schedule_dispatch"):
+            response = self.client.post(
+                "/api/notifications/dispatch",
+                headers={"X-Notifications-Token": "notifications-secret"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+
+    def _add_pending_delivery(self, status="pending", claimed_at=None):
+        from db import execute, new_id, query
+
+        with self.app.app_context():
+            project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)
+            delivery_id = new_id()
+            execute(
+                """INSERT INTO notification_outbox
+                     (id, event_key, project_id, channel, recipient, subject, body,
+                      status, created_at, claimed_at)
+                   VALUES (?, ?, ?, 'email', 'owner@example.test', 'Subject', 'Update',
+                           ?, '2099-01-01T00:00:00+00:00', ?)""",
+                (delivery_id, new_id(), project["id"], status, claimed_at),
+            )
+        return delivery_id
+
+    def test_dispatch_persists_success(self):
+        from unittest.mock import patch
+
+        from db import execute, query
+        from notifications import dispatch_pending
+
+        delivery_id = self._add_pending_delivery()
+        with patch("notifications._deliver", return_value={"status": "sent"}):
+            self.assertEqual(dispatch_pending(self.app), 1)
+
+        with self.app.app_context():
+            delivery = query(
+                "SELECT status, sent_at, attempts, claimed_at FROM notification_outbox WHERE id = ?",
+                (delivery_id,),
+                one=True,
+            )
+            execute("DELETE FROM notification_outbox WHERE id = ?", (delivery_id,))
+        self.assertEqual(delivery["status"], "sent")
+        self.assertTrue(delivery["sent_at"])
+        self.assertEqual(delivery["attempts"], 1)
+        self.assertIsNone(delivery["claimed_at"])
+
+    def test_dispatch_recovers_a_stale_sending_delivery(self):
+        from unittest.mock import patch
+
+        from db import execute, query
+        from notifications import dispatch_pending
+
+        delivery_id = self._add_pending_delivery(
+            status="sending",
+            claimed_at="2000-01-01T00:00:00+00:00",
+        )
+        with patch("notifications._deliver", return_value={"status": "sent"}):
+            self.assertEqual(dispatch_pending(self.app), 1)
+
+        with self.app.app_context():
+            delivery = query(
+                "SELECT status, claimed_at FROM notification_outbox WHERE id = ?",
+                (delivery_id,),
+                one=True,
+            )
+            execute("DELETE FROM notification_outbox WHERE id = ?", (delivery_id,))
+        self.assertEqual(delivery["status"], "sent")
+        self.assertIsNone(delivery["claimed_at"])
+
+    def test_dispatch_persists_failure_after_retries(self):
+        from unittest.mock import patch
+
+        from db import execute, query
+        from notifications import dispatch_pending
+
+        delivery_id = self._add_pending_delivery()
+        with self.assertLogs("yavaka.notifications", level="ERROR") as logs, patch(
+            "notifications._deliver",
+            side_effect=RuntimeError("provider unavailable"),
+        ) as deliver, patch("notifications.time.sleep"):
+            self.assertEqual(dispatch_pending(self.app), 0)
+
+        with self.app.app_context():
+            delivery = query(
+                "SELECT status, attempts, last_error FROM notification_outbox WHERE id = ?",
+                (delivery_id,),
+                one=True,
+            )
+            execute("DELETE FROM notification_outbox WHERE id = ?", (delivery_id,))
+        self.assertEqual(deliver.call_count, 3)
+        self.assertEqual(len(logs.output), 4)
+        self.assertEqual(delivery["status"], "failed")
+        self.assertEqual(delivery["attempts"], 3)
+        self.assertEqual(delivery["last_error"], "provider unavailable")
+
+    def test_only_assigned_manager_updates_are_queued(self):
+        from unittest.mock import patch
+
+        from db import execute, query
+        from notifications import queue_manager_update
+
+        original = {
+            key: self.app.config.get(key)
+            for key in (
+                "SMTP_HOST",
+                "SMTP_FROM_EMAIL",
+                "WHATSAPP_TOKEN",
+                "WHATSAPP_PHONE_NUMBER_ID",
+                "WHATSAPP_UPDATE_TEMPLATE",
+            )
+        }
+        self.app.config.update(
+            SMTP_HOST="smtp.example.test",
+            SMTP_FROM_EMAIL="updates@example.test",
+            WHATSAPP_TOKEN="test-token",
+            WHATSAPP_PHONE_NUMBER_ID="12345",
+            WHATSAPP_UPDATE_TEMPLATE="project_update",
+        )
+        try:
+            with self.app.app_context():
+                project = query(
+                    """SELECT p.id, p.manager_id FROM projects p
+                       WHERE p.code = 'YVK-0001'""",
+                    one=True,
+                )
+                with patch("notifications.schedule_dispatch"):
+                    queued = queue_manager_update(
+                        project["id"],
+                        project["manager_id"],
+                        "Assigned Manager",
+                        "Stage updated",
+                        "Survey complete",
+                    )
+                    ignored = queue_manager_update(
+                        project["id"],
+                        "not-the-assigned-manager",
+                        "Other Manager",
+                        "Stage updated",
+                        "Should not notify",
+                    )
+
+                rows = query(
+                    """SELECT id, channel, recipient, body FROM notification_outbox
+                       WHERE project_id = ? AND body LIKE ? ORDER BY channel""",
+                    (project["id"], "%Survey complete%"),
+                )
+                for row in rows:
+                    execute("DELETE FROM notification_outbox WHERE id = ?", (row["id"],))
+
+            self.assertEqual(queued, 2)
+            self.assertEqual(ignored, 0)
+            self.assertEqual(len(rows), 2)
+            self.assertEqual({row["channel"] for row in rows}, {"email", "whatsapp"})
+            self.assertTrue(all("Available balance:" in row["body"] for row in rows))
+        finally:
+            self.app.config.update(original)
+
+    def test_whatsapp_requires_credentials_and_an_approved_template(self):
+        from unittest.mock import patch
+
+        from db import execute, query
+        from notifications import queue_manager_update
+
+        original = {
+            key: self.app.config.get(key)
+            for key in (
+                "SMTP_HOST",
+                "SMTP_FROM_EMAIL",
+                "WHATSAPP_TOKEN",
+                "WHATSAPP_PHONE_NUMBER_ID",
+                "WHATSAPP_UPDATE_TEMPLATE",
+            )
+        }
+        self.app.config.update(
+            SMTP_HOST="smtp.example.test",
+            SMTP_FROM_EMAIL="updates@example.test",
+            WHATSAPP_TOKEN="test-token",
+            WHATSAPP_PHONE_NUMBER_ID="12345",
+            WHATSAPP_UPDATE_TEMPLATE="",
+        )
+        try:
+            with self.app.app_context():
+                project = query(
+                    "SELECT id, manager_id FROM projects WHERE code = 'YVK-0001'",
+                    one=True,
+                )
+                with patch("notifications.schedule_dispatch"):
+                    queued = queue_manager_update(
+                        project["id"],
+                        project["manager_id"],
+                        "Assigned Manager",
+                        "Template missing",
+                        "Email only",
+                    )
+                rows = query(
+                    """SELECT id, channel FROM notification_outbox
+                       WHERE project_id = ? AND body LIKE ?""",
+                    (project["id"], "%Email only%"),
+                )
+                for row in rows:
+                    execute("DELETE FROM notification_outbox WHERE id = ?", (row["id"],))
+
+            self.assertEqual(queued, 1)
+            self.assertEqual([row["channel"] for row in rows], ["email"])
+        finally:
+            self.app.config.update(original)
 
 
 class BrandCodes(VakaTestCase):

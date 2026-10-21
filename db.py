@@ -150,6 +150,25 @@ CREATE TABLE IF NOT EXISTS audit_events (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_audit_project ON audit_events(project_id, created_at);
+
+CREATE TABLE IF NOT EXISTS notification_outbox (
+  id TEXT PRIMARY KEY,
+  event_key TEXT NOT NULL,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  channel TEXT NOT NULL,
+  recipient TEXT NOT NULL,
+  subject TEXT,
+  body TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  created_at TEXT NOT NULL,
+  sent_at TEXT,
+  claimed_at TEXT,
+  UNIQUE(event_key, channel)
+);
+CREATE INDEX IF NOT EXISTS idx_notification_pending
+  ON notification_outbox(status, created_at);
 """
 
 
@@ -302,6 +321,18 @@ def run_migrations(connection):
                 (f"YVK-{index:04d}", row[0]),
             )
         connection.execute("PRAGMA user_version = 6")
+
+    if version < 7:
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(notification_outbox)")
+        }
+        if "claimed_at" not in columns:
+            connection.execute("ALTER TABLE notification_outbox ADD COLUMN claimed_at TEXT")
+        connection.execute(
+            """UPDATE notification_outbox SET status = 'pending'
+               WHERE status = 'sending' AND claimed_at IS NULL"""
+        )
+        connection.execute("PRAGMA user_version = 7")
 
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.

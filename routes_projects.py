@@ -10,6 +10,7 @@ from auth import accessible_projects, archived_projects, login_required, require
 from db import execute, log_event, new_id, now_iso, query, touch_project
 from workspaces import workspaces_for
 from money import format_money, parse_money_to_cents
+from notifications import queue_manager_update
 from paging import offset, page_number, page_window
 from queries import (
     attachments_by_stage,
@@ -329,6 +330,13 @@ def update_stage(project_id, stage_key):
         (status, notes or stage["notes"], started_at, completed_at, stage["id"]),
     )
     touch_project(project_id)
+    queue_manager_update(
+        project_id,
+        g.user["id"],
+        g.user["name"],
+        f"Build stage: {stage['name']} — {status.replace('_', ' ')}",
+        notes or stage["notes"] or "",
+    )
 
     if status == "complete":
         log_event(g.user["id"], project_id, "stage.completed", f"{stage['name']} marked complete")

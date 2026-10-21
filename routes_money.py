@@ -10,6 +10,7 @@ from flask import Blueprint, flash, g, make_response, redirect, render_template,
 from auth import accessible_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query, touch_project
 from money import format_money, parse_money_to_cents
+from notifications import queue_manager_update
 from paging import offset, page_number, page_window
 from queries import category_breakdown, missing_receipts, money_totals, stage_rows, stage_spend
 from stages import TRANSACTION_CATEGORIES, category_label, method_label, stage_name
@@ -325,6 +326,13 @@ def create():
         project["id"],
         "funding.recorded" if tx_type == "FUNDING" else "expense.recorded",
         f"{description[:120]} — {'received' if tx_type == 'FUNDING' else 'spent'}",
+    )
+    queue_manager_update(
+        project["id"],
+        g.user["id"],
+        g.user["name"],
+        f"{'Funding received' if tx_type == 'FUNDING' else 'Expense recorded'}: {format_money(amount_cents)}",
+        description[:200],
     )
 
     if tx_type == "FUNDING":

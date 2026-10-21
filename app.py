@@ -75,6 +75,7 @@ def create_app(config_object=Config):
     from routes_digest import bp as digest_bp
     from routes_documents import bp as documents_bp
     from routes_money import bp as money_bp
+    from routes_notifications import bp as notifications_bp
     from routes_projects import bp as projects_bp
     from routes_public import bp as public_bp
     from routes_search import bp as search_bp
@@ -88,6 +89,7 @@ def create_app(config_object=Config):
         dashboard_bp,
         projects_bp,
         money_bp,
+        notifications_bp,
         documents_bp,
         agreements_bp,
         suppliers_bp,

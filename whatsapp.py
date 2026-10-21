@@ -56,6 +56,45 @@ def send_whatsapp_text(to: str, body: str) -> dict:
     if not whatsapp_configured():
         return {"status": "queued", "simulated": True}
 
+    return _send_whatsapp_payload(
+        to,
+        {
+            "type": "text",
+            "text": {"preview_url": False, "body": body},
+        },
+    )
+
+
+def send_whatsapp_project_update(to: str, body: str) -> dict:
+    """Send an approved template so updates can be delivered outside the 24h window."""
+    template_name = current_app.config.get("WHATSAPP_UPDATE_TEMPLATE")
+    if not whatsapp_configured():
+        return {"status": "failed", "error": "WhatsApp Cloud API is not configured."}
+    if not template_name:
+        return {
+            "status": "failed",
+            "error": "An approved WhatsApp update template is not configured.",
+        }
+
+    return _send_whatsapp_payload(
+        to,
+        {
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": current_app.config.get("WHATSAPP_UPDATE_LANGUAGE", "en")},
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [{"type": "text", "text": body[:1024]}],
+                    }
+                ],
+            },
+        },
+    )
+
+
+def _send_whatsapp_payload(to: str, content: dict) -> dict:
     url = (
         f"https://graph.facebook.com/v21.0/"
         f"{current_app.config['WHATSAPP_PHONE_NUMBER_ID']}/messages"
@@ -65,8 +104,7 @@ def send_whatsapp_text(to: str, body: str) -> dict:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": normalize_phone(to),
-            "type": "text",
-            "text": {"preview_url": False, "body": body},
+            **content,
         }
     ).encode("utf-8")
 

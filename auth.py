@@ -14,6 +14,7 @@ CSRF_EXEMPT_ENDPOINTS = {
     # browser session: Meta's webhook and the digest scheduler.
     "whatsapp.webhook",
     "digest.digest",
+    "notifications.dispatch",
     "public.health",
 }
 

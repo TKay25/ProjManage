@@ -6,6 +6,7 @@ from flask import Blueprint, abort, current_app, flash, g, redirect, render_temp
 
 from auth import accessible_projects, can_manage_project, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query
+from notifications import queue_manager_update
 from stages import STAGE_GROUPS, stage_by_key
 from storage import UploadError, delete_upload, save_upload
 import web
@@ -131,6 +132,13 @@ def upload():
     )
 
     log_event(g.user["id"], project["id"], "document.uploaded", saved["original_name"])
+    queue_manager_update(
+        project["id"],
+        g.user["id"],
+        g.user["name"],
+        "Project file uploaded",
+        saved["original_name"],
+    )
 
     if web.wants_json():
         file_row = query(

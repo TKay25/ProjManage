@@ -32,7 +32,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | **Staff portal** | `/admin` — every workspace in one table, platform money totals, attention feed, people & role management, account creation, activity log, stage reference |
 | Projects | Create with stand/suburb/budget; the 19-stage Zimbabwe plan and budget split are generated automatically |
 | Stages | 5 groups, 19 stages, 5 regulatory gates, notes, status transitions, weighted progress %, budget-vs-actual per stage |
-| Money | Funding and expense ledger in integer US cents, stage tagging, category/method/reference, live balance preview, delete and re-attach receipts |
+| Money | Funding and expense ledger in integer US cents, stage tagging, category/method/reference, live balance preview, receipts, and manager-recorded payment tracking |
 | Documents | Receipts, statutory documents and site photos, image thumbnails, download, delete, access-checked file serving |
 | Agreements | Scope, terms, milestone payment schedule, on-screen signature capture, print/PDF view, void |
 | Suppliers | Directory of Zimbabwean material suppliers with links out to their own catalogues |
@@ -46,6 +46,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Search | One box in the topbar searches projects, ledger entries, documents, agreements and stage names, limited to builds the user can already open |
 | Themes | Light by default; the workspace follows the OS setting and the toggle in the topbar overrides it, applied before first paint so there is no flash |
 | Weekly digest | `POST /api/whatsapp/digest` with `X-Digest-Token` sends each client a progress-and-balance summary per active project |
+| Manager updates | Assigned-manager stage changes, document uploads and ledger entries queue prompt progress/balance updates over each configured email and WhatsApp channel |
 | Statements | `GET /app/money/export` streams a CSV of the ledger with a running balance, filtered to whatever the user is viewing; spreadsheet-formula cells are neutralised |
 | Search & paging | Server-side search and paging on the ledger, projects and staff activity, with page numbers clamped so a stale link never shows a blank screen |
 | Accessibility | Skip link, `aria-current` on navigation, labelled search and filter controls, scoped table headers, focus trapping and focus restore in dialogs |
@@ -132,6 +133,7 @@ routes_documents.py     Document vault and file serving
 routes_agreements.py    Agreements, signing, print view
 routes_suppliers.py     In-app supplier directory
 routes_whatsapp.py      WhatsApp inbox, simulator, webhook
+routes_notifications.py Protected notification outbox dispatcher
 routes_settings.py      Profile and password
 
 templates/              Jinja templates
@@ -162,7 +164,9 @@ All amounts are stored as **integer US cents** — never floats. Parse with
 balance is always `SUM(funding) - SUM(expense)` for the project, so it cannot
 drift from the ledger.
 
-YaVaKa never touches client money: it is a record, not a wallet, bank or escrow.
+For YaVaKa-managed builds, YaVaKa coordinates contractors and suppliers and
+records client funding and payments made on the project's behalf. The app keeps
+the auditable ledger; it does not itself hold funds as a bank or escrow service.
 
 ---
 
@@ -215,6 +219,40 @@ normalised, e.g. `263771234567`).
 
 ---
 
+## Automatic project updates
+
+When the assigned build manager changes a stage, uploads a project file or
+records funding/an expense, YaVaKa queues a progress-and-balance update for the
+project owner. Each channel is enabled independently and only runs when its
+credentials are configured.
+
+For email, configure `SMTP_HOST`, `SMTP_PORT`, and `SMTP_FROM_EMAIL`; configure
+`SMTP_USERNAME` and `SMTP_PASSWORD` if the relay requires authentication.
+`SMTP_USE_TLS=1` uses STARTTLS (the default); set `SMTP_USE_TLS=0` and
+`SMTP_USE_SSL=1` for implicit TLS. Do not enable both TLS modes.
+
+For WhatsApp, configure `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID`, then
+create and approve a Meta message template for proactive updates. Set
+`WHATSAPP_UPDATE_TEMPLATE` to its name and `WHATSAPP_UPDATE_LANGUAGE` to the
+template language code. The template body must accept the full update in one
+text parameter (`{{1}}`).
+
+An in-process worker sends updates immediately and retries transient failures.
+The outbox reclaims interrupted sends after a two-minute lease. To recover
+pending work after a process restart, configure a scheduler to POST to
+`/api/notifications/dispatch` with `X-Notifications-Token`; the endpoint fails
+closed until `NOTIFICATIONS_TOKEN` is set:
+
+```bash
+curl -X POST https://your-domain/api/notifications/dispatch \
+   -H "X-Notifications-Token: $NOTIFICATIONS_TOKEN"
+```
+
+Only an assigned manager's changes trigger client notifications. Project
+owners, other managers and staff updates are not sent through this event flow.
+
+---
+
 ## Deploying
 
 The production entrypoint is `wsgi:app` ([wsgi.py](./wsgi.py)). Anything that speaks
@@ -230,7 +268,9 @@ WSGI can host it.
    uploaded receipt are wiped on each deploy.
 3. Set the secrets flagged `sync: false` in the dashboard before going live:
    `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`,
-   `WHATSAPP_APP_SECRET`.
+   `WHATSAPP_APP_SECRET`, `WHATSAPP_UPDATE_TEMPLATE`, `SMTP_HOST`,
+   `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, and
+   `NOTIFICATIONS_TOKEN` when enabling automatic updates.
 4. Health checks hit `/health`, which probes the database for read **and** write
    access, so a read-only or missing disk fails the deploy instead of silently
    breaking sign-ups.

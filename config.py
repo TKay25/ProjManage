@@ -56,6 +56,20 @@ class Config:
     # No default: webhook verification fails closed until the environment sets it.
     WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
     WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
+    WHATSAPP_UPDATE_TEMPLATE = os.environ.get("WHATSAPP_UPDATE_TEMPLATE", "")
+    WHATSAPP_UPDATE_LANGUAGE = os.environ.get("WHATSAPP_UPDATE_LANGUAGE", "en")
+
+    SMTP_HOST = os.environ.get("SMTP_HOST", "")
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
+    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+    SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", "")
+    SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "1") == "1"
+    SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "0") == "1"
+
+    # Shared token for the notification outbox scheduler. No default; the
+    # endpoint remains closed until a deployment configures a secret.
+    NOTIFICATIONS_TOKEN = os.environ.get("NOTIFICATIONS_TOKEN", "")
 
     # Shared secret for the weekly digest scheduler. No default: an
     # unconfigured deployment returns 403 rather than mailing everyone.
