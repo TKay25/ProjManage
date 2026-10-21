@@ -224,18 +224,56 @@ def stage_budget(weight: float, budget_cents: int) -> int:
     return round(budget_cents * weight / 100)
 
 
+def allocate_budgets(stage_definitions, budget_cents: int) -> dict:
+    """Split a budget across the stages a project actually uses.
+
+    Weights are relative, so a project that skips stages still spends its whole
+    budget. The rounding drift lands on the heaviest stage so the allocation
+    always sums to exactly `budget_cents`.
+    """
+    definitions = list(stage_definitions)
+    if not definitions:
+        return {}
+
+    total_weight = sum(item["weight"] for item in definitions) or 1
+    allocations = {
+        item["key"]: round(budget_cents * item["weight"] / total_weight) for item in definitions
+    }
+    drift = budget_cents - sum(allocations.values())
+    if drift:
+        heaviest = max(definitions, key=lambda item: item["weight"])["key"]
+        allocations[heaviest] += drift
+    return allocations
+
+
 def project_progress(stage_rows) -> int:
-    """Weighted progress across all stages (0-100)."""
+    """Weighted progress over the stages this project actually has (0-100).
+
+    Normalised by the weights present, so a project that skipped stages can
+    still reach 100%.
+    """
     weighted = 0.0
+    total = 0.0
     for stage in stage_rows:
         definition = stage_by_key(stage["key"])
         if not definition:
             continue
+        weight = definition["weight"]
+        total += weight
         if stage["status"] == "complete":
-            weighted += definition["weight"]
+            weighted += weight
         elif stage["status"] == "in_progress":
-            weighted += definition["weight"] * 0.5
-    return min(100, int(weighted + 0.5))
+            weighted += weight * 0.5
+
+    if total <= 0:
+        return 0
+    return min(100, int(weighted / total * 100 + 0.5))
+
+
+def selected_stages(keys) -> list:
+    """Stage definitions for the chosen keys, in the canonical build order."""
+    wanted = set(keys or [])
+    return [stage for stage in STAGES if stage["key"] in wanted]
 
 
 def category_label(value) -> str:

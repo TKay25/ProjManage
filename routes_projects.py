@@ -20,7 +20,15 @@ from queries import (
     stage_rows,
     stage_spend,
 )
-from stages import STAGE_GROUPS, STAGES, project_progress, stage_by_key, stage_budget
+from stages import (
+    STAGE_GROUPS,
+    STAGES,
+    allocate_budgets,
+    project_progress,
+    selected_stages,
+    stage_by_key,
+    stage_budget,
+)
 from workspaces import create_workspace, ensure_default_workspace, find_workspace, workspaces_for
 
 bp = Blueprint("projects", __name__)
@@ -29,10 +37,13 @@ PAGE_SIZE = 12
 
 PROJECT_STATUSES = {"planning", "in_progress", "on_hold", "completed"}
 
+# Project codes carry the company initials: YVK-2601, YVK-2602, ...
+PROJECT_CODE_PREFIX = "YVK"
+
 
 def _next_code() -> str:
     count = query("SELECT COUNT(*) AS count FROM projects", one=True)["count"]
-    return f"VK-{datetime.now():%y}{count + 1:02d}"
+    return f"{PROJECT_CODE_PREFIX}-{datetime.now():%y}{count + 1:02d}"
 
 
 @bp.get("/app/projects")
@@ -162,7 +173,14 @@ def create():
         ),
     )
 
-    for index, stage in enumerate(STAGES):
+    chosen = selected_stages(request.form.getlist("stage_keys"))
+    if not chosen:
+        # No choice made (or JavaScript off): use the full Zimbabwe sequence.
+        chosen = list(STAGES)
+
+    allocations = allocate_budgets(chosen, budget_cents)
+
+    for index, stage in enumerate(chosen):
         execute(
             """INSERT INTO stages
                  (id, project_id, key, name, position, status, budget_cents, notes, started_at, completed_at)
@@ -173,7 +191,7 @@ def create():
                 stage["key"],
                 stage["name"],
                 index + 1,
-                stage_budget(stage["weight"], budget_cents),
+                allocations.get(stage["key"], 0),
             ),
         )
 
@@ -456,11 +474,14 @@ def update(project_id):
     )
 
     # Stage allocations are derived from the budget, so they have to follow it.
+    # Only the stages this project actually has are re-split.
     if budget_changed:
-        for stage in STAGES:
+        own_stages = [stage for stage in STAGES if stage["key"] in {row["key"] for row in stage_rows(project_id)}]
+        allocations = allocate_budgets(own_stages, budget_cents)
+        for key, amount in allocations.items():
             execute(
                 "UPDATE stages SET budget_cents = ? WHERE project_id = ? AND key = ?",
-                (stage_budget(stage["weight"], budget_cents), project_id, stage["key"]),
+                (amount, project_id, key),
             )
 
     log_event(g.user["id"], project_id, "project.updated", values["name"][:120])

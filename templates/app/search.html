@@ -1,0 +1,150 @@
+{% extends "app/base.html" %}
+{% block title %}Search · YaVaKa{% endblock %}
+
+{% block page_title %}Search{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {% if term %}
+      {{ total }} result{{ '' if total == 1 else 's' }} for “{{ term }}”
+    {% else %}
+      Projects, ledger entries, documents, agreements and stages
+    {% endif %}
+  </p>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar filter-bar--single" method="get" action="{{ url_for('search.index') }}">
+  <label class="search-field">
+    {{ icon('search', 16) }}
+    <input class="input" type="search" name="q" value="{{ term }}" autofocus
+           placeholder="Try a suburb, supplier, invoice number or stage" aria-label="Search everything" />
+  </label>
+  <button class="btn btn-primary btn-sm" type="submit">Search</button>
+</form>
+
+{% if not term %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('search', 26) }}</span>
+      <h3>Search across your builds</h3>
+      <p>Find a project by name, code or suburb; a payment by description or reference; a file by name; or a stage.</p>
+    </div>
+  </div>
+{% elif total == 0 %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('search', 26) }}</span>
+      <h3>Nothing matches “{{ term }}”</h3>
+      <p>Check the spelling, or try part of the word — search looks at names, references and notes.</p>
+    </div>
+  </div>
+{% else %}
+
+  {% if results.projects %}
+    <div class="card">
+      <div class="card-head"><h2>Projects</h2><span class="badge">{{ results.projects|length }}</span></div>
+      <ul class="mini-list">
+        {% for item in results.projects %}
+          <li>
+            <span class="mini-icon">{{ icon('building', 15) }}</span>
+            <div>
+              <p class="mini-title"><a href="{{ url_for('projects.detail', project_id=item.id) }}">{{ item.name }}</a></p>
+              <p class="mini-meta">{{ item.code }} · {{ item.city }}{% if item.suburb %} · {{ item.suburb }}{% endif %}</p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if results.money %}
+    <div class="card">
+      <div class="card-head"><h2>Money</h2><span class="badge">{{ results.money|length }}</span></div>
+      <ul class="ledger-list">
+        {% for tx in results.money %}
+          <li class="ledger-row">
+            <span class="ledger-icon {{ 'is-in' if tx.type == 'FUNDING' else 'is-out' }}">
+              {{ icon('arrow-down' if tx.type == 'FUNDING' else 'arrow-right', 15) }}
+            </span>
+            <div class="ledger-main">
+              <p class="ledger-title">{{ tx.description }}</p>
+              <p class="mini-meta">
+                {{ tx.project_name }} · {{ tx.category_label }} · {{ tx.occurred_at|date }}
+                {% if tx.reference %}· {{ tx.reference }}{% endif %}
+              </p>
+            </div>
+            <span class="ledger-amount {{ 'pos' if tx.type == 'FUNDING' else 'neg' }}">
+              {{ '+' if tx.type == 'FUNDING' else '−' }}{{ tx.amount_cents|money }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+      <a class="card-foot-link" href="{{ url_for('money.index') }}">Open the ledger {{ icon('arrow-right', 13) }}</a>
+    </div>
+  {% endif %}
+
+  {% if results.documents %}
+    <div class="card">
+      <div class="card-head"><h2>Documents</h2><span class="badge">{{ results.documents|length }}</span></div>
+      <ul class="mini-list">
+        {% for file in results.documents %}
+          <li>
+            <span class="mini-icon">{{ icon('receipt' if file.kind == 'receipt' else 'folder', 15) }}</span>
+            <div>
+              <p class="mini-title">
+                <a href="{{ url_for('documents.serve', attachment_id=file.id) }}" target="_blank" rel="noopener">{{ file.original_name }}</a>
+              </p>
+              <p class="mini-meta">
+                {{ file.kind|replace('_', ' ')|title }} · {{ file.project_name }}
+                {% if file.stage_name %}· {{ file.stage_name }}{% endif %}
+                · {{ file.created_at|date }}
+              </p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if results.agreements %}
+    <div class="card">
+      <div class="card-head"><h2>Agreements</h2><span class="badge">{{ results.agreements|length }}</span></div>
+      <ul class="mini-list">
+        {% for item in results.agreements %}
+          <li>
+            <span class="mini-icon">{{ icon('pen', 15) }}</span>
+            <div>
+              <p class="mini-title">
+                <a href="{{ url_for('agreements.detail', agreement_id=item.id) }}"
+                   data-modal-remote="{{ url_for('agreements.detail', agreement_id=item.id) }}"
+                   data-modal-title="{{ item.title }}">{{ item.title }}</a>
+              </p>
+              <p class="mini-meta">{{ item.project_name }} · {{ item.contract_value_cents|money }} · {{ item.status|replace('_', ' ')|title }}</p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if results.stages %}
+    <div class="card">
+      <div class="card-head"><h2>Build stages</h2><span class="badge">{{ results.stages|length }}</span></div>
+      <ul class="mini-list">
+        {% for stage in results.stages %}
+          <li>
+            <span class="mini-icon">{{ icon('check', 15) }}</span>
+            <div>
+              <p class="mini-title">
+                <a href="{{ url_for('projects.detail', project_id=stage.project_id) }}#stage-{{ stage.key }}">{{ stage.name }}</a>
+              </p>
+              <p class="mini-meta">{{ stage.project_name }} · {{ stage.status|replace('_', ' ')|title }}</p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+{% endif %}
+{% endblock %}

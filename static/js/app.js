@@ -236,6 +236,70 @@
     });
   }
 
+  /* ---------- Theme toggle ---------- */
+
+  $$("[data-theme-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const root = document.documentElement;
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      if (next === "dark") root.setAttribute("data-theme", "dark");
+      else root.removeAttribute("data-theme");
+      try {
+        localStorage.setItem("yavaka-theme", next);
+      } catch (error) {
+        /* private mode: the choice lasts for this page only */
+      }
+    });
+  });
+
+  /* ---------- Stage picker ---------- */
+
+  const picker = $("[data-stage-picker]");
+  if (picker) {
+    const boxes = $$("[data-stage-key]", picker);
+    const count = $("[data-stage-count]");
+    const none = $("[data-stage-none]", picker);
+    const all = $("[data-stage-all]", picker);
+
+    const refresh = () => {
+      const checked = boxes.filter((box) => box.checked).length;
+      if (count) count.textContent = checked;
+      if (none) none.hidden = checked === 0;
+    };
+
+    boxes.forEach((box) => box.addEventListener("change", refresh));
+
+    all?.addEventListener("click", () => {
+      boxes.forEach((box) => (box.checked = true));
+      refresh();
+    });
+
+    none?.addEventListener("click", () => {
+      // Clearing everything would leave a project with no stages, so the
+      // last one stays ticked.
+      boxes.forEach((box, index) => (box.checked = index === 0));
+      refresh();
+    });
+
+    // The structural work only: substructure and superstructure.
+    document.querySelectorAll("[data-stage-preset='core']").forEach((button) => {
+      button.addEventListener("click", () => {
+        const keep = new Set([
+          "land_due_diligence",
+          "architectural_design",
+          "plan_approval",
+          "foundation",
+          "superstructure",
+          "ring_beam_roof",
+        ]);
+        boxes.forEach((box) => (box.checked = keep.has(box.value)));
+        refresh();
+      });
+    });
+
+    refresh();
+  }
+
   /* ---------- PWA install ---------- */
 
   let installPrompt = null;

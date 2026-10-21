@@ -137,7 +137,7 @@ class ProjectAccess(VakaTestCase):
         from db import query
 
         with self.app.app_context():
-            project = query("SELECT id FROM projects WHERE code = 'VK-2401'", one=True)
+            project = query("SELECT id FROM projects WHERE code = 'YVK-2401'", one=True)
 
         self.assertEqual(self.client.get(f"/app/projects/{project['id']}").status_code, 404)
 
@@ -174,7 +174,7 @@ class MoneyLedger(VakaTestCase):
         from db import query
 
         with self.app.app_context():
-            return query("SELECT id FROM projects WHERE code = 'VK-2401'", one=True)["id"]
+            return query("SELECT id FROM projects WHERE code = 'YVK-2401'", one=True)["id"]
 
     def totals(self, project_id):
         from queries import money_totals
@@ -793,6 +793,158 @@ class StageAttachments(VakaTestCase):
                 "SELECT stage_key FROM attachments WHERE original_name = 'loose-file.png'", one=True
             )
         self.assertIsNone(row["stage_key"])
+
+
+class GlobalSearch(VakaTestCase):
+    def test_finds_projects_money_and_stages(self):
+        self.login()
+        response = self.client.get("/app/search?q=greendale")
+        page = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Greendale Family Home", page)
+
+        money = self.client.get("/app/search?q=cement").get_data(as_text=True)
+        self.assertIn("Cement", money)
+
+        stage = self.client.get("/app/search?q=foundation").get_data(as_text=True)
+        self.assertIn("Build stages", stage)
+
+    def test_empty_search_page_and_no_results(self):
+        self.login()
+        self.assertIn("Search across your builds", self.client.get("/app/search").get_data(as_text=True))
+        self.assertIn(
+            "Nothing matches",
+            self.client.get("/app/search?q=zzzznothinghere").get_data(as_text=True),
+        )
+
+    def test_search_never_crosses_into_another_client(self):
+        from db import execute, new_id, now_iso, query
+
+        # A project owned by someone else.
+        with self.app.app_context():
+            other = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            execute(
+                """INSERT INTO projects (id, code, name, owner_id, city, status, budget_cents,
+                                         created_at, updated_at, workspace_id)
+                   VALUES (?, 'YVK-9001', 'Hidden Vault Project', ?, 'Harare', 'planning',
+                           100000, ?, ?, NULL)""",
+                (new_id(), other["id"], now_iso(), now_iso()),
+            )
+
+        self.login("manager@yavaka.co.zw")
+        page = self.client.get("/app/search?q=hidden vault").get_data(as_text=True)
+        self.assertNotIn("Hidden Vault Project", page)
+
+
+class StageSelection(VakaTestCase):
+    def test_project_keeps_only_the_chosen_stages_and_still_spends_the_budget(self):
+        from db import query
+
+        self.login()
+        response = self.client.post(
+            "/app/projects",
+            data={
+                "csrf_token": self.csrf(),
+                "name": "Skeleton Build",
+                "budget": "30000",
+                "city": "Harare",
+                "stage_keys": ["land_due_diligence", "foundation", "superstructure"],
+            },
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+        )
+        self.assertTrue(response.get_json()["ok"])
+
+        with self.app.app_context():
+            project = query("SELECT id, code FROM projects WHERE name = 'Skeleton Build'", one=True)
+            stages = query(
+                "SELECT key, budget_cents FROM stages WHERE project_id = ? ORDER BY position",
+                (project["id"],),
+            )
+
+        self.assertEqual([row["key"] for row in stages], ["land_due_diligence", "foundation", "superstructure"])
+        self.assertEqual(sum(row["budget_cents"] for row in stages), 3_000_000)
+        self.assertTrue(project["code"].startswith("YVK-"))
+
+    def test_no_selection_falls_back_to_the_full_sequence(self):
+        from db import query
+
+        self.login()
+        self.client.post(
+            "/app/projects",
+            data={
+                "csrf_token": self.csrf(),
+                "name": "Complete Build",
+                "budget": "20000",
+                "city": "Harare",
+            },
+            headers={"X-Requested-With": "fetch", "Accept": "application/json"},
+        )
+
+        with self.app.app_context():
+            project = query("SELECT id FROM projects WHERE name = 'Complete Build'", one=True)
+            count = query(
+                "SELECT COUNT(*) AS c FROM stages WHERE project_id = ?", (project["id"],), one=True
+            )["c"]
+        self.assertEqual(count, 19)
+
+
+class DigestEndpoint(VakaTestCase):
+    def setUp(self):
+        super().setUp()
+        self.app.config["DIGEST_TOKEN"] = "digest-secret"
+
+    def tearDown(self):
+        self.app.config["DIGEST_TOKEN"] = ""
+
+    def test_requires_the_shared_token(self):
+        self.assertEqual(self.client.post("/api/whatsapp/digest").status_code, 403)
+        self.assertEqual(
+            self.client.post(
+                "/api/whatsapp/digest", headers={"X-Digest-Token": "wrong"}
+            ).status_code,
+            403,
+        )
+
+    def test_fails_closed_when_unconfigured(self):
+        self.app.config["DIGEST_TOKEN"] = ""
+        self.assertEqual(
+            self.client.post("/api/whatsapp/digest", headers={"X-Digest-Token": ""}).status_code,
+            403,
+        )
+
+    def test_sends_a_summary_per_active_project(self):
+        response = self.client.post(
+            "/api/whatsapp/digest", headers={"X-Digest-Token": "digest-secret"}
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertGreaterEqual(payload["sent"], 1)
+        self.assertEqual(payload["failed"], [])
+
+    def test_message_contains_progress_and_balance(self):
+        from db import query
+        from routes_digest import build_digest
+
+        with self.app.app_context():
+            project = query("SELECT * FROM projects LIMIT 1", one=True)
+            body = build_digest(project)
+
+        self.assertIn(project["name"], body)
+        self.assertIn("Progress:", body)
+        self.assertIn("Balance:", body)
+
+
+class BrandCodes(VakaTestCase):
+    def test_project_codes_use_the_new_prefix(self):
+        from db import query
+
+        self.login()
+        with self.app.app_context():
+            codes = [row["code"] for row in query("SELECT code FROM projects")]
+        self.assertTrue(codes)
+        for code in codes:
+            self.assertTrue(code.startswith("YVK-"), code)
 
 
 class MoneyFormatting(unittest.TestCase):

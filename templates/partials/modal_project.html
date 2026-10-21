@@ -60,11 +60,36 @@
             <span class="field-label">Notes (optional)</span>
             <textarea class="textarea" name="description" rows="2" maxlength="2000" placeholder="Who is on the ground, access notes, design preferences…"></textarea>
           </label>
+
+          <div class="field">
+            <span class="field-label">Build stages</span>
+            <p class="field-hint">The 19-stage Zimbabwe sequence is selected by default. Untick anything this project does not need — the budget is re-split across what is left.</p>
+
+            <div class="stage-picker" data-stage-picker>
+              <div class="stage-picker-actions">
+                <button class="btn btn-ghost btn-xs" type="button" data-stage-all>Select all</button>
+                <button class="btn btn-ghost btn-xs" type="button" data-stage-none>Clear</button>
+                <button class="btn btn-ghost btn-xs" type="button" data-stage-preset="core">Structure only</button>
+              </div>
+
+              {% for group in stage_catalog %}
+                <fieldset class="stage-picker-group">
+                  <legend>{{ group.name }}</legend>
+                  {% for item in group.stages %}
+                    <label class="stage-check">
+                      <input type="checkbox" name="stage_keys" value="{{ item.key }}" data-stage-key checked />
+                      <span>{{ item.name }}</span>
+                    </label>
+                  {% endfor %}
+                </fieldset>
+              {% endfor %}
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="modal-foot">
-        <p class="modal-note">{{ stages_count }} stages will be created automatically.</p>
+        <p class="modal-note"><span data-stage-count>{{ stage_total }}</span> stages will be created automatically.</p>
         <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
         <button class="btn btn-primary" type="submit" data-ajax-submit>
           {{ icon('check', 16) }} <span data-submit-label>Create project</span>

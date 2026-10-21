@@ -10,7 +10,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from db import query
 
 CSRF_EXEMPT_ENDPOINTS = {
+    # Server-to-server calls that carry their own shared secret instead of a
+    # browser session: Meta's webhook and the digest scheduler.
     "whatsapp.webhook",
+    "digest.digest",
     "public.health",
 }
 

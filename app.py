@@ -48,6 +48,7 @@ NAV_ITEMS = [
     {"key": "money", "href": "/app/money", "label": "Money", "icon": "wallet"},
     {"key": "documents", "href": "/app/documents", "label": "Documents", "icon": "folder"},
     {"key": "agreements", "href": "/app/agreements", "label": "Agreements", "icon": "pen"},
+    {"key": "search", "href": "/app/search", "label": "Search", "icon": "search"},
     {"key": "suppliers", "href": "/app/suppliers", "label": "Suppliers", "icon": "store"},
     {"key": "whatsapp", "href": "/app/whatsapp", "label": "WhatsApp", "icon": "message"},
     {"key": "settings", "href": "/app/settings", "label": "Settings", "icon": "settings"},
@@ -71,10 +72,12 @@ def create_app(config_object=Config):
     from routes_admin import bp as admin_bp
     from routes_auth import bp as auth_bp
     from routes_dashboard import bp as dashboard_bp
+    from routes_digest import bp as digest_bp
     from routes_documents import bp as documents_bp
     from routes_money import bp as money_bp
     from routes_projects import bp as projects_bp
     from routes_public import bp as public_bp
+    from routes_search import bp as search_bp
     from routes_settings import bp as settings_bp
     from routes_suppliers import bp as suppliers_bp
     from routes_whatsapp import bp as whatsapp_bp
@@ -90,6 +93,8 @@ def create_app(config_object=Config):
         suppliers_bp,
         whatsapp_bp,
         settings_bp,
+        search_bp,
+        digest_bp,
         admin_bp,
     ):
         app.register_blueprint(blueprint)
@@ -123,6 +128,14 @@ def create_app(config_object=Config):
         current_year=datetime.now().year,
         today_iso=lambda: datetime.now().strftime("%Y-%m-%d"),
         stages_count=len(STAGES),
+    stage_catalog=[
+        {
+            "name": group,
+            "stages": [stage for stage in STAGES if stage["group"] == group],
+        }
+        for group in STAGE_GROUPS
+    ],
+    stage_total=len(STAGES),
         DEFAULT_AGREEMENT_TERMS=DEFAULT_TERMS,
         STAGE_GROUPS=STAGE_GROUPS,
         STAGES=STAGES,

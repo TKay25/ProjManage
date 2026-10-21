@@ -1,0 +1,240 @@
+/* ============================================================
+   YaVaKa — theme
+   Light is the default. Dark is opt-in via data-theme on <html>,
+   which the inline script in <head> sets before first paint so the
+   page never flashes the wrong theme.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces read as slate-green rather than pure black, so the
+     forest/brass accents keep their warmth. */
+  --sand-50: #0e1512;
+  --sand-100: #121a16;
+  --sand-200: #17211c;
+  --sand-300: #1f2b25;
+  --sand-400: #2b3a32;
+
+  --ink: #e8efeb;
+  --ink-soft: #a9b8b1;
+  --ink-faint: #7e8f88;
+  --line: rgba(180, 220, 200, 0.12);
+  --line-strong: rgba(180, 220, 200, 0.22);
+
+  /* Accents lifted for contrast against dark surfaces. */
+  --forest-950: #04120d;
+  --forest-900: #071d16;
+  --forest-800: #0b2c22;
+  --forest-700: #16745a;
+  --forest-600: #2a8a6c;
+  --forest-500: #3aa383;
+  --forest-400: #58b898;
+  --forest-300: #82cfb2;
+  --forest-200: #a9ddc9;
+  --forest-100: #1b3a2f;
+  --forest-50: #14261f;
+
+  --brass-700: #d9ab5d;
+  --brass-600: #e6c489;
+  --brass-500: #c8963e;
+  --brass-400: #d9ab5d;
+  --brass-300: #e6c489;
+  --brass-100: #2e2718;
+
+  --brick: #e2826f;
+  --brick-soft: #33201c;
+  --amber-soft: #2e2718;
+  --success: #58b898;
+  --success-soft: #16302a;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 34px -22px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 24px 60px -28px rgba(0, 0, 0, 0.75);
+}
+
+/* ---------- Surfaces that were hardcoded white ---------- */
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .modal-panel,
+[data-theme="dark"] .input,
+[data-theme="dark"] .select,
+[data-theme="dark"] .textarea,
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .stage-picker,
+[data-theme="dark"] .segmented,
+[data-theme="dark"] .side-project,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .doc-card,
+[data-theme="dark"] .agreement-card,
+[data-theme="dark"] .project-card,
+[data-theme="dark"] .kpi-card,
+[data-theme="dark"] .empty,
+[data-theme="dark"] .wa-shell,
+[data-theme="dark"] .wa-chat,
+[data-theme="dark"] .wa-message.is-in,
+[data-theme="dark"] .chart-card,
+[data-theme="dark"] .table thead th,
+[data-theme="dark"] .admin-table-wrap,
+[data-theme="dark"] .timeline-lg,
+[data-theme="dark"] .status-choice span,
+[data-theme="dark"] .type-option span,
+[data-theme="dark"] .dropzone,
+[data-theme="dark"] .filter-bar,
+[data-theme="dark"] .search-field,
+[data-theme="dark"] .pager,
+[data-theme="dark"] .install-btn,
+[data-theme="dark"] .doc-preview {
+  background: var(--sand-200);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .input,
+[data-theme="dark"] .select,
+[data-theme="dark"] .textarea {
+  background: var(--sand-100);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .input::placeholder,
+[data-theme="dark"] .textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+/* Sidebar, topbar and tab bar */
+
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .topbar,
+[data-theme="dark"] .tabbar {
+  background: var(--sand-100);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .nav-link.is-active {
+  background: rgba(58, 163, 131, 0.16);
+  color: var(--forest-200);
+}
+
+[data-theme="dark"] .nav-link:hover {
+  background: rgba(180, 220, 200, 0.06);
+}
+
+/* Chips, badges and tints */
+
+[data-theme="dark"] .chip,
+[data-theme="dark"] .segment,
+[data-theme="dark"] .badge,
+[data-theme="dark"] .doc-chip,
+[data-theme="dark"] .tag,
+[data-theme="dark"] .stage-gate,
+[data-theme="dark"] .micro-note,
+[data-theme="dark"] .side-note,
+[data-theme="dark"] .notice {
+  background: var(--sand-300);
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .chip.is-active,
+[data-theme="dark"] .segment.is-active {
+  background: var(--forest-700);
+  color: #eaf6f0;
+}
+
+[data-theme="dark"] .badge-success { background: var(--success-soft); color: var(--forest-200); }
+[data-theme="dark"] .badge-warn { background: var(--amber-soft); color: var(--brass-300); }
+[data-theme="dark"] .badge-danger { background: var(--brick-soft); color: var(--brick); }
+
+[data-theme="dark"] .stage-files li {
+  background: rgba(180, 220, 200, 0.06);
+}
+
+[data-theme="dark"] .signature-block,
+[data-theme="dark"] .signature-pad,
+[data-theme="dark"] .signature-img {
+  background: #f7f9f8;
+}
+
+/* Skeleton/chart strokes that assumed a light canvas */
+
+[data-theme="dark"] .chart-grid line,
+[data-theme="dark"] .chart-bar {
+  stroke: var(--line-strong);
+}
+
+[data-theme="dark"] .modal::backdrop {
+  background: rgba(2, 8, 6, 0.7);
+}
+
+/* Public pages keep their light identity for now: the marketing site is
+   deliberately bright, so only the signed-in workspace follows the toggle. */
+[data-theme="dark"] body:not(.app) {
+  --sand-50: #fcfaf7;
+  --sand-100: #f7f4ef;
+  --sand-200: #efe9df;
+  --sand-300: #e2d9ca;
+  --sand-400: #cfc3ae;
+  --ink: #14201b;
+  --ink-soft: #4e5f58;
+  --ink-faint: #7c8a84;
+  --line: rgba(15, 93, 70, 0.12);
+  --line-strong: rgba(15, 93, 70, 0.22);
+  color-scheme: light;
+}
+
+/* ---------- Theme toggle ---------- */
+
+.theme-toggle .theme-icon-dark { display: none; }
+
+[data-theme="dark"] .theme-toggle .theme-icon-light { display: none; }
+[data-theme="dark"] .theme-toggle .theme-icon-dark { display: inline-flex; }
+
+[data-theme="dark"] .theme-toggle {
+  color: var(--brass-300);
+}
+
+/* Topbar search */
+
+.topbar-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 18px;
+  padding: 0 11px;
+  height: 36px;
+  width: min(320px, 34vw);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--sand-100);
+  color: var(--ink-faint);
+}
+
+.topbar-search:focus-within {
+  border-color: var(--forest-500);
+  background: var(--sand-50);
+}
+
+.topbar-search-input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+  width: 100%;
+  min-width: 0;
+}
+
+.topbar-search-input::placeholder {
+  color: var(--ink-faint);
+}
+
+@media (max-width: 820px) {
+  .topbar-search {
+    display: none;
+  }
+}

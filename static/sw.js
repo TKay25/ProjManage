@@ -9,6 +9,7 @@ const PRECACHE = [
   "/manifest.webmanifest",
   "/static/css/app.css",
   "/static/css/portal.css",
+  "/static/css/theme.css",
   "/static/css/transitions.css",
   "/static/js/app.js",
   "/static/js/nav.js",

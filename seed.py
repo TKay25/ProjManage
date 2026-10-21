@@ -105,7 +105,7 @@ def _seed_demo():
     project_id = _create_project(
         owner_id=client_id,
         manager_id=manager_id,
-        code="VK-2401",
+        code="YVK-2401",
         name="Greendale Family Home",
         description="Three-bedroom family house on Stand 1421, Greendale. Client is based in London and visits twice a year.",
         city="Harare",
@@ -122,7 +122,7 @@ def _seed_demo():
     _create_project(
         owner_id=client_id,
         manager_id=manager_id,
-        code="VK-2402",
+        code="YVK-2402",
         name="Waterfalls Rental Cottage",
         description="Two-bedroom cottage for rental income. Awaiting council plan approval before site works begin.",
         city="Harare",

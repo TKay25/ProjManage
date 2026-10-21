@@ -11,7 +11,16 @@
     <header class="topbar">
       <button class="icon-btn menu-toggle" type="button" data-drawer-open aria-label="Open menu">{{ icon('menu', 22) }}</button>
       <a class="topbar-brand" href="/app">{{ logo_mark(28) }}<span>YaVaKa</span></a>
+      <form class="topbar-search" method="get" action="{{ url_for('search.index') }}" role="search">
+        {{ icon('search', 15) }}
+        <input class="topbar-search-input" type="search" name="q" value="{{ term if active == 'search' else '' }}"
+               placeholder="Search everything" aria-label="Search everything" />
+      </form>
       <div class="topbar-spacer"></div>
+      <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch between light and dark" title="Switch theme">
+        <span class="theme-icon-light">{{ icon('sun', 17) }}</span>
+        <span class="theme-icon-dark">{{ icon('moon', 17) }}</span>
+      </button>
       <button class="btn btn-ghost btn-sm install-btn" type="button" id="install-btn" hidden>
         {{ icon('download', 16) }}<span>Install app</span>
       </button>

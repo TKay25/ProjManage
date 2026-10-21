@@ -287,6 +287,17 @@ def run_migrations(connection):
         )
         connection.execute("PRAGMA user_version = 4")
 
+    if version < 5:
+        connection.execute("PRAGMA user_version = 5")
+
+    # Always run: project codes carry the current company initials. Rewriting
+    # only old-prefix rows keeps this safe to repeat, and catches codes that
+    # arrive from a restored backup.
+    connection.execute(
+        "UPDATE OR IGNORE projects SET code = 'YVK-' || substr(code, 4) "
+        "WHERE code LIKE 'VK-%' AND code NOT LIKE 'YVK-%'"
+    )
+
     connection.commit()
 
 

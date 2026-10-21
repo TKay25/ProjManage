@@ -57,5 +57,9 @@ class Config:
     WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
     WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
 
+    # Shared secret for the weekly digest scheduler. No default: an
+    # unconfigured deployment returns 403 rather than mailing everyone.
+    DIGEST_TOKEN = os.environ.get("DIGEST_TOKEN", "")
+
     APP_NAME = "YaVaKa"
     APP_TAGLINE = "Build from anywhere"
