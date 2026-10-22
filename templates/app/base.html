@@ -73,13 +73,9 @@
   </div>
 </dialog>
 
-{% block scripts %}
-  {# Workspace scripts stay loaded across in-app page transitions. #}
-  <script src="{{ asset_url('js/signature.js') }}" defer></script>
-  <script src="{{ asset_url('js/whatsapp.js') }}" defer></script>
-  <script src="{{ asset_url('js/palette.js') }}" defer></script>
-{% endblock %}
-
+{# A block defined inside body_content renders twice — once there and once via
+   base.html's scripts block — which attaches every handler twice. The scripts
+   block is therefore declared after body_content closes. #}
 <nav class="tabbar" aria-label="Sections">
   {% for item in tab_items %}
     <a class="tab {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
@@ -91,4 +87,12 @@
     {{ icon('menu', 21) }}<span>More</span>
   </button>
 </nav>
+{% endblock %}
+
+{% block scripts %}
+  {# Workspace scripts stay loaded across in-app page transitions. #}
+  <script src="{{ asset_url('js/signature.js') }}" defer></script>
+  <script src="{{ asset_url('js/whatsapp.js') }}" defer></script>
+  <script src="{{ asset_url('js/palette.js') }}" defer></script>
+  <script src="{{ asset_url('js/views.js') }}" defer></script>
 {% endblock %}

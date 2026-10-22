@@ -76,6 +76,21 @@
   </a>
 </div>
 
+<div class="ledger-views" data-ledger-views data-view-key="ledger:{{ project.id }}">
+  <span class="toolbar-label">Views</span>
+  <div class="view-chips">
+    {% for key, label in [('all', 'All entries'), ('funding', 'Received'), ('expense', 'Spent'), ('missing', 'No receipt'), ('month', 'This month')] %}
+      <a class="view-chip {{ 'is-active' if filter_type == key }}"
+         href="{{ url_for('money.index', project=project.id, filter=key, stage=stage_filter, q=search) }}"
+         data-view-filter="{{ key }}"
+         {% if filter_type == key %}aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </div>
+  <button class="view-pin" type="button" data-view-pin aria-pressed="false">
+    {{ icon('sparkles', 14) }}<span data-view-pin-label>Pin as my default</span>
+  </button>
+</div>
+
 <div class="money-layout money-layout--full">
   <div class="money-ledger">
     <div class="card">
@@ -84,15 +99,12 @@
           <h2>Ledger</h2>
           <p class="card-sub">{{ total_rows }} {{ 'entry' if total_rows == 1 else 'entries' }} · newest first · keep each cost tied to its proof</p>
         </div>
-        <div class="segmented">
-          {% for key, label in [('all', 'All'), ('funding', 'Received'), ('expense', 'Spent'), ('missing', 'No receipt')] %}
-            <a class="segment {{ 'is-active' if filter_type == key }}" href="{{ url_for('money.index', project=project.id, filter=key, stage=stage_filter, q=search) }}"
-               {% if filter_type == key %}aria-current="true"{% endif %}>{{ label }}</a>
-          {% endfor %}
-        </div>
+        <a class="link-quiet" href="{{ url_for('money.export', project=project.id, filter=filter_type, q=search, stage=stage_filter) }}">
+          {{ icon('download', 14) }} Export this view
+        </a>
       </div>
 
-      <form class="filter-bar" method="get" action="{{ url_for('money.index') }}">
+      <form class="filter-bar filter-bar--single" method="get" action="{{ url_for('money.index') }}">
         <input type="hidden" name="project" value="{{ project.id }}" />
         <input type="hidden" name="filter" value="{{ filter_type }}" />
         <label class="search-field">

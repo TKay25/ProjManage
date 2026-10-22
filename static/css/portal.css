@@ -3564,3 +3564,239 @@ button.card-trigger {
   color: var(--forest-200);
   background: rgba(180, 220, 200, 0.1);
 }
+
+
+/* ============================================================
+   Shell refinements — sticky page head, loading skeletons,
+   and saved ledger views.
+   ============================================================ */
+
+/* ---------- Sticky page header ----------
+   Long pages (project detail, money) keep their title and primary actions in
+   view once the reader scrolls past the fold. Below 900px the sheet layout is
+   already tight, so the header scrolls normally. */
+
+@media (min-width: 901px) {
+  .page-head {
+    position: sticky;
+    top: 60px;
+    z-index: 18;
+    padding-top: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    background: var(--sand-100);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .page-head.is-stuck {
+    border-bottom-color: var(--line);
+    box-shadow: 0 16px 24px -24px rgba(7, 35, 31, 0.55);
+  }
+}
+
+/* ---------- Loading skeleton ----------
+   Shown only when an in-app page swap is slow enough to notice, so quick
+   navigations never flash a placeholder. */
+
+.skel-page {
+  display: grid;
+  gap: 18px;
+  padding-top: 4px;
+}
+
+.sk {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--sand-200);
+}
+
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: sk-shimmer 1.15s ease-in-out infinite;
+}
+
+[data-theme="dark"] .sk {
+  background: var(--sand-200);
+}
+
+[data-theme="dark"] .sk::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}
+
+@keyframes sk-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.sk-title {
+  width: min(320px, 46%);
+  height: 26px;
+}
+
+.sk-sub {
+  width: min(420px, 62%);
+  height: 13px;
+  margin-top: 10px;
+}
+
+.sk-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.sk-kpi {
+  height: 108px;
+  border-radius: var(--radius);
+}
+
+.sk-body {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.sk-panel {
+  height: 320px;
+  border-radius: var(--radius);
+}
+
+.sk-side {
+  height: 220px;
+  border-radius: var(--radius);
+}
+
+/* The dim is replaced by the skeleton, so drop it while one is on screen. */
+body.is-skeleton .shell-main {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .sk-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sk-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk::after {
+    animation: none;
+  }
+}
+
+/* ---------- Saved ledger views ---------- */
+
+.ledger-views {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--sand-50);
+  margin-bottom: 18px;
+}
+
+.view-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.view-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 0.79rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.view-chip:hover {
+  border-color: var(--forest-400);
+  color: var(--forest-700);
+}
+
+.view-chip.is-active {
+  background: var(--forest-700);
+  border-color: var(--forest-700);
+  color: #fff;
+}
+
+.view-chip .view-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.view-pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.view-pin:hover {
+  border-color: var(--brass-500);
+  color: var(--brass-700);
+}
+
+.view-pin[aria-pressed="true"] {
+  border-style: solid;
+  border-color: var(--brass-500);
+  background: var(--brass-100);
+  color: var(--brass-700);
+}
+
+[data-theme="dark"] .view-chip {
+  background: var(--sand-200);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .view-chip.is-active {
+  background: var(--forest-600);
+  border-color: var(--forest-600);
+  color: #fff;
+}
+
+[data-theme="dark"] .view-pin[aria-pressed="true"] {
+  background: var(--brass-100);
+  color: var(--brass-300);
+}
+
+@media (max-width: 640px) {
+  .view-pin {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}

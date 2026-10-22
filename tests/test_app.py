@@ -260,6 +260,56 @@ class MoneyLedger(VakaTestCase):
         self.assertEqual(after["funded"] - before["funded"], 100_000)
 
 
+class LedgerViews(VakaTestCase):
+    """Saved views: the preset row, the month filter, and default pinning."""
+
+    def project_id(self):
+        from db import query
+
+        with self.app.app_context():
+            return query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)["id"]
+
+    def test_the_money_page_offers_preset_views(self):
+        self.login()
+        page = self.client.get(f"/app/money?project={self.project_id()}").get_data(as_text=True)
+
+        self.assertIn("data-ledger-views", page)
+        self.assertIn("data-view-pin", page)
+        for label in ("All entries", "Received", "Spent", "No receipt", "This month"):
+            self.assertIn(label, page)
+
+    def test_month_view_only_counts_the_current_month(self):
+        from datetime import datetime
+
+        from db import query
+
+        self.login()
+        project_id = self.project_id()
+        month = datetime.now().strftime("%Y-%m")
+
+        response = self.client.get(f"/app/money?project={project_id}&filter=month")
+        self.assertEqual(response.status_code, 200)
+
+        with self.app.app_context():
+            expected = query(
+                """SELECT COUNT(*) AS total FROM transactions
+                   WHERE project_id = ? AND substr(occurred_at, 1, 7) = ?""",
+                (project_id, month),
+                one=True,
+            )["total"]
+
+        page = response.get_data(as_text=True)
+        self.assertIn(f"{expected} {'entry' if expected == 1 else 'entries'}", page)
+
+    def test_pinned_view_is_a_client_side_preference(self):
+        self.login()
+        page = self.client.get(f"/app/money?project={self.project_id()}").get_data(as_text=True)
+
+        # The pin state is never rendered server-side, so nothing depends on it.
+        self.assertIn('aria-pressed="false"', page)
+        self.assertIn("Pin as my default", page)
+
+
 class WhatsAppAssistant(VakaTestCase):
     def test_webhook_verification(self):
         response = self.client.get(

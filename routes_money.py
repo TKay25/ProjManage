@@ -61,6 +61,9 @@ def _ledger_filters(project):
         where.append("t.type = 'EXPENSE'")
     elif filter_type == "missing":
         where.append("t.type = 'EXPENSE' AND a.id IS NULL")
+    elif filter_type == "month":
+        where.append("substr(t.occurred_at, 1, 7) = ?")
+        params.append(datetime.now().strftime("%Y-%m"))
 
     if search:
         where.append("(t.description LIKE ? OR t.reference LIKE ?)")

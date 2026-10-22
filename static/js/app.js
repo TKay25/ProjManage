@@ -399,8 +399,18 @@
     targets.forEach((target) => observer.observe(target));
   };
 
+  // Sticky page head gets a hairline + shadow once it actually sticks.
+  const syncStuckHeader = () => {
+    const head = document.querySelector(".page-head");
+    if (!head) return;
+    head.classList.toggle("is-stuck", window.scrollY > 6);
+  };
+  window.addEventListener("scroll", syncStuckHeader, { passive: true });
+  document.addEventListener("vaka:pagechange", syncStuckHeader);
+
   initPage();
   initReveal();
+  syncStuckHeader();
   document.addEventListener("vaka:pagechange", initPage);
   document.addEventListener("vaka:fragment", (event) =>
     enhancePasswords((event.detail && event.detail.root) || document),

@@ -4,10 +4,12 @@
   "use strict";
 
   const SHOW_DELAY = 140;
+  const SKELETON_DELAY = 220;
   let activeRequest = null;
   let navigationId = 0;
   let progressTimer = null;
   let loaderTimer = null;
+  let skeletonTimer = null;
   let leaving = false;
 
   const mount = () => {
@@ -75,6 +77,7 @@
 
   const setNavigating = (active) => {
     clearTimeout(progressTimer);
+    clearTimeout(skeletonTimer);
     const main = document.getElementById("main");
     if (active) {
       document.body.classList.add("is-navigating");
@@ -82,12 +85,37 @@
       progressTimer = setTimeout(() => {
         document.querySelector(".page-progress")?.classList.add("is-active");
       }, 100);
+      // A slow swap gets placeholders instead of a dimmed stale page. Fast
+      // swaps never reach this, so nothing flashes.
+      skeletonTimer = setTimeout(showSkeleton, SKELETON_DELAY);
       return;
     }
+    hideSkeleton();
     document.body.classList.remove("is-navigating");
     document.getElementById("main")?.removeAttribute("aria-busy");
     document.querySelector(".page-progress")?.classList.remove("is-active");
   };
+
+  const SKELETON =
+    '<div class="skel-page" aria-hidden="true">' +
+    '<div><div class="sk sk-title"></div><div class="sk sk-sub"></div></div>' +
+    '<div class="sk-kpis">' +
+    '<div class="sk sk-kpi"></div><div class="sk sk-kpi"></div>' +
+    '<div class="sk sk-kpi"></div><div class="sk sk-kpi"></div>' +
+    "</div>" +
+    '<div class="sk-body"><div class="sk sk-panel"></div><div class="sk sk-side"></div></div>' +
+    "</div>";
+
+  function showSkeleton() {
+    const main = document.getElementById("main");
+    if (!main || !document.body.classList.contains("is-navigating")) return;
+    main.innerHTML = SKELETON;
+    document.body.classList.add("is-skeleton");
+  }
+
+  function hideSkeleton() {
+    document.body.classList.remove("is-skeleton");
+  }
 
   const syncMeta = (parsed, selector) => {
     const next = parsed.querySelector(selector);
