@@ -1,0 +1,36 @@
+{# ⌘K quick jump. Pages are rendered server-side; records arrive from
+   /app/api/quick-find so the palette never shows anything the user cannot open. #}
+<dialog class="modal modal--palette" id="modal-palette" aria-label="Jump to a page or record">
+  <div class="palette">
+    <header class="palette-head">
+      <label class="palette-field">
+        <span class="sr-only">Jump to a page or record</span>
+        {{ icon('search', 18) }}
+        <input class="palette-input" id="palette-input" type="text" autocomplete="off"
+               spellcheck="false" placeholder="Jump to a page, project, payment or file…" />
+      </label>
+      <kbd class="palette-kbd">ESC</kbd>
+    </header>
+
+    <div class="palette-results" id="palette-results" role="listbox" aria-label="Results">
+      <p class="palette-group-label">Go to</p>
+      {% for item in nav_items %}
+        <a class="palette-item" role="option" aria-selected="false" href="{{ item.href }}"
+           data-palette-title="{{ item.label }}" data-palette-meta="Section">
+          <span class="palette-icon">{{ icon(item.icon, 17) }}</span>
+          <span class="palette-text">
+            <span class="palette-title">{{ item.label }}</span>
+            <span class="palette-meta">{{ 'Overview' if item.key == 'dashboard' else 'Workspace' }}</span>
+          </span>
+          <span class="palette-enter">{{ icon('arrow-right', 15) }}</span>
+        </a>
+      {% endfor %}
+    </div>
+
+    <footer class="palette-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> to move</span>
+      <span><kbd>↵</kbd> to open</span>
+      <span class="palette-foot-note" id="palette-note" aria-live="polite"></span>
+    </footer>
+  </div>
+</dialog>

@@ -39,11 +39,11 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), stored conversation history, in-app simulator |
 | PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons |
 | Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, attention feed (blocked stages, missing receipts, overdraw), project log |
-| Interaction | Action flows run in dialogs (new project, money, agreement, upload, stage update) with an AJAX form enhancer; sidebar navigation shows a branded overlay loader and uses the View Transitions API where supported |
+| Interaction | Action flows run in dialogs (new project, money, agreement, upload, stage update) with an AJAX form enhancer; sidebar navigation swaps the page in place under a branded overlay loader; public sections fade in on scroll, respecting reduced-motion |
 | Record reader | Clicking an agreement opens it in a wide dialog over the list, with signing inside the dialog; a direct link still renders the full page for printing and sharing |
 | Sign-up | The header "Get started", the landing CTAs and the login link open a registration dialog; `/register` still works standalone for direct links and no-JavaScript browsers |
 | Stage planning | A new project starts with the 19-stage Zimbabwe sequence pre-selected; untick stages the build does not need and the budget re-splits across what is left |
-| Search | One box in the topbar searches projects, ledger entries, documents, agreements and stage names, limited to builds the user can already open |
+| Search | `Ctrl/⌘ K` (or `/`) opens a command palette that jumps to any section and live-searches projects, ledger entries, documents and agreements, limited to builds the user can already open; the full search page remains for deeper results |
 | Themes | Light by default; the workspace follows the OS setting and the toggle in the topbar overrides it, applied before first paint so there is no flash |
 | Weekly digest | `POST /api/whatsapp/digest` with `X-Digest-Token` sends each client a progress-and-balance summary per active project |
 | Manager updates | Assigned-manager stage changes, document uploads and ledger entries queue prompt progress/balance updates over each configured email and WhatsApp channel |

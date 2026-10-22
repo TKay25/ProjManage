@@ -182,7 +182,7 @@
     if (!isPlainNavigation(event, anchor)) return;
 
     const url = new URL(anchor.href, window.location.href);
-    if (isWorkspacePath(url.pathname) && anchor.closest("#sidebar, .tabbar")) {
+    if (isWorkspacePath(url.pathname) && anchor.closest("#sidebar, .tabbar, .palette")) {
       event.preventDefault();
       navigate(url);
       return;

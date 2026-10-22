@@ -249,26 +249,34 @@ def accountability_card(x0, y0, height=292):
     """
     r = 30
     x1 = W
-    top = y0 + 42
+    headlines = ["ALL ACCOUNTABLE.", "ALL TRACEABLE.", "ALL SECURE."]
+    lines = [
+        "Automated WhatsApp and email notifications.",
+        "Every receipt, invoice and document — at every",
+        "stage — in your YaVaKa portal. Private to your",
+        "build team and encrypted in transit.",
+    ]
+
+    # Centre the block vertically so the card works at any height.
+    content_h = 70 + 42 + (len(lines) - 1) * 26
+    top = y0 + max(30, (height - content_h) / 2)
+
     path = (
         f"M{x1} {y0} H{x0 + r} Q{x0} {y0} {x0} {y0 + r} "
         f"V{y0 + height - r} Q{x0} {y0 + height} {x0 + r} {y0 + height} H{x1} Z"
     )
     out = [
         f'<path d="{path}" fill="{CREAM}" stroke="{BRASS}" stroke-width="3.5"/>',
-        f'<circle cx="{x0 + 58}" cy="{top + 26}" r="23" fill="#f2e6cd"/>',
-        icon("lock", x0 + 58, top + 26),
-        text(x0 + 96, top + 20, "ALL ACCOUNTABLE.", 17.5, INK, weight=700, family=SANS, spacing=0.8),
-        text(x0 + 96, top + 44, "ALL TRACEABLE.", 17.5, INK, weight=700, family=SANS, spacing=0.8),
+        f'<circle cx="{x0 + 56}" cy="{top + 42}" r="23" fill="#f2e6cd"/>',
+        icon("lock", x0 + 56, top + 42),
     ]
-    lines = [
-        "You get automated WhatsApp",
-        "and email notifications — and",
-        "you can see every receipt,",
-        "invoice and document, at every",
-        "stage, in your YaVaKa portal.",
-    ]
-    y = top + 104
+    for index, headline in enumerate(headlines):
+        out.append(
+            text(x0 + 92, top + 26 + index * 22, headline, 16.5, INK,
+                 weight=700, family=SANS, spacing=0.8)
+        )
+
+    y = top + 112
     for line in lines:
         out.append(text(x0 + 42, y, line, 15.5, INK_SOFT, weight=400, family=SANS))
         y += 26

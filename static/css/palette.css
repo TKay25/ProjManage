@@ -1,0 +1,267 @@
+/* ============================================================
+   YaVaKa — command palette (⌘K) and shell refinements
+   ============================================================ */
+
+/* ---------- Topbar trigger ---------- */
+
+button.topbar-search {
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+button.topbar-search:hover {
+  border-color: var(--forest-500);
+  background: var(--sand-50);
+}
+
+.topbar-search-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-faint);
+}
+
+.topbar-kbd {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--sand-200);
+  color: var(--ink-faint);
+  font-family: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Palette dialog ---------- */
+
+dialog.modal--palette {
+  width: min(640px, calc(100vw - 24px));
+  max-width: 640px;
+  margin-top: 10vh;
+  margin-bottom: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, 620px);
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 40px 90px -40px rgba(4, 24, 18, 0.6), 0 2px 6px rgba(4, 24, 18, 0.08);
+  overflow: hidden;
+}
+
+.palette-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.palette-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-faint);
+}
+
+.palette-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+.palette-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.palette-kbd,
+.palette-foot kbd {
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--sand-100);
+  color: var(--ink-faint);
+  font-family: inherit;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.palette-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 8px 10px;
+  scrollbar-width: thin;
+}
+
+.palette-group-label {
+  margin: 10px 10px 5px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  scroll-margin: 6px;
+}
+
+.palette-item.is-active {
+  background: var(--forest-50);
+}
+
+.palette-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--sand-100);
+  color: var(--forest-700);
+  font-size: 0.85rem;
+}
+
+.palette-item.is-active .palette-icon {
+  background: #fff;
+  color: var(--forest-700);
+}
+
+.palette-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.palette-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.palette-meta {
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.palette-enter {
+  flex: none;
+  color: var(--ink-faint);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.palette-item.is-active .palette-enter {
+  opacity: 1;
+}
+
+.palette-empty {
+  padding: 28px 14px;
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+}
+
+.palette-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--sand-50);
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.palette-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.palette-foot-note {
+  margin-left: auto;
+  color: var(--ink-faint);
+}
+
+/* ---------- Dark theme ---------- */
+
+[data-theme="dark"] .palette {
+  background: var(--sand-100);
+  border: 1px solid var(--line);
+}
+
+[data-theme="dark"] .palette-icon,
+[data-theme="dark"] .palette-item.is-active .palette-icon {
+  background: var(--sand-200);
+  color: var(--forest-300);
+}
+
+[data-theme="dark"] .palette-item.is-active {
+  background: var(--forest-100);
+}
+
+[data-theme="dark"] .palette-foot {
+  background: var(--sand-50);
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 820px) {
+  dialog.modal--palette {
+    width: calc(100vw - 16px);
+    margin-top: auto;
+    margin-bottom: 8px;
+  }
+
+  .palette {
+    max-height: 78vh;
+  }
+
+  .palette-foot {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-enter {
+    transition: none;
+  }
+}

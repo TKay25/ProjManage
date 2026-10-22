@@ -11,11 +11,17 @@
     <header class="topbar">
       <button class="icon-btn menu-toggle" type="button" data-drawer-open aria-label="Open menu">{{ icon('menu', 22) }}</button>
       <a class="topbar-brand" href="/app">{{ logo_mark(28) }}<span>YaVaKa</span></a>
-      <form class="topbar-search" method="get" action="{{ url_for('search.index') }}" role="search">
+      <button class="topbar-search" type="button" data-palette-open aria-label="Search or jump to (Ctrl K)">
         {{ icon('search', 15) }}
-        <input class="topbar-search-input" type="search" name="q" value="{{ term if active == 'search' else '' }}"
-               placeholder="Search everything" aria-label="Search everything" />
-      </form>
+        <span class="topbar-search-text">Search or jump to…</span>
+        <kbd class="topbar-kbd">⌘K</kbd>
+      </button>
+      <noscript>
+        <form class="topbar-search" method="get" action="{{ url_for('search.index') }}" role="search">
+          {{ icon('search', 15) }}
+          <input class="topbar-search-input" type="search" name="q" placeholder="Search everything" aria-label="Search everything" />
+        </form>
+      </noscript>
       <div class="topbar-spacer"></div>
       <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch between light and dark" title="Switch theme">
         <span class="theme-icon-light">{{ icon('sun', 17) }}</span>
@@ -50,6 +56,7 @@
 
 {# Available everywhere in the workspace: any page can raise it. #}
 {% include "partials/modal_workspace.html" %}
+{% include "partials/command_palette.html" %}
 
 {# Shared reader dialog. Any record with a JSON-capable detail route can open in
    here by setting data-modal-remote on its link, so nothing has to redirect. #}
@@ -70,6 +77,7 @@
   {# Workspace scripts stay loaded across in-app page transitions. #}
   <script src="{{ asset_url('js/signature.js') }}" defer></script>
   <script src="{{ asset_url('js/whatsapp.js') }}" defer></script>
+  <script src="{{ asset_url('js/palette.js') }}" defer></script>
 {% endblock %}
 
 <nav class="tabbar" aria-label="Sections">

@@ -4,19 +4,135 @@ Results are always filtered through the caller's accessible projects, so search
 can never surface a build the user could not open directly.
 """
 
-from flask import Blueprint, g, render_template, request
+from flask import Blueprint, g, jsonify, render_template, request
 
 from auth import accessible_projects, login_required
 from db import query
+from money import format_money
 from stages import category_label, stage_name
 
 bp = Blueprint("search", __name__)
 
 RESULT_LIMIT = 12
+QUICK_LIMIT = 5
 
 
 def _project_ids(user):
     return [project["id"] for project in accessible_projects(user)]
+
+
+@bp.get("/app/api/quick-find")
+@login_required
+def quick_find():
+    """Compact JSON feed for the command palette.
+
+    Same access rules as the full search page: only projects the caller may
+    already open, and never more than a handful of rows per group.
+    """
+    term = (request.args.get("q") or "").strip()
+    projects = accessible_projects(g.user)
+    groups = []
+
+    if term:
+        like = f"%{term}%"
+        ids = [project["id"] for project in projects]
+
+        if ids:
+            placeholders = ",".join("?" for _ in ids)
+
+            matched = query(
+                f"""SELECT id, name, code FROM projects
+                    WHERE id IN ({placeholders})
+                      AND (name LIKE ? OR code LIKE ? OR suburb LIKE ? OR city LIKE ?)
+                    ORDER BY created_at DESC LIMIT ?""",
+                [*ids, like, like, like, like, QUICK_LIMIT],
+            )
+            if matched:
+                groups.append(
+                    {
+                        "label": "Projects",
+                        "items": [
+                            {
+                                "title": row["name"],
+                                "meta": row["code"],
+                                "href": f"/app/projects/{row['id']}",
+                            }
+                            for row in matched
+                        ],
+                    }
+                )
+
+            money_rows = query(
+                f"""SELECT t.id, t.description, t.amount_cents, t.type, t.project_id
+                    FROM transactions t
+                    WHERE t.project_id IN ({placeholders})
+                      AND (t.description LIKE ? OR t.reference LIKE ?)
+                    ORDER BY t.occurred_at DESC LIMIT ?""",
+                [*ids, like, like, QUICK_LIMIT],
+            )
+            if money_rows:
+                groups.append(
+                    {
+                        "label": "Money",
+                        "items": [
+                            {
+                                "title": row["description"],
+                                "meta": (
+                                    ("+" if row["type"] == "FUNDING" else "−")
+                                    + format_money(row["amount_cents"])
+                                ),
+                                "href": f"/app/money?project={row['project_id']}&q={term}",
+                            }
+                            for row in money_rows
+                        ],
+                    }
+                )
+
+            docs = query(
+                f"""SELECT a.id, a.original_name, a.kind, a.project_id
+                    FROM attachments a
+                    WHERE a.project_id IN ({placeholders}) AND a.original_name LIKE ?
+                    ORDER BY a.created_at DESC LIMIT ?""",
+                [*ids, like, QUICK_LIMIT],
+            )
+            if docs:
+                groups.append(
+                    {
+                        "label": "Documents",
+                        "items": [
+                            {
+                                "title": row["original_name"],
+                                "meta": row["kind"].title(),
+                                "href": f"/app/documents?project={row['project_id']}&q={term}",
+                            }
+                            for row in docs
+                        ],
+                    }
+                )
+
+            agreements = query(
+                f"""SELECT ag.id, ag.title, ag.status, ag.project_id
+                    FROM agreements ag
+                    WHERE ag.project_id IN ({placeholders}) AND ag.title LIKE ?
+                    ORDER BY ag.created_at DESC LIMIT ?""",
+                [*ids, like, QUICK_LIMIT],
+            )
+            if agreements:
+                groups.append(
+                    {
+                        "label": "Agreements",
+                        "items": [
+                            {
+                                "title": row["title"],
+                                "meta": row["status"].replace("_", " ").title(),
+                                "href": f"/app/agreements?project={row['project_id']}",
+                            }
+                            for row in agreements
+                        ],
+                    }
+                )
+
+    return jsonify({"ok": True, "term": term, "groups": groups})
 
 
 @bp.get("/app/search")
