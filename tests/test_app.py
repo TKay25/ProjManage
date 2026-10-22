@@ -1291,6 +1291,36 @@ class BrandCodes(VakaTestCase):
             self.assertTrue(code.startswith("YVK-"), code)
 
 
+class TextEncoding(VakaTestCase):
+    """Guards against UTF-8 being decoded as Windows-1252 and saved back.
+
+    That mistake turns an em dash into three stray characters, which is easy to
+    miss in review but glaring on the page. Patterns are written as escapes so
+    this test file can never be the thing that is corrupted.
+    """
+
+    MOJIBAKE = (
+        "\u00e2\u20ac",  # em dash / curly quote read as cp1252
+        "\u00c2\u00b7",  # middle dot read as cp1252
+        "\u00e2\u0153",  # check mark read as cp1252
+        "\u00c3\u00a2",  # double-encoded lead byte
+    )
+
+    def test_pages_contain_no_mojibake(self):
+        self.login()
+        for path in ["/", "/app", "/app/projects", "/app/money", "/app/documents"]:
+            with self.subTest(path=path):
+                html = self.client.get(path).get_data(as_text=True)
+                for sequence in self.MOJIBAKE:
+                    self.assertNotIn(sequence, html, f"{path} carries mojibake {sequence!r}")
+                self.assertNotIn("\ufffd", html, f"{path} carries a replacement character")
+
+    def test_landing_page_keeps_real_punctuation(self):
+        html = self.client.get("/").get_data(as_text=True)
+        self.assertIn("\u2014", html)  # em dash
+        self.assertIn("\u00b7", html)  # middle dot
+
+
 class MoneyFormatting(unittest.TestCase):
     def test_rounding_and_parsing(self):
         from money import format_money, parse_money_to_cents
