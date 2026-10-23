@@ -1522,6 +1522,17 @@ body.app {
   text-align: right;
 }
 
+.fact-list dd.fact-contact {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.fact-list dd.fact-contact a {
+  color: var(--forest-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* Side notes */
 
 .side-note {

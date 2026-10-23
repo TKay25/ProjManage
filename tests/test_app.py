@@ -180,6 +180,81 @@ class ProjectAccess(VakaTestCase):
         self.assertEqual(len(stages), len(STAGES))
 
 
+class ClientContactDetails(VakaTestCase):
+    def test_build_manager_records_client_email_and_whatsapp(self):
+        from db import query
+
+        self.login("manager@yavaka.co.zw")
+        response = self.client.post(
+            "/app/projects",
+            data={
+                "name": "Client Contact Build",
+                "city": "Harare",
+                "suburb": "Avondale",
+                "budget": "20,000",
+                "client_email": "Client@Example.com",
+                "client_whatsapp": "077 123 4567",
+                "csrf_token": self.csrf(),
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+
+        with self.app.app_context():
+            project = query(
+                "SELECT * FROM projects WHERE name = 'Client Contact Build'", one=True
+            )
+
+        self.assertEqual(project["client_email"], "client@example.com")
+        self.assertEqual(project["client_whatsapp"], "263771234567")
+        page = response.get_data(as_text=True)
+        self.assertIn("client@example.com", page)
+        self.assertIn("+263 77 123 4567", page)
+
+    def test_client_edit_keeps_the_recorded_contact(self):
+        from db import execute, query
+
+        self.login()
+        with self.app.app_context():
+            project = query("SELECT * FROM projects WHERE code = 'YVK-0001'", one=True)
+            execute(
+                "UPDATE projects SET client_email = ?, client_whatsapp = ? WHERE id = ?",
+                ("owner-client@example.com", "263771111222", project["id"]),
+            )
+
+        try:
+            response = self.client.post(
+                f"/app/projects/{project['id']}",
+                data={
+                    "name": project["name"],
+                    "city": project["city"],
+                    "suburb": project["suburb"] or "",
+                    "stand_number": project["stand_number"] or "",
+                    "budget": f"{project['budget_cents'] / 100:.2f}",
+                    "description": project["description"] or "",
+                    "status": project["status"],
+                    "csrf_token": self.csrf(),
+                },
+                follow_redirects=True,
+            )
+            self.assertEqual(response.status_code, 200)
+
+            with self.app.app_context():
+                saved = query(
+                    "SELECT client_email, client_whatsapp FROM projects WHERE id = ?",
+                    (project["id"],),
+                    one=True,
+                )
+            self.assertEqual(saved["client_email"], "owner-client@example.com")
+            self.assertEqual(saved["client_whatsapp"], "263771111222")
+        finally:
+            with self.app.app_context():
+                execute(
+                    "UPDATE projects SET client_email = NULL, client_whatsapp = NULL WHERE id = ?",
+                    (project["id"],),
+                )
+
+
 class MoneyLedger(VakaTestCase):
     def project_id(self):
         from db import query
@@ -340,6 +415,30 @@ class WhatsAppAssistant(VakaTestCase):
 
         self.assertEqual(result["intent"], "balance")
         self.assertIn("Available", result["reply"])
+
+    def test_recorded_client_whatsapp_links_the_project(self):
+        from db import execute, query
+        from whatsapp import handle_inbound
+
+        phone = "263778887777"
+        with self.app.app_context():
+            project = query("SELECT id, name FROM projects WHERE code = 'YVK-0001'", one=True)
+            execute(
+                "UPDATE projects SET client_whatsapp = ? WHERE id = ?", (phone, project["id"])
+            )
+
+        try:
+            with self.app.app_context():
+                result = handle_inbound(phone, "BALANCE")
+
+            self.assertEqual(result["intent"], "balance")
+            self.assertIn(project["name"], result["reply"])
+        finally:
+            with self.app.app_context():
+                execute("DELETE FROM whatsapp_contacts WHERE phone = ?", (phone,))
+                execute(
+                    "UPDATE projects SET client_whatsapp = NULL WHERE id = ?", (project["id"],)
+                )
 
     def test_intent_detection(self):
         from whatsapp import detect_intent
@@ -1225,6 +1324,67 @@ class ProjectUpdateNotifications(VakaTestCase):
             self.assertEqual(len(rows), 2)
             self.assertEqual({row["channel"] for row in rows}, {"email", "whatsapp"})
             self.assertTrue(all("Available balance:" in row["body"] for row in rows))
+        finally:
+            self.app.config.update(original)
+
+    def test_updates_go_to_the_recorded_client_contact(self):
+        from unittest.mock import patch
+
+        from db import execute, query
+        from notifications import queue_manager_update
+
+        original = {
+            key: self.app.config.get(key)
+            for key in (
+                "SMTP_HOST",
+                "SMTP_FROM_EMAIL",
+                "WHATSAPP_TOKEN",
+                "WHATSAPP_PHONE_NUMBER_ID",
+                "WHATSAPP_UPDATE_TEMPLATE",
+            )
+        }
+        self.app.config.update(
+            SMTP_HOST="smtp.example.test",
+            SMTP_FROM_EMAIL="updates@example.test",
+            WHATSAPP_TOKEN="test-token",
+            WHATSAPP_PHONE_NUMBER_ID="12345",
+            WHATSAPP_UPDATE_TEMPLATE="project_update",
+        )
+        try:
+            with self.app.app_context():
+                project = query(
+                    "SELECT id, manager_id FROM projects WHERE code = 'YVK-0001'", one=True
+                )
+                execute(
+                    "UPDATE projects SET client_email = ?, client_whatsapp = ? WHERE id = ?",
+                    ("client-contact@example.test", "263779998888", project["id"]),
+                )
+                with patch("notifications.schedule_dispatch"):
+                    queued = queue_manager_update(
+                        project["id"],
+                        project["manager_id"],
+                        "Assigned Manager",
+                        "Stage updated",
+                        "Client contact routing",
+                    )
+
+                rows = query(
+                    """SELECT id, channel, recipient FROM notification_outbox
+                       WHERE project_id = ? AND body LIKE ? ORDER BY channel""",
+                    (project["id"], "%Client contact routing%"),
+                )
+                for row in rows:
+                    execute("DELETE FROM notification_outbox WHERE id = ?", (row["id"],))
+                execute(
+                    "UPDATE projects SET client_email = NULL, client_whatsapp = NULL WHERE id = ?",
+                    (project["id"],),
+                )
+
+            self.assertEqual(queued, 2)
+            self.assertEqual(
+                {row["channel"]: row["recipient"] for row in rows},
+                {"email": "client-contact@example.test", "whatsapp": "263779998888"},
+            )
         finally:
             self.app.config.update(original)
 

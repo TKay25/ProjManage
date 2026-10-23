@@ -31,6 +31,7 @@ from stages import (
     stage_by_key,
     stage_budget,
 )
+from whatsapp import display_phone, normalize_phone
 from workspaces import create_workspace, ensure_default_workspace, find_workspace, workspaces_for
 
 bp = Blueprint("projects", __name__)
@@ -132,15 +133,23 @@ def _read_project_form():
         "start_date": (request.form.get("start_date") or "").strip(),
         "target_date": (request.form.get("target_date") or "").strip(),
         "status": (request.form.get("status") or "").strip(),
+        "client_email": (request.form.get("client_email") or "").strip().lower(),
+        "client_whatsapp": (request.form.get("client_whatsapp") or "").strip(),
     }
 
 
 def _validate_project(values):
     budget_cents = parse_money_to_cents(values["budget"])
+    client_email = values["client_email"]
+    client_whatsapp = normalize_phone(values["client_whatsapp"])
     error = None
 
     if len(values["name"]) < 3:
         error = "Give the project a name of at least 3 characters."
+    elif client_email and ("@" not in client_email or "." not in client_email.split("@")[-1]):
+        error = "Enter a valid client email address."
+    elif values["client_whatsapp"] and len(client_whatsapp) < 9:
+        error = "Enter a valid client WhatsApp number."
     elif budget_cents < 10000:
         error = "Enter a build budget of at least $100."
 
@@ -164,8 +173,10 @@ def create():
 
     execute(
         """INSERT INTO projects
-             (id, code, name, description, owner_id, manager_id, city, suburb, stand_number, status, budget_cents, start_date, target_date, workspace_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?, ?)""",
+             (id, code, name, description, owner_id, manager_id, city, suburb, stand_number,
+              client_email, client_whatsapp, status, budget_cents, start_date, target_date,
+              workspace_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?, ?)""",
         (
             project_id,
             _next_code(),
@@ -176,6 +187,8 @@ def create():
             values["city"][:80] or "Harare",
             values["suburb"][:80] or None,
             values["stand_number"][:80] or None,
+            values["client_email"][:120] or None,
+            normalize_phone(values["client_whatsapp"]) or None,
             budget_cents,
             values["start_date"] or None,
             values["target_date"] or None,
@@ -291,6 +304,7 @@ def detail(project_id):
         completed_count=len([stage for stage in stages if stage["status"] == "complete"]),
         progress=project_progress(stages),
         spend=spend,
+        display_phone=display_phone,
     )
 
 
@@ -472,9 +486,20 @@ def update(project_id):
     status = values["status"] if values["status"] in PROJECT_STATUSES else project["status"]
     budget_changed = budget_cents != project["budget_cents"]
 
+    # The contact fields are only rendered for build managers. Preserve whatever
+    # is stored when someone else edits the rest of the project.
+    keeps_client_contact = not {"client_email", "client_whatsapp"} & set(request.form)
+    client_email = project["client_email"] if keeps_client_contact else (values["client_email"][:120] or None)
+    client_whatsapp = (
+        project["client_whatsapp"]
+        if keeps_client_contact
+        else (normalize_phone(values["client_whatsapp"]) or None)
+    )
+
     execute(
         """UPDATE projects
            SET name = ?, city = ?, suburb = ?, stand_number = ?, description = ?,
+               client_email = ?, client_whatsapp = ?,
                status = ?, budget_cents = ?, start_date = ?, target_date = ?, updated_at = ?
            WHERE id = ?""",
         (
@@ -483,6 +508,8 @@ def update(project_id):
             values["suburb"][:80] or None,
             values["stand_number"][:80] or None,
             values["description"][:2000] or None,
+            client_email,
+            client_whatsapp,
             status,
             budget_cents,
             values["start_date"] or None,

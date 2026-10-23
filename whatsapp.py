@@ -169,15 +169,21 @@ def resolve_contact(phone: str, profile_name: str = ""):
         return existing
 
     user = query("SELECT * FROM users WHERE phone = ?", (normalised,), one=True)
-    project = (
-        query(
+    project = None
+    if user:
+        project = query(
             "SELECT * FROM projects WHERE owner_id = ? ORDER BY created_at LIMIT 1",
             (user["id"],),
             one=True,
         )
-        if user
-        else None
-    )
+    if not project:
+        # A build manager can record a client's WhatsApp on the project even
+        # when that client has no YaVaKa login of their own.
+        project = query(
+            "SELECT * FROM projects WHERE client_whatsapp = ? ORDER BY created_at DESC LIMIT 1",
+            (normalised,),
+            one=True,
+        )
 
     contact_id = new_id()
     execute(

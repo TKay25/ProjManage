@@ -196,8 +196,8 @@ def queue_manager_update(project_id, manager_id, manager_name, headline, detail)
     """Queue an update only when it was posted by this project's assigned manager."""
     project = query(
         """SELECT p.id, p.name, p.code, p.manager_id,
-                  owner.name AS owner_name, owner.email AS owner_email,
-                  owner.phone AS owner_phone
+                  COALESCE(NULLIF(p.client_email, ''), owner.email) AS client_email,
+                  COALESCE(NULLIF(p.client_whatsapp, ''), owner.phone) AS client_phone
            FROM projects p
            JOIN users owner ON owner.id = p.owner_id
            WHERE p.id = ?""",
@@ -213,11 +213,11 @@ def queue_manager_update(project_id, manager_id, manager_name, headline, detail)
         and current_app.config.get("WHATSAPP_PHONE_NUMBER_ID")
         and current_app.config.get("WHATSAPP_UPDATE_TEMPLATE")
     )
-    phone = normalize_phone(project["owner_phone"] or "")
+    phone = normalize_phone(project["client_phone"] or "")
     channels = []
 
-    if email_ready and project["owner_email"]:
-        channels.append(("email", project["owner_email"]))
+    if email_ready and project["client_email"]:
+        channels.append(("email", project["client_email"]))
     elif not email_ready:
         current_app.logger.warning("Manager update email notification skipped: SMTP is not configured.")
 

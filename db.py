@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS projects (
   city TEXT DEFAULT 'Harare',
   suburb TEXT,
   stand_number TEXT,
+  client_email TEXT,
+  client_whatsapp TEXT,
   status TEXT NOT NULL DEFAULT 'planning',
   budget_cents INTEGER NOT NULL DEFAULT 0,
   start_date TEXT,
@@ -333,6 +335,17 @@ def run_migrations(connection):
                WHERE status = 'sending' AND claimed_at IS NULL"""
         )
         connection.execute("PRAGMA user_version = 7")
+
+    if version < 8:
+        # A build manager can run a project for a client who has no YaVaKa
+        # account yet. Keep that client's email and WhatsApp on the project so
+        # updates and the weekly digest have somewhere to go.
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(projects)")}
+        if "client_email" not in columns:
+            connection.execute("ALTER TABLE projects ADD COLUMN client_email TEXT")
+        if "client_whatsapp" not in columns:
+            connection.execute("ALTER TABLE projects ADD COLUMN client_whatsapp TEXT")
+        connection.execute("PRAGMA user_version = 8")
 
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.

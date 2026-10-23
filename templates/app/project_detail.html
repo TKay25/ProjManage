@@ -102,6 +102,12 @@
       </div>
       <dl class="fact-list">
         <div><dt>Client</dt><dd>{{ owner.name if owner else '—' }}</dd></div>
+        {% if project.client_email %}
+          <div><dt>Client email</dt><dd class="fact-contact"><a href="mailto:{{ project.client_email }}">{{ project.client_email }}</a></dd></div>
+        {% endif %}
+        {% if project.client_whatsapp %}
+          <div><dt>Client WhatsApp</dt><dd class="fact-contact"><a href="https://wa.me/{{ project.client_whatsapp }}" target="_blank" rel="noopener">{{ display_phone(project.client_whatsapp) }}</a></dd></div>
+        {% endif %}
         <div><dt>Build manager</dt><dd data-manager-name>{{ manager.name if manager else 'Not assigned' }}</dd></div>
         <div><dt>Start date</dt><dd>{{ project.start_date|date if project.start_date else '—' }}</dd></div>
         <div><dt>Target handover</dt><dd>{{ project.target_date|date if project.target_date else '—' }}</dd></div>

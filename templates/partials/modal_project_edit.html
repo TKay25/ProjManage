@@ -59,6 +59,19 @@
             </label>
           </div>
 
+          {% if user.role in ['manager', 'admin'] %}
+            <div class="form-row">
+              <label class="field">
+                <span class="field-label">Client email</span>
+                <input class="input" type="email" name="client_email" value="{{ project.client_email or '' }}" maxlength="120" placeholder="client@example.com" />
+              </label>
+              <label class="field">
+                <span class="field-label">Client WhatsApp</span>
+                <input class="input" type="tel" name="client_whatsapp" value="{{ project.client_whatsapp or '' }}" maxlength="30" placeholder="+263 77 123 4567" />
+              </label>
+            </div>
+          {% endif %}
+
           <label class="field">
             <span class="field-label">Status</span>
             <select class="select" name="status">

@@ -63,17 +63,19 @@ def digest():
     # Only projects that are actually live, and only where we have a number.
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
     projects = query(
-        """SELECT p.*, u.name AS owner_name, u.phone AS owner_phone
+        """SELECT p.*, u.name AS owner_name,
+                  COALESCE(NULLIF(p.client_whatsapp, ''), u.phone) AS client_phone
            FROM projects p JOIN users u ON u.id = p.owner_id
            WHERE p.archived_at IS NULL
              AND p.status IN ('planning', 'in_progress')
-             AND u.phone IS NOT NULL AND u.phone != ''
+             AND COALESCE(NULLIF(p.client_whatsapp, ''), u.phone) IS NOT NULL
+             AND COALESCE(NULLIF(p.client_whatsapp, ''), u.phone) != ''
            ORDER BY p.created_at"""
     )
 
     sent, skipped, failed = [], [], []
     for project in projects:
-        phone = normalize_phone(project["owner_phone"] or "")
+        phone = normalize_phone(project["client_phone"] or "")
         if not phone:
             skipped.append({"project": project["name"], "reason": "no phone"})
             continue
