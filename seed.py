@@ -102,15 +102,6 @@ def _seed_demo():
             (user_id, name, email, password_hash, role, phone, country, colour, "2026-02-20T10:00:00+00:00"),
         )
 
-    # The demo manager runs the demo client's builds, so give them the same
-    # team link a real invitation would create.
-    execute(
-        """INSERT OR IGNORE INTO manager_links
-               (id, client_id, manager_id, created_by, created_at)
-           VALUES (?, ?, ?, ?, ?)""",
-        (new_id(), client_id, manager_id, client_id, "2026-02-20T10:00:00+00:00"),
-    )
-
     project_id = _create_project(
         owner_id=client_id,
         manager_id=manager_id,

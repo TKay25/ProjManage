@@ -93,26 +93,43 @@ def is_linked(client_id, manager_id) -> bool:
 
 
 def managers_for(client_id):
+    """Everyone who runs this client's builds — linked by invitation, or simply
+    assigned on one of the projects. Both mean the same thing to the client."""
     return query(
-        """SELECT u.id, u.name, u.email, u.avatar_color, u.phone, l.created_at AS linked_at
-           FROM manager_links l
-           JOIN users u ON u.id = l.manager_id
-           WHERE l.client_id = ?
+        """SELECT u.id, u.name, u.email, u.avatar_color, u.phone,
+                 MIN(seen.at) AS linked_at
+            FROM (
+                  SELECT manager_id AS manager_id, created_at AS at
+                    FROM manager_links WHERE client_id = ?
+                  UNION ALL
+                  SELECT manager_id AS manager_id, created_at AS at
+                    FROM projects
+                   WHERE owner_id = ? AND manager_id IS NOT NULL
+            ) seen
+            JOIN users u ON u.id = seen.manager_id
+           WHERE u.id <> ?
+           GROUP BY u.id
            ORDER BY u.name""",
-        (client_id,),
+        (client_id, client_id, client_id),
     )
 
 
 def clients_for(manager_id):
+    """The clients this manager works with, whichever way they were attached."""
     return query(
         """SELECT u.id, u.name, u.email, u.avatar_color,
-                  (SELECT COUNT(*) FROM projects p
-                    WHERE p.owner_id = u.id AND p.archived_at IS NULL) AS project_count
-           FROM manager_links l
-           JOIN users u ON u.id = l.client_id
-           WHERE l.manager_id = ?
+                 (SELECT COUNT(*) FROM projects p
+                   WHERE p.owner_id = u.id AND p.archived_at IS NULL) AS project_count
+            FROM (
+                  SELECT client_id AS client_id FROM manager_links WHERE manager_id = ?
+                  UNION
+                  SELECT owner_id AS client_id FROM projects
+                   WHERE manager_id = ? AND owner_id IS NOT NULL
+            ) seen
+            JOIN users u ON u.id = seen.client_id
+           WHERE u.id <> ?
            ORDER BY u.name""",
-        (manager_id,),
+        (manager_id, manager_id, manager_id),
     )
 
 

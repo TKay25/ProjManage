@@ -210,6 +210,8 @@ class ClientContactDetails(VakaTestCase):
         page = response.get_data(as_text=True)
         self.assertIn("client@example.com", page)
         self.assertIn("+263 77 123 4567", page)
+        # And the manager is told how the client takes the build over.
+        self.assertIn("sign up with that address", page)
 
     def test_client_edit_keeps_the_recorded_contact(self):
         from db import execute, query
@@ -2255,7 +2257,14 @@ class BuildManagerInvites(VakaTestCase):
         with self.app.app_context():
             from db import query
 
-            project = query("SELECT id FROM projects WHERE code = 'YVK-0004'", one=True)
+            project = query(
+                """SELECT p.id FROM projects p
+                     JOIN users u ON u.id = p.owner_id
+                    WHERE u.email = 'client@yavaka.co.zw'
+                    ORDER BY p.created_at DESC, p.code DESC LIMIT 1""",
+                one=True,
+            )
+        self.assertIsNotNone(project)
 
         response = self.client.post(
             f"/app/projects/{project['id']}/manager",
@@ -2427,13 +2436,19 @@ class BuildManagerInvites(VakaTestCase):
         self.assertIn("Clients you work with", page)
 
     def test_a_manager_assigned_without_a_team_link_can_still_be_removed(self):
+        from auth import hash_password
         from db import execute, new_id, now_iso, query
 
+        password = "Legacy2026!"
         with self.app.app_context():
-            client, manager = self._people()
+            _client, manager = self._people()
+            # A fresh client keeps this test's cleanup away from demo data.
+            owner_id = new_id()
+            owner_email = f"{owner_id}@example.com"
             execute(
-                "DELETE FROM manager_links WHERE client_id = ? AND manager_id = ?",
-                (client["id"], manager["id"]),
+                """INSERT INTO users (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Legacy Client', ?, ?, 'client', '#0F5D46', ?)""",
+                (owner_id, owner_email, hash_password(password), now_iso()),
             )
             project_id = new_id()
             execute(
@@ -2444,14 +2459,14 @@ class BuildManagerInvites(VakaTestCase):
                 (
                     project_id,
                     f"YVK-L{new_id()[:4].upper()}",
-                    client["id"],
+                    owner_id,
                     manager["id"],
                     now_iso(),
                     now_iso(),
                 ),
             )
 
-        self.login()
+        self.login(owner_email, password)
         page = self.client.post(
             f"/app/team/{manager['id']}/remove",
             data={"csrf_token": self.csrf()},
@@ -2467,16 +2482,7 @@ class BuildManagerInvites(VakaTestCase):
             self.assertIsNone(
                 query(
                     "SELECT id FROM manager_links WHERE client_id = ? AND manager_id = ?",
-                    (client["id"], manager["id"]),
+                    (owner_id, manager["id"]),
                     one=True,
                 )
-            )
-
-        # Put the demo pairing back so later tests see the seeded team.
-        with self.app.app_context():
-            execute(
-                """INSERT OR IGNORE INTO manager_links
-                       (id, client_id, manager_id, created_by, created_at)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (new_id(), client["id"], manager["id"], client["id"], now_iso()),
             )

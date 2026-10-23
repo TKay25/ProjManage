@@ -248,6 +248,10 @@ def create():
 
     log_event(g.user["id"], project_id, "project.created", f"Project {values['name']} created")
 
+    # A build filed for an address that has no account yet waits in the manager's
+    # workspace until that person signs up, then moves under their name.
+    held_for = values["client_email"] if values["client_email"] and not client_account else ""
+
     if web.wants_json():
         created = query("SELECT * FROM projects WHERE id = ?", (project_id,), one=True)
         created["stages"] = stage_rows(project_id)
@@ -256,6 +260,11 @@ def create():
         note = f"{values['name']} created with the full Zimbabwe stage plan."
         if client_account:
             note += f" {client_account['name']} owns it; you are the build manager."
+        elif held_for:
+            note += (
+                f" Tell {held_for} to sign up with that address — the build moves "
+                "under their name automatically, with you as build manager."
+            )
         return web.ok(
             note,
             fragment=render_template("partials/project_card.html", project=created),
@@ -264,6 +273,12 @@ def create():
         )
 
     flash("Project created. YaVaKa has added the full Zimbabwe stage plan.", "success")
+    if held_for:
+        flash(
+            f"Tell {held_for} to sign up with that address — this build moves under "
+            "their name automatically, with you as build manager.",
+            "info",
+        )
     return redirect(url_for("projects.detail", project_id=project_id))
 
 

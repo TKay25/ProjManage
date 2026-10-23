@@ -198,7 +198,10 @@ def register_post():
         claimed = adopted = 0
 
     if claimed:
-        message = "Account created. Your build manager invitation is waiting — sign in to open it."
+        message = (
+            "Account created. You are now a build manager on the projects you were "
+            "invited to — sign in to open them."
+        )
     elif adopted:
         message = (
             "Account created. We found "
