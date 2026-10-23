@@ -2425,3 +2425,58 @@ class BuildManagerInvites(VakaTestCase):
         # A manager inviting on their own account is a client-side action only;
         # they get the manager view, not an invite form.
         self.assertIn("Clients you work with", page)
+
+    def test_a_manager_assigned_without_a_team_link_can_still_be_removed(self):
+        from db import execute, new_id, now_iso, query
+
+        with self.app.app_context():
+            client, manager = self._people()
+            execute(
+                "DELETE FROM manager_links WHERE client_id = ? AND manager_id = ?",
+                (client["id"], manager["id"]),
+            )
+            project_id = new_id()
+            execute(
+                """INSERT INTO projects (id, code, name, owner_id, manager_id, city, status,
+                                         budget_cents, created_at, updated_at)
+                   VALUES (?, ?, 'Legacy Assignment', ?, ?, 'Harare', 'planning',
+                           1000, ?, ?)""",
+                (
+                    project_id,
+                    f"YVK-L{new_id()[:4].upper()}",
+                    client["id"],
+                    manager["id"],
+                    now_iso(),
+                    now_iso(),
+                ),
+            )
+
+        self.login()
+        page = self.client.post(
+            f"/app/team/{manager['id']}/remove",
+            data={"csrf_token": self.csrf()},
+            follow_redirects=True,
+        ).get_data(as_text=True)
+        self.assertIn("Build manager removed from your builds", page)
+
+        with self.app.app_context():
+            row = query(
+                "SELECT manager_id FROM projects WHERE id = ?", (project_id,), one=True
+            )
+            self.assertIsNone(row["manager_id"])
+            self.assertIsNone(
+                query(
+                    "SELECT id FROM manager_links WHERE client_id = ? AND manager_id = ?",
+                    (client["id"], manager["id"]),
+                    one=True,
+                )
+            )
+
+        # Put the demo pairing back so later tests see the seeded team.
+        with self.app.app_context():
+            execute(
+                """INSERT OR IGNORE INTO manager_links
+                       (id, client_id, manager_id, created_by, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (new_id(), client["id"], manager["id"], client["id"], now_iso()),
+            )

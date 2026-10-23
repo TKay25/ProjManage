@@ -448,6 +448,21 @@ def run_migrations(connection):
         "WHERE code LIKE 'VK-%' AND code NOT LIKE 'YVK-%'"
     )
 
+    # Always run: an assignment made before team links existed still means the
+    # manager works with that client, so keep links in step with assignments.
+    connection.execute(
+        """INSERT OR IGNORE INTO manager_links
+               (id, client_id, manager_id, created_by, created_at)
+           SELECT lower(hex(randomblob(10))), p.owner_id, p.manager_id, p.owner_id, ?
+             FROM projects p
+            WHERE p.manager_id IS NOT NULL
+              AND p.owner_id <> p.manager_id
+              AND EXISTS (SELECT 1 FROM users u WHERE u.id = p.owner_id)
+              AND EXISTS (SELECT 1 FROM users m WHERE m.id = p.manager_id)
+            GROUP BY p.owner_id, p.manager_id""",
+        (now_iso(),),
+    )
+
     connection.commit()
 
 

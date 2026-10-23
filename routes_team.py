@@ -3,7 +3,7 @@
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from auth import login_required
-from db import log_event, query
+from db import execute, log_event, now_iso, query
 from web import fail, ok, wants_json
 import team
 
@@ -103,15 +103,22 @@ def revoke(invitation_id):
 @login_required
 def remove(manager_id):
     """Stop a manager seeing this client's builds. Per-project assignment clears too."""
-    if team.unlink(g.user["id"], manager_id):
-        # The team link is what granted access; also clear the explicit
-        # per-project assignment so nothing is left pointing at them.
-        from db import execute, now_iso
-
+    unlinked = team.unlink(g.user["id"], manager_id)
+    # Clear the explicit per-project assignment as well, so a manager who was
+    # only ever assigned (no team link) can still be taken off the builds.
+    assigned = query(
+        "SELECT COUNT(*) AS count FROM projects WHERE owner_id = ? AND manager_id = ?",
+        (g.user["id"], manager_id),
+        one=True,
+    )
+    if assigned and assigned["count"]:
         execute(
             "UPDATE projects SET manager_id = NULL, updated_at = ? WHERE owner_id = ? AND manager_id = ?",
             (now_iso(), g.user["id"], manager_id),
         )
+        unlinked = True
+
+    if unlinked:
         log_event(g.user["id"], None, "team.removed", "Build manager removed from the team")
         flash("Build manager removed from your builds.", "success")
     else:
