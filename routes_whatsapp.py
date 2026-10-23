@@ -18,8 +18,8 @@ from whatsapp import (
     display_phone,
     handle_inbound,
     normalize_phone,
+    quick_replies,
     send_whatsapp_text,
-    whatsapp_configured,
 )
 
 bp = Blueprint("whatsapp", __name__)
@@ -66,7 +66,7 @@ def index():
         contacts=contacts,
         selected=selected,
         messages=messages,
-        configured=whatsapp_configured(),
+        quick_replies=quick_replies,
         display_phone=display_phone,
     )
 

@@ -17,7 +17,21 @@
       messages.scrollTop = messages.scrollHeight;
     };
 
-    const bubble = (text, direction) => {
+    const quickButton = (option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "wa-quick-btn";
+      button.dataset.waQuick = option;
+      button.textContent = option;
+      return button;
+    };
+
+    const bubble = (text, direction, suggestions = []) => {
+      messages.querySelector(".wa-empty")?.remove();
+
+      const turn = document.createElement("div");
+      turn.className = `wa-turn ${direction === "IN" ? "wa-turn-in" : "wa-turn-out"}`;
+
       const element = document.createElement("div");
       element.className = `wa-bubble ${direction === "IN" ? "wa-in" : "wa-out"}`;
 
@@ -29,10 +43,27 @@
       time.textContent = "just now";
 
       element.append(paragraph, time);
-      messages.appendChild(element);
+      turn.appendChild(element);
+
+      if (direction === "OUT" && suggestions.length) {
+        const actions = document.createElement("div");
+        actions.className = "wa-actions";
+        actions.setAttribute("aria-label", "Quick replies");
+        suggestions.forEach((option) => actions.appendChild(quickButton(option)));
+        turn.appendChild(actions);
+      }
+
+      messages.appendChild(turn);
       scroll();
       return element;
     };
+
+    messages.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-wa-quick]");
+      if (!button || input.disabled) return;
+      input.value = button.dataset.waQuick || "";
+      form.requestSubmit();
+    });
 
     const typing = () => {
       const element = document.createElement("div");
@@ -41,6 +72,25 @@
       messages.appendChild(element);
       scroll();
       return element;
+    };
+
+    const refreshConversationChrome = async () => {
+      try {
+        const response = await fetch(window.location.href, {
+          headers: { Accept: "text/html" },
+          credentials: "same-origin",
+        });
+        if (!response.ok) return;
+
+        const page = new DOMParser().parseFromString(await response.text(), "text/html");
+        for (const selector of [".wa-contacts", ".wa-chat-head"]) {
+          const fresh = page.querySelector(selector);
+          const current = document.querySelector(selector);
+          if (fresh && current) current.replaceWith(fresh);
+        }
+      } catch {
+        // The conversation still works; the chrome catches up on the next visit.
+      }
     };
 
     form.addEventListener("submit", async (event) => {
@@ -77,12 +127,18 @@
           return;
         }
 
-        bubble(data.reply, "OUT");
+        bubble(data.reply, "OUT", data.quick_replies || []);
 
         if (!form.dataset.contactId && data.contact_id) {
-          setTimeout(() => {
-            window.location.href = `/app/whatsapp?contact=${encodeURIComponent(data.contact_id)}`;
-          }, 900);
+          // Remember the conversation in place. Reloading the page here used to
+          // wipe the bubbles that had just been rendered.
+          form.dataset.contactId = data.contact_id;
+          window.history.replaceState(
+            {},
+            "",
+            `/app/whatsapp?contact=${encodeURIComponent(data.contact_id)}`,
+          );
+          refreshConversationChrome();
         }
       } catch {
         indicator.remove();

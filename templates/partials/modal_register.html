@@ -18,7 +18,7 @@
         <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
       </header>
 
-      <form class="modal-form" method="post" action="{{ url_for('auth.register_post') }}" data-ajax>
+      <form class="modal-form" method="post" action="{{ url_for('auth.register_post') }}" data-ajax data-busy-text="Creating your account…">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
         <div class="modal-body">

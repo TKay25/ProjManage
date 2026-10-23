@@ -10,32 +10,6 @@
 {% endblock %}
 
 {% block content %}
-<div class="card integration-card">
-  <div class="integration-main">
-    <span class="integration-icon">{{ icon('message', 22) }}</span>
-    <div>
-      <div class="integration-title">
-        <h2>WhatsApp connection</h2>
-        {% if configured %}
-          <span class="badge badge-success">{{ icon('check', 12) }} Live</span>
-        {% else %}
-          <span class="badge badge-warn">Simulator mode</span>
-        {% endif %}
-      </div>
-      <p class="muted small">
-        {% if configured %}
-          Messages reach clients through your WhatsApp Business number, and replies
-          return to this inbox—connected to the project conversation.
-        {% else %}
-          Credentials are not configured on this deployment, so messages are stored
-          locally and nothing is sent. You can test how project questions and
-          replies are handled before connecting a live WhatsApp Business number.
-        {% endif %}
-      </p>
-    </div>
-  </div>
-</div>
-
 <div class="wa-layout">
   <aside class="card wa-contacts">
     <div class="card-head">
@@ -62,10 +36,6 @@
       <p class="muted small pad">No conversations yet. Send a test message below to start one.</p>
     {% endif %}
 
-    <div class="side-note">
-      {{ icon('sparkles', 16) }}
-      <p>Try <code>BALANCE</code>, <code>STATUS</code>, <code>PROJECTS</code> or <code>PAY 500</code>.</p>
-    </div>
   </aside>
 
   <section class="card wa-chat">
@@ -83,9 +53,19 @@
     <div class="wa-messages" id="wa-messages" aria-live="polite">
       {% if messages %}
         {% for message in messages %}
-          <div class="wa-bubble {{ 'wa-in' if message.direction == 'IN' else 'wa-out' }}">
-            <p>{{ message.body|wa }}</p>
-            <span class="wa-time">{{ message.created_at|datetime }}{% if message.intent %} · {{ message.intent }}{% endif %}</span>
+          {% set options = quick_replies(message.intent) if message.direction == 'OUT' else () %}
+          <div class="wa-turn {{ 'wa-turn-in' if message.direction == 'IN' else 'wa-turn-out' }}">
+            <div class="wa-bubble {{ 'wa-in' if message.direction == 'IN' else 'wa-out' }}">
+              <p>{{ message.body|wa }}</p>
+              <span class="wa-time">{{ message.created_at|datetime }}{% if message.intent %} · {{ message.intent }}{% endif %}</span>
+            </div>
+            {% if options %}
+              <div class="wa-actions" aria-label="Quick replies">
+                {% for option in options %}
+                  <button class="wa-quick-btn" type="button" data-wa-quick="{{ option }}">{{ option }}</button>
+                {% endfor %}
+              </div>
+            {% endif %}
           </div>
         {% endfor %}
       {% else %}

@@ -448,6 +448,33 @@ class WhatsAppAssistant(VakaTestCase):
         self.assertEqual(detect_intent("PAY 750")[1], 75_000)
         self.assertEqual(detect_intent("status please")[0], "status")
 
+    def test_quick_reply_buttons_are_rendered_under_assistant_messages(self):
+        self.login()
+        page = self.client.get("/app/whatsapp").get_data(as_text=True)
+
+        self.assertNotIn("WhatsApp connection", page)
+        self.assertNotIn("Simulator mode", page)
+        self.assertIn('class="wa-actions"', page)
+        for command in ("BALANCE", "STATUS", "PROJECTS", "PAY 500"):
+            with self.subTest(command=command):
+                self.assertIn(f'data-wa-quick="{command}"', page)
+
+    def test_replies_do_not_ask_for_another_text_command(self):
+        from whatsapp import handle_inbound
+
+        with self.app.app_context():
+            balance = handle_inbound("263771234567", "BALANCE")
+            status = handle_inbound("263771234567", "STATUS")
+
+        self.assertIn("Available:", balance["reply"])
+        self.assertNotIn("Reply *", balance["reply"])
+        self.assertIn("Progress:", status["reply"])
+        self.assertNotIn("Reply *", status["reply"])
+        self.assertIn("STATUS", balance["quick_replies"])
+        self.assertNotIn("BALANCE", balance["quick_replies"])
+        self.assertIn("BALANCE", status["quick_replies"])
+        self.assertNotIn("STATUS", status["quick_replies"])
+
 
 class StageProgress(VakaTestCase):
     def test_progress_is_weighted_and_capped(self):
@@ -777,6 +804,11 @@ class RegistrationModal(VakaTestCase):
         self.assertEqual(page.count('class="auth-aside modal-auth-aside"'), 2)
         self.assertIn('class="btn btn-outline btn-sm auth-switch-btn"', page)
         self.assertIn('>Create an account</a>', page)
+
+    def test_auth_dialogs_name_the_work_they_are_doing(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('data-busy-text="Logging you in…"', page)
+        self.assertIn('data-busy-text="Creating your account…"', page)
 
     def test_sign_in_posts_json_so_the_dialog_never_navigates(self):
         client = self.app.test_client()

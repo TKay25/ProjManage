@@ -17,7 +17,7 @@
         <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
       </header>
 
-      <form class="modal-form" method="post" action="{{ url_for('auth.login_post') }}" data-ajax>
+      <form class="modal-form" method="post" action="{{ url_for('auth.login_post') }}" data-ajax data-busy-text="Logging you in…">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}" />
 

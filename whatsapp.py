@@ -26,6 +26,22 @@ HELP = "\n".join(
 )
 
 
+QUICK_REPLIES = {
+    "balance": ("STATUS", "PROJECTS", "PAY 500"),
+    "status": ("BALANCE", "PROJECTS", "PAY 500"),
+    "projects": ("BALANCE", "STATUS"),
+    "deposit": ("BALANCE", "STATUS"),
+    "receipt": ("BALANCE", "STATUS"),
+    "help": ("BALANCE", "STATUS", "PROJECTS", "PAY 500"),
+    "unknown": ("BALANCE", "STATUS", "PROJECTS", "PAY 500"),
+}
+
+
+def quick_replies(intent: str):
+    """Follow-up commands offered under an assistant reply."""
+    return QUICK_REPLIES.get(intent or "", ())
+
+
 def whatsapp_configured() -> bool:
     return bool(
         current_app.config.get("WHATSAPP_TOKEN")
@@ -249,8 +265,6 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
                 f"Received: {format_money(funded)}",
                 f"Used: {format_money(spent)}",
                 f"*Available: {format_money(funded - spent)}*",
-                "",
-                "Reply *STATUS* for the current stage.",
             ]
         )
     elif intent == "status":
@@ -271,7 +285,6 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
         ]
         if current and current["status"] == "blocked":
             lines.append("⚠️ This stage is on hold — your manager will call you.")
-        lines += ["", "Reply *BALANCE* for the money position."]
         reply = "\n".join(lines)
     elif intent == "projects":
         projects = (
@@ -321,8 +334,6 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
                     f"Logged a *{format_money(amount_cents)}* deposit notification for *{project['name']}*.",
                     "",
                     "Status: *pending verification* — your manager will match it to the bank or EcoCash entry and attach the proof.",
-                    "",
-                    "Reply *BALANCE* to see the updated position.",
                 ]
             )
     else:
@@ -335,4 +346,10 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
     )
 
     delivery = send_whatsapp_text(contact["phone"], reply)
-    return {"reply": reply, "intent": intent, "contact_id": contact["id"], "delivery": delivery["status"]}
+    return {
+        "reply": reply,
+        "intent": intent,
+        "contact_id": contact["id"],
+        "delivery": delivery["status"],
+        "quick_replies": list(quick_replies(intent)),
+    }

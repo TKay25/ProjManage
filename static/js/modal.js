@@ -492,6 +492,9 @@
       if (data.open_modal) {
         closeModal(form.closest("dialog.modal"));
         const nextDialog = openModal(data.open_modal);
+        const submittedEmail = form.querySelector('input[type="email"][name="email"]');
+        const nextEmail = nextDialog?.querySelector('input[type="email"][name="email"]');
+        if (submittedEmail?.value && nextEmail) nextEmail.value = submittedEmail.value;
         if (nextDialog && data.modal_notice) {
           const notice = nextDialog.querySelector("[data-modal-success]");
           const text = notice && notice.querySelector("[data-modal-success-text]");

@@ -332,14 +332,14 @@ def _seed_whatsapp(client_id, project_id):
         ("IN", "Hi, how much have I used so far?", "balance", "2026-10-18T09:12:00+00:00"),
         (
             "OUT",
-            "*Greendale Family Home*\n\nReceived: $60,000.00\nUsed: $29,020.00\n*Available: $30,980.00*\n\nReply *STATUS* for the current stage.",
+            "*Greendale Family Home*\n\nReceived: $60,000.00\nUsed: $29,020.00\n*Available: $30,980.00*",
             "balance",
             "2026-10-18T09:12:05+00:00",
         ),
         ("IN", "Status", "status", "2026-10-18T09:15:00+00:00"),
         (
             "OUT",
-            "*Greendale Family Home*\nProgress: 39% (9/19 stages)\nNow: *Superstructure brickwork*\n\nReply *BALANCE* for the money position.",
+            "*Greendale Family Home*\nProgress: 39% (9/19 stages)\nNow: *Superstructure brickwork*",
             "status",
             "2026-10-18T09:15:04+00:00",
         ),

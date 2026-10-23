@@ -347,6 +347,21 @@ def run_migrations(connection):
             connection.execute("ALTER TABLE projects ADD COLUMN client_whatsapp TEXT")
         connection.execute("PRAGMA user_version = 8")
 
+    if version < 9:
+        # The assistant now offers tap-to-send quick replies, so the old
+        # "Reply BALANCE/STATUS" trailers are noise. Strip them from messages
+        # that are already stored.
+        for trailer in (
+            "\n\nReply *STATUS* for the current stage.",
+            "\n\nReply *BALANCE* for the money position.",
+            "\n\nReply *BALANCE* to see the updated position.",
+        ):
+            connection.execute(
+                "UPDATE whatsapp_messages SET body = REPLACE(body, ?, '') WHERE body LIKE ?",
+                (trailer, f"%{trailer}%"),
+            )
+        connection.execute("PRAGMA user_version = 9")
+
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(
