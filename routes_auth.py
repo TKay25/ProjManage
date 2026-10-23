@@ -2,9 +2,10 @@
 
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, url_for
 
 import auth
+import team
 import web
 from db import execute, new_id, now_iso, query
 from whatsapp import normalize_phone
@@ -118,7 +119,13 @@ def login_post():
 def register():
     if g.user:
         return redirect(url_for("dashboard.index"))
-    return render_template("auth/register.html", title="Create your account", values={}, error=None)
+    return render_template(
+        "auth/register.html",
+        title="Create your account",
+        values={"email": request.args.get("email", "").strip().lower()},
+        invite=request.args.get("invite", ""),
+        error=None,
+    )
 
 
 @bp.post("/register")
@@ -130,6 +137,7 @@ def register_post():
         "country": request.form.get("country") or "Zimbabwe",
         "role": request.form.get("role") or "client",
     }
+    invite_token = (request.form.get("invite") or "").strip()
     password = request.form.get("password") or ""
     error = None
 
@@ -147,7 +155,16 @@ def register_post():
     if error:
         if web.wants_json():
             return web.fail(error)
-        return render_template("auth/register.html", title="Create your account", values=values, error=error), 400
+        return (
+            render_template(
+                "auth/register.html",
+                title="Create your account",
+                values=values,
+                invite=invite_token,
+                error=error,
+            ),
+            400,
+        )
 
     user_id = new_id()
     role = "manager" if values["role"] == "manager" else "client"
@@ -169,6 +186,29 @@ def register_post():
     )
 
     message = "Account created successfully. Sign in with your new credentials."
+
+    # Two things can be waiting for a brand-new account: invitations addressed to
+    # this address, and projects a manager filed for this client's email.
+    new_user = query("SELECT * FROM users WHERE id = ?", (user_id,), one=True)
+    try:
+        claimed = team.accept_pending_for(new_user)
+        adopted = team.adopt_projects_for(new_user)
+    except Exception:  # never block sign-up on team bookkeeping
+        current_app.logger.exception("Could not apply team state for %s", values["email"])
+        claimed = adopted = 0
+
+    if claimed:
+        message = "Account created. Your build manager invitation is waiting — sign in to open it."
+    elif adopted:
+        message = (
+            "Account created. We found "
+            f"{adopted} project{'s' if adopted != 1 else ''} your build manager filed for you — sign in to open them."
+        )
+
+    next_url = request.form.get("next") or ""
+    if not next_url.startswith("/"):
+        next_url = ""
+
     if web.wants_json():
         return web.ok(
             message,
@@ -177,6 +217,8 @@ def register_post():
         )
 
     flash(message, "success")
+    if next_url:
+        return redirect(url_for("auth.login", next=next_url))
     return redirect(url_for("auth.login"))
 
 

@@ -56,6 +56,21 @@
             </label>
           </div>
 
+          {% if user.role in ['manager', 'admin'] %}
+            <div class="form-row">
+              <label class="field">
+                <span class="field-label">Client email (optional)</span>
+                <input class="input" type="email" name="client_email" maxlength="120" placeholder="client@example.com" />
+                <span class="field-hint">If they already have an account, the build is filed under their name.</span>
+              </label>
+              <label class="field">
+                <span class="field-label">Client WhatsApp (optional)</span>
+                <input class="input" type="tel" name="client_whatsapp" maxlength="30" placeholder="+263 77 123 4567" />
+                <span class="field-hint">Progress updates go here so they can ask for BALANCE or STATUS.</span>
+              </label>
+            </div>
+          {% endif %}
+
           <label class="field">
             <span class="field-label">Notes (optional)</span>
             <textarea class="textarea" name="description" rows="2" maxlength="2000" placeholder="Who is on the ground, access notes, design preferences…"></textarea>

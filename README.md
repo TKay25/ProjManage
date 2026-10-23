@@ -28,7 +28,8 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Area | What works today |
 | --- | --- |
 | Authentication | Register, login, logout, hashed passwords, signed session cookies, per-request CSRF tokens, login throttling |
-| Roles & access | `client`, `manager`, `admin`; a project is only visible to its owner, its build manager, or YaVaKa staff |
+| Roles & access | `client`, `manager`, `admin`; a project is visible to its owner, its build manager, a build manager linked to that client, or YaVaKa staff. Roles are labels — any account can be named as a build manager |
+| **Team & invitations** | A build manager can type the client's email and WhatsApp number when creating a project: if that email already belongs to a client account, the project is filed under that client and the manager is linked, otherwise the details are kept for the invite. Registered accounts are linked immediately; anyone else gets a single-use invitation with a copyable `/invite/<token>` link (emailed when SMTP is configured) that requires signing in as the invited address. Pending invites appear on the project and in Settings, and a new registration claims any invite or project filed for its email |
 | **Staff portal** | `/admin` — every workspace in one table, platform money totals, attention feed, people & role management, account creation, activity log, stage reference |
 | Projects | Create with stand/suburb/budget; the 19-stage Zimbabwe plan and budget split are generated automatically |
 | Stages | 5 groups, 19 stages, 5 regulatory gates, notes, status transitions, weighted progress %, budget-vs-actual per stage |
@@ -38,9 +39,11 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Suppliers | Directory of Zimbabwean material suppliers with links out to their own catalogues |
 | WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), stored conversation history, in-app simulator |
 | PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons; a project can be saved as an explicit read-only offline copy that survives a signal drop |
-| Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, attention feed (blocked stages, missing receipts, overdraw), project log |
+| Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, attention feed (blocked stages, missing receipts, overdraw), latest updates across every build |
 | **Attention inbox** | `/app/attention` — one cross-project list of approvals due (regulatory gates and unsigned agreements), blocked stages and missing receipts, oldest first; the sidebar and topbar carry a live count of the same items |
-| Interaction | Action flows run in dialogs (new project, money, agreement, upload, stage update) with an AJAX form enhancer; sidebar navigation swaps the page in place under a branded overlay loader; public sections fade in on scroll, respecting reduced-motion |
+| **Updates inbox** | `/app/updates` — every stage move, upload, payment, receipt and agreement across your builds, newest first and grouped by day; filter by progress, money, documents or agreements, and see what is new since your last visit |
+| Live notifications | A build manager's change notifies each project stakeholder (owner and manager, never the actor) instantly: a badge on the Updates tab, a toast with a link to the record, and a card on the dashboard. Read state is per person; opening the inbox acknowledges it |
+| Interaction | Action flows run in dialogs (new project, money, agreement, upload, stage update) with an AJAX form enhancer; sidebar navigation swaps the page in place under a branded overlay loader, and a slow swap shows a placeholder shaped like the page being opened (KPI row, ledger rows, project grid, settings form, chat) instead of a blank screen; public sections fade in on scroll, respecting reduced-motion |
 | Record reader | Clicking an agreement opens it in a wide dialog over the list, with signing inside the dialog; a direct link still renders the full page for printing and sharing |
 | Sign-up | The header "Get started", the landing CTAs and the login link open a registration dialog; `/register` still works standalone for direct links and no-JavaScript browsers |
 | Stage planning | A new project starts with the 19-stage Zimbabwe sequence pre-selected; untick stages the build does not need and the budget re-splits across what is left |
@@ -54,7 +57,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Search & paging | Server-side search and paging on the ledger, document vault, projects and staff activity, with numbered pages, a clamped page window and a per-user page size; off-screen rows skip layout work |
 | Backups | `GET /app/settings/backup` (staff only) streams a zip of a consistent SQLite snapshot plus the uploads folder, from the browser or the desktop menu |
 | Desktop app | `desktop/` wraps the same Flask app in an Electron window with a native menu, a local-only server, per-user data folder and optional auto-update |
-| Accessibility | Skip link, `aria-current` on navigation plus a non-colour active marker in the mobile tab bar, labelled search and filter controls, scoped table headers, focus trapping and focus restore in dialogs, `prefers-contrast` and reduced-motion support |
+| Accessibility | Skip link, `aria-current` on navigation plus a non-colour active marker in the mobile tab bar, labelled search and filter controls, scoped table headers, focus trapping and focus restore in dialogs, `prefers-contrast` and reduced-motion support; on phones under 420px each KPI collapses to a single compact row so the work sits above the fold |
 
 ---
 
@@ -153,6 +156,10 @@ routes_auth.py          Register / login / logout
 routes_public.py        Landing, public suppliers, PWA assets, health
 routes_dashboard.py     Signed-in dashboard
 routes_attention.py     Cross-project approvals, blocked stages and missing receipts
+routes_updates.py       The update inbox and the unread-notification feed
+updates.py               Turns audit events into per-person notifications
+team.py                  Build-manager links, invitations, acceptance and project adoption
+routes_team.py          Invite landing page, send / revoke invites, unlink a manager
 routes_projects.py      Projects, stage tracking, budget, manager assignment, offline snapshot
 routes_money.py         Funding, expenses, receipts
 routes_documents.py     Document vault and file serving
@@ -167,6 +174,7 @@ templates/              Jinja templates
   app/base.html         Workspace shell (sidebar, topbar, mobile tab bar)
   partials/             Header, footer, sidebar, flash, transaction row
   app/                  Dashboard, projects, money, documents, agreements, suppliers, WhatsApp, settings
+  invite.html           Public invitation landing page (sign in / register / accept)
   auth/                 Login, register
   errors/               Error page
 
@@ -176,6 +184,7 @@ static/js/app.js        Progressive enhancement (drawer, money form, uploads, in
 static/js/signature.js  Signature pad
 static/js/whatsapp.js   Simulator chat
 static/js/palette.js    Command palette, quick actions, `?` cheat sheet
+static/js/updates.js    Polls for new build updates, raises the toast and badge
 static/js/offline.js    Opt-in offline snapshot cache and wipe rules
 static/sw.js            Service worker (app shell + saved snapshots)
 static/icons/           PWA icons

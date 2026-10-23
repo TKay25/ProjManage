@@ -1,0 +1,74 @@
+{% extends "app/base.html" %}
+{% block title %}Updates · YaVaKa{% endblock %}
+
+{% block page_title %}Updates{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {% if total_rows %}
+      {{ total_rows }} change{{ '' if total_rows == 1 else 's' }} across your builds, newest first.
+      {% if unread %}<strong>{{ unread }} new</strong> since your last visit.{% endif %}
+    {% else %}
+      Every stage change, upload, receipt and agreement lands here.
+    {% endif %}
+  </p>
+{% endblock %}
+
+{% block content %}
+<div class="ledger-views">
+  <span class="toolbar-label">Show</span>
+  <div class="view-chips">
+    {% for item in kinds %}
+      <a class="view-chip {{ 'is-active' if kind == item.key }}"
+         href="{{ url_for('updates.index', kind=item.key) }}"
+         {% if kind == item.key %}aria-current="true"{% endif %}>
+        {{ item.label }}{% if item.count and item.key != 'all' %} <span class="chip-count">{{ item.count }}</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if groups %}
+  <div class="update-feed">
+    {% for group in groups %}
+      <section class="update-day">
+        <h2 class="update-day-label">{{ group.label }}</h2>
+        <ul class="update-list">
+          {% for item in group.rows %}
+            <li class="update-item {{ 'is-new' if item.id in new_ids }}">
+              <span class="update-icon update-icon--{{ item.tone or 'neutral' }}">{{ icon(item.icon, 16) }}</span>
+              <div class="update-body">
+                <p class="update-title">
+                  {{ item.title }}
+                  {% if item.id in new_ids %}<span class="update-new">New</span>{% endif %}
+                </p>
+                {% if item.detail %}<p class="update-detail">{{ item.detail }}</p>{% endif %}
+                <p class="update-meta">
+                  {{ item.actor_name or 'YaVaKa' }} · {{ item.project_name }}
+                  {% if item.project_code %}· {{ item.project_code }}{% endif %}
+                  · {{ item.created_at|relative }}
+                </p>
+              </div>
+              <a class="alert-link" href="{{ item.href or '/app/projects/' ~ item.project_id }}"
+                 aria-label="Open {{ item.project_name }}">{{ icon('chevron-right', 16) }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  </div>
+
+  {% include "partials/pager.html" %}
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('activity', 26) }}</span>
+      <h3>Nothing here yet</h3>
+      <p>
+        When your build manager records a payment, completes a stage, uploads a
+        document or signs an agreement, it shows up here straight away.
+      </p>
+      <a class="btn btn-outline" href="{{ url_for('projects.index') }}">{{ icon('building', 15) }} Open projects</a>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

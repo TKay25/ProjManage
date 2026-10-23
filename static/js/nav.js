@@ -11,6 +11,7 @@
   let loaderTimer = null;
   let skeletonTimer = null;
   let leaving = false;
+  let pendingPath = window.location.pathname;
 
   const mount = () => {
     if (document.querySelector(".page-loader")) return;
@@ -96,20 +97,101 @@
     document.querySelector(".page-progress")?.classList.remove("is-active");
   };
 
-  const SKELETON =
-    '<div class="skel-page" aria-hidden="true">' +
-    '<div><div class="sk sk-title"></div><div class="sk sk-sub"></div></div>' +
-    '<div class="sk-kpis">' +
-    '<div class="sk sk-kpi"></div><div class="sk sk-kpi"></div>' +
-    '<div class="sk sk-kpi"></div><div class="sk sk-kpi"></div>' +
-    "</div>" +
-    '<div class="sk-body"><div class="sk sk-panel"></div><div class="sk sk-side"></div></div>' +
+  /* ---------- Page-shaped skeletons ----------
+     Shown only when a swap is slow enough to notice. Each destination gets a
+     placeholder with the same bones as the real page, so the layout does not
+     jump when the response lands. */
+
+  const HEAD =
+    '<div><div class="sk sk-title"></div><div class="sk sk-sub"></div></div>';
+
+  const kpis = (count) =>
+    `<div class="sk-kpis${count === 3 ? " sk-kpis--3" : ""}">` +
+    '<div class="sk sk-kpi"></div>'.repeat(count) +
     "</div>";
+
+  const ROW =
+    '<div class="sk-row">' +
+    '<div class="sk sk-avatar"></div>' +
+    '<div class="sk-lines">' +
+    '<div class="sk sk-line"></div>' +
+    '<div class="sk sk-line sk-line--short"></div>' +
+    "</div>" +
+    '<div class="sk sk-amount"></div>' +
+    "</div>";
+
+  const rows = (count) =>
+    '<div class="sk-frame"><div class="sk-rows">' + ROW.repeat(count) + "</div></div>";
+
+  const cards = (count, kind) =>
+    '<div class="sk-grid">' + `<div class="sk ${kind}"></div>`.repeat(count) + "</div>";
+
+  const fields = (count) =>
+    '<div class="sk-frame sk-form">' +
+    (
+      '<div class="sk sk-field-label"></div><div class="sk sk-field"></div>'
+    ).repeat(count) +
+    "</div>";
+
+  const PANEL = '<div class="sk sk-panel"></div>';
+  const SIDE = '<div class="sk sk-side"></div>';
+
+  const SKELETONS = {
+    dashboard:
+      HEAD +
+      kpis(4) +
+      `<div class="sk-body">${PANEL}${SIDE}</div>` +
+      `<div class="sk-body"><div class="sk sk-panel sk-panel--short"></div>${SIDE}</div>`,
+    money:
+      HEAD +
+      kpis(4) +
+      '<div class="sk-toolbar">' +
+      '<div class="sk sk-chip"></div>'.repeat(5) +
+      "</div>" +
+      `<div class="sk-body">${rows(5)}${SIDE}</div>`,
+    attention: HEAD + kpis(3) + rows(5),
+    projects: HEAD + cards(6, "sk-card"),
+    project: HEAD + '<div class="sk sk-hero"></div>' + rows(5),
+    documents: HEAD + cards(6, "sk-doc"),
+    agreements: HEAD + rows(4) + rows(4),
+    suppliers: HEAD + cards(4, "sk-card"),
+    settings:
+      HEAD +
+      '<div class="sk-split">' +
+      `<div class="sk-stack">${fields(3)}${fields(2)}</div>` +
+      `<div class="sk-stack">${rows(2)}${rows(1)}</div>` +
+      "</div>",
+    chat:
+      HEAD +
+      '<div class="sk-chat">' +
+      '<div class="sk sk-chat-side"></div><div class="sk sk-chat-main"></div>' +
+      "</div>",
+    search: HEAD + '<div class="sk sk-searchbar"></div>' + rows(4),
+    admin: HEAD + kpis(4) + rows(6),
+    generic: HEAD + kpis(4) + `<div class="sk-body">${PANEL}${SIDE}</div>`,
+  };
+
+  function skeletonFor(pathname) {
+    if (pathname === "/app") return SKELETONS.dashboard;
+    if (pathname.startsWith("/app/money")) return SKELETONS.money;
+    if (pathname.startsWith("/app/attention")) return SKELETONS.attention;
+    if (pathname.startsWith("/app/projects/")) return SKELETONS.project;
+    if (pathname.startsWith("/app/projects")) return SKELETONS.projects;
+    if (pathname.startsWith("/app/documents")) return SKELETONS.documents;
+    if (pathname.startsWith("/app/agreements")) return SKELETONS.agreements;
+    if (pathname.startsWith("/app/suppliers")) return SKELETONS.suppliers;
+    if (pathname.startsWith("/app/whatsapp")) return SKELETONS.chat;
+    if (pathname.startsWith("/app/settings")) return SKELETONS.settings;
+    if (pathname.startsWith("/app/search")) return SKELETONS.search;
+    if (pathname === "/admin" || pathname.startsWith("/admin/")) return SKELETONS.admin;
+    return SKELETONS.generic;
+  }
 
   function showSkeleton() {
     const main = document.getElementById("main");
     if (!main || !document.body.classList.contains("is-navigating")) return;
-    main.innerHTML = SKELETON;
+    main.innerHTML =
+      '<div class="skel-page" aria-hidden="true">' + skeletonFor(pendingPath) + "</div>";
     document.body.classList.add("is-skeleton");
   }
 
@@ -157,6 +239,7 @@
     activeRequest = controller;
     const requestId = ++navigationId;
     const previousScrollY = window.scrollY;
+    pendingPath = url.pathname;
     setNavigating(true);
 
     try {

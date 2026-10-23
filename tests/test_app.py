@@ -692,9 +692,16 @@ class LedgerExport(VakaTestCase):
 
         self.login()
         with self.app.app_context():
-            # Export defaults to the newest project, so target that one explicitly.
-            project = query("SELECT id FROM projects ORDER BY created_at DESC LIMIT 1", one=True)
-            user = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            # Target a project the signed-in client can see; other tests create
+            # newer projects that belong to unrelated accounts.
+            user = query(
+                "SELECT id FROM users WHERE email = 'client@yavaka.co.zw' LIMIT 1", one=True
+            )
+            project = query(
+                "SELECT id FROM projects WHERE owner_id = ? ORDER BY created_at DESC LIMIT 1",
+                (user["id"],),
+                one=True,
+            )
             execute(
                 """INSERT INTO transactions
                      (id, project_id, type, amount_cents, currency, category, stage_key,
@@ -1063,15 +1070,22 @@ class GlobalSearch(VakaTestCase):
     def test_search_never_crosses_into_another_client(self):
         from db import execute, new_id, now_iso, query
 
-        # A project owned by someone else.
+        # A project owned by somebody the manager has no relationship with. The
+        # demo client may itself be linked to the manager by other tests, so this
+        # stranger is created fresh.
         with self.app.app_context():
-            other = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            other_id = new_id()
+            execute(
+                """INSERT INTO users (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Unlinked Client', ?, 'x', 'client', '#0F5D46', ?)""",
+                (other_id, f"{other_id}@example.com", now_iso()),
+            )
             execute(
                 """INSERT INTO projects (id, code, name, owner_id, city, status, budget_cents,
                                          created_at, updated_at, workspace_id)
-                   VALUES (?, 'YVK-9001', 'Hidden Vault Project', ?, 'Harare', 'planning',
+                   VALUES (?, ?, 'Hidden Vault Project', ?, 'Harare', 'planning',
                            100000, ?, ?, NULL)""",
-                (new_id(), other["id"], now_iso(), now_iso()),
+                (new_id(), f"YVK-H{new_id()[:4].upper()}", other_id, now_iso(), now_iso()),
             )
 
         self.login("manager@yavaka.co.zw")
@@ -1693,14 +1707,21 @@ class OfflineSnapshot(VakaTestCase):
         from db import execute, new_id, now_iso, query
 
         with self.app.app_context():
-            owner = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            # Not the demo client: other tests link that client to the manager,
+            # which legitimately grants access. This stranger is unrelated.
+            stranger = new_id()
+            execute(
+                """INSERT INTO users (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Unrelated Client', ?, 'x', 'client', '#0F5D46', ?)""",
+                (stranger, f"{stranger}@example.com", now_iso()),
+            )
             project_id = new_id()
             execute(
                 """INSERT INTO projects (id, code, name, owner_id, city, status, budget_cents,
                                          created_at, updated_at)
-                   VALUES (?, 'YVK-SNAP-B', 'Snapshot Wall', ?, 'Harare', 'planning',
+                   VALUES (?, ?, 'Snapshot Wall', ?, 'Harare', 'planning',
                            1000, ?, ?)""",
-                (project_id, owner["id"], now_iso(), now_iso()),
+                (project_id, f"YVK-S{new_id()[:4].upper()}", stranger, now_iso(), now_iso()),
             )
 
         self.login("manager@yavaka.co.zw")
@@ -1840,3 +1861,567 @@ class AttentionCounts(unittest.TestCase):
         from queries import attention_counts
 
         self.assertEqual(attention_counts([])["total"], 0)
+
+
+class PageSkeletons(unittest.TestCase):
+    """Each destination has a placeholder shaped like the real page.
+
+    The skeleton only appears for slow swaps, so a unit test can only assert the
+    mapping exists and covers the workspace routes.
+    """
+
+    def test_every_workspace_route_maps_to_a_skeleton(self):
+        import re
+        from pathlib import Path
+
+        source = Path("static/js/nav.js").read_text(encoding="utf-8")
+        block = source.split("function skeletonFor", 1)[1]
+        routes = re.findall(r'pathname\.startsWith\("([^"]+)"\)', block)
+        self.assertTrue(routes)
+        for expected in (
+            "/app/money",
+            "/app/attention",
+            "/app/projects",
+            "/app/documents",
+            "/app/agreements",
+            "/app/suppliers",
+            "/app/whatsapp",
+            "/app/settings",
+            "/app/search",
+        ):
+            self.assertIn(expected, routes)
+        # Project detail must be checked before the project list, or every
+        # project would get the grid placeholder.
+        self.assertLess(block.index('"/app/projects/"'), block.index('"/app/projects"'))
+
+    def test_skeletons_use_only_the_css_parts_that_exist(self):
+        import re
+        from pathlib import Path
+
+        source = Path("static/js/nav.js").read_text(encoding="utf-8")
+        css = Path("static/css/portal.css").read_text(encoding="utf-8")
+
+        # Template expressions ("sk-kpis${...}") are not class names: drop them
+        # so only the literal part is checked.
+        markup = source.split("function skeletonFor", 1)[0]
+        markup = re.sub(r"\$\{[^}]*\}", "", markup)
+
+        classes = set()
+        for value in re.findall(r'class="([^"]+)"', markup):
+            classes.update(part for part in value.split() if part.startswith("sk"))
+
+        self.assertTrue(classes)
+        for name in sorted(classes):
+            with self.subTest(name=name):
+                self.assertIn(f".{name}", css)
+
+
+class UpdateNotifications(VakaTestCase):
+    """A build manager's work lands in the client's updates inbox."""
+
+    def _project(self):
+        from db import query
+
+        with self.app.app_context():
+            return query("SELECT id, owner_id, manager_id FROM projects WHERE code = 'YVK-0001'", one=True)
+
+    def _people(self):
+        from db import query
+
+        with self.app.app_context():
+            owner = query("SELECT id, name FROM users WHERE email = 'client@yavaka.co.zw'", one=True)
+            manager = query("SELECT id, name FROM users WHERE email = 'manager@yavaka.co.zw'", one=True)
+        return owner, manager
+
+    def _notifications(self, user_id):
+        from db import query
+
+        with self.app.app_context():
+            return query(
+                "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
+                (user_id,),
+            )
+
+    def test_a_manager_update_notifies_the_client_but_not_the_manager(self):
+        from db import log_event
+
+        project = self._project()
+        owner, manager = self._people()
+
+        with self.app.app_context():
+            log_event(manager["id"], project["id"], "stage.completed", "Ring beam cast")
+
+        mine = self._notifications(owner["id"])
+        self.assertTrue(mine)
+        self.assertEqual(mine[0]["action"], "stage.completed")
+        self.assertEqual(mine[0]["body"], "Ring beam cast")
+        self.assertIsNone(mine[0]["read_at"])
+        # The actor never gets a notification about their own work.
+        self.assertFalse(
+            [row for row in self._notifications(manager["id"]) if row["body"] == "Ring beam cast"]
+        )
+
+    def test_a_document_upload_links_to_the_vault(self):
+        from db import log_event
+
+        project = self._project()
+        owner, manager = self._people()
+
+        with self.app.app_context():
+            log_event(manager["id"], project["id"], "document.uploaded", "site-week-12.jpg")
+
+        row = self._notifications(owner["id"])[0]
+        self.assertEqual(row["title"], "Document uploaded")
+        self.assertEqual(row["href"], f"/app/documents?project={project['id']}")
+
+    def test_client_actions_notify_the_manager(self):
+        from db import log_event
+
+        project = self._project()
+        owner, manager = self._people()
+
+        with self.app.app_context():
+            log_event(owner["id"], project["id"], "funding.recorded", "Tranche 3 — received")
+
+        manager_rows = [row for row in self._notifications(manager["id"]) if row["body"] == "Tranche 3"]
+        self.assertTrue(manager_rows)
+        self.assertEqual(manager_rows[0]["title"], "Funding received")
+
+    def test_system_events_are_audited_but_never_notified(self):
+        from db import log_event
+
+        project = self._project()
+        owner, _manager = self._people()
+
+        with self.app.app_context():
+            log_event(None, project["id"], "digest.sent", "Weekly digest to +263...")
+            log_event(owner["id"], project["id"], "digest.sent", "Weekly digest again")
+
+        self.assertFalse([row for row in self._notifications(owner["id"]) if row["action"] == "digest.sent"])
+
+    def test_the_updates_page_shows_new_items_then_clears_the_badge(self):
+        from db import log_event
+
+        project = self._project()
+        _owner, manager = self._people()
+
+        with self.app.app_context():
+            log_event(manager["id"], project["id"], "stage.blocked", "Council query on the slab")
+
+        self.login()
+        first = self.client.get("/app/updates").get_data(as_text=True)
+        self.assertIn("Stage blocked", first)
+        self.assertIn("Council query on the slab", first)
+        self.assertIn("Greendale Family Home", first)
+        self.assertIn("is-new", first)
+        # The badge is cleared before the page renders, so it is not repeated.
+        self.assertNotIn("nav-count--live", first)
+
+        second = self.client.get("/app/updates").get_data(as_text=True)
+        self.assertNotIn("is-new", second)
+
+    def test_the_unread_endpoint_reports_the_latest_item(self):
+        from db import log_event
+
+        project = self._project()
+        _owner, manager = self._people()
+
+        with self.app.app_context():
+            log_event(manager["id"], project["id"], "expense.recorded", "Cement delivery — spent")
+
+        self.login()
+        payload = self.client.get("/app/api/updates/unread").get_json()
+
+        self.assertTrue(payload["ok"])
+        self.assertGreaterEqual(payload["count"], 1)
+        self.assertEqual(payload["latest"]["title"], "Expense recorded")
+        self.assertEqual(payload["latest"]["project"], "Greendale Family Home")
+        # The stored detail drops the "— spent" tail the label already carries.
+        self.assertNotIn("— spent", payload["latest"].get("detail", ""))
+
+    def test_the_unread_endpoint_needs_a_session(self):
+        self.assertEqual(self.client.get("/app/api/updates/unread").status_code, 302)
+
+    def test_another_clients_updates_are_never_listed(self):
+        from db import execute, log_event, new_id, now_iso, query
+
+        with self.app.app_context():
+            stranger = new_id()
+            execute(
+                """INSERT INTO users (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Stranger Client', ?, 'x', 'client', '#0F5D46', ?)""",
+                (stranger, f"{stranger}@example.com", now_iso()),
+            )
+            project_id = new_id()
+            execute(
+                """INSERT INTO projects (id, code, name, owner_id, city, status, budget_cents,
+                                         created_at, updated_at)
+                   VALUES (?, ?, 'Quiet Build', ?, 'Harare', 'planning', 1000, ?, ?)""",
+                (project_id, f"YVK-Q{new_id()[:5].upper()}", stranger, now_iso(), now_iso()),
+            )
+            manager = query("SELECT id FROM users WHERE role = 'manager' LIMIT 1", one=True)
+            log_event(manager["id"], project_id, "stage.updated", "Private stage note")
+
+        self.login()
+        page = self.client.get("/app/updates").get_data(as_text=True)
+        self.assertNotIn("Private stage note", page)
+        self.assertNotIn("Quiet Build", page)
+        self.assertEqual(self.client.get("/app/api/updates/unread").get_json()["count"], 0)
+
+    def test_the_workspace_offers_the_updates_tab_and_card(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+
+        self.assertIn('href="/app/updates"', page)
+        self.assertIn("Latest updates", page)
+
+
+class UpdateCatalogue(unittest.TestCase):
+    def test_every_audited_action_has_a_label(self):
+        import re
+        from pathlib import Path
+        import updates
+
+        source = ""
+        for path in Path(".").glob("routes_*.py"):
+            source += path.read_text(encoding="utf-8")
+        actions = set(re.findall(r'log_event\([^)]*?"([a-z]+\.[a-z]+)"', source, flags=re.S))
+
+        self.assertTrue(actions)
+        for action in sorted(actions):
+            if action in updates.QUIET_ACTIONS:
+                continue
+            with self.subTest(action=action):
+                self.assertIn(action, updates.ACTIONS)
+
+    def test_kinds_cover_every_prefix(self):
+        import updates
+
+        for action in updates.ACTIONS:
+            kind = updates.kind_for(action)
+            self.assertIn(kind, updates.KINDS)
+            if kind != "all":
+                self.assertTrue(action.startswith(updates.KINDS[kind][1]))
+
+    def test_dot_paths_never_leak_into_a_label(self):
+        import updates
+
+        described = updates.describe("mystery.event", "detail")
+        self.assertNotIn(".", described["title"])
+        self.assertIn(described["kind"], updates.KINDS)
+
+
+class BuildManagerInvites(VakaTestCase):
+    """Inviting a manager, accepting the link, and what each side can open."""
+
+    def _people(self):
+        from db import query
+
+        with self.app.app_context():
+            return (
+                query("SELECT * FROM users WHERE email = 'client@yavaka.co.zw'", one=True),
+                query("SELECT * FROM users WHERE email = 'manager@yavaka.co.zw'", one=True),
+            )
+
+    def _token(self, email="newmanager@example.com"):
+        from db import query
+
+        with self.app.app_context():
+            return query(
+                "SELECT * FROM invitations WHERE email = ? AND status = 'pending' ORDER BY created_at DESC",
+                (email,),
+                one=True,
+            )
+
+    def test_a_client_invites_an_email_with_no_account(self):
+        self.login()
+        response = self.client.post(
+            "/app/team/invite",
+            data={"csrf_token": self.csrf(), "email": "NewManager@Example.com"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        page = response.get_data(as_text=True)
+        self.assertIn("newmanager@example.com", page)
+        self.assertIn("/invite/", page)
+        self.assertIn("Invite build manager", page)
+
+    def test_a_manager_with_an_account_is_linked_immediately(self):
+        from db import execute, new_id, now_iso, query
+
+        with self.app.app_context():
+            client, _manager = self._people()
+            helper_id = new_id()
+            execute(
+                """INSERT INTO users (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Helper Manager', 'helper@example.com', 'x', 'manager', '#0F5D46', ?)""",
+                (helper_id, now_iso()),
+            )
+
+        self.login()
+        page = self.client.post(
+            "/app/team/invite",
+            data={"csrf_token": self.csrf(), "email": "helper@example.com"},
+            follow_redirects=True,
+        ).get_data(as_text=True)
+
+        self.assertIn("Helper Manager now works on your builds", page)
+        with self.app.app_context():
+            linked = query(
+                "SELECT * FROM manager_links WHERE client_id = ? AND manager_id = ?",
+                (client["id"], helper_id),
+                one=True,
+            )
+            self.assertIsNotNone(linked)
+            # No pending invitation was needed for an existing account.
+            self.assertIsNone(
+                query(
+                    "SELECT * FROM invitations WHERE email = 'helper@example.com'",
+                    one=True,
+                )
+            )
+
+    def test_accepting_links_the_manager_and_opens_the_clients_projects(self):
+        from db import query
+
+        self.login()
+        self.client.post(
+            "/app/team/invite",
+            data={"csrf_token": self.csrf(), "email": "brandnew@example.com"},
+        )
+        invitation = self._token("brandnew@example.com")
+        self.assertIsNotNone(invitation)
+
+        # A different signed-in user cannot accept somebody else's invitation.
+        self.login("manager@yavaka.co.zw")
+        blocked = self.client.post(
+            f"/invite/{invitation['token']}",
+            data={"csrf_token": self.csrf()},
+            follow_redirects=True,
+        )
+        self.assertIn("different email address", blocked.get_data(as_text=True))
+
+        # Register the invited address, then accept.
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        with self.app.app_context():
+            target_project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)["id"]
+
+        registered = self.client.post(
+            "/register",
+            data={
+                "name": "Brand New",
+                "email": "brandnew@example.com",
+                "password": "Builder2026!",
+                "role": "manager",
+                "country": "United Kingdom",
+                "terms": "yes",
+                "invite": invitation["token"],
+                "csrf_token": self.csrf(),
+            },
+            follow_redirects=False,
+        )
+        self.assertIn("/login", registered.headers["Location"])
+
+        self.login("brandnew@example.com", "Builder2026!")
+        accepted = self.client.post(
+            f"/invite/{invitation['token']}",
+            data={"csrf_token": self.csrf()},
+            follow_redirects=True,
+        )
+        self.assertEqual(accepted.status_code, 200)
+
+        # The manager can now open the client's build.
+        self.assertEqual(self.client.get(f"/app/projects/{target_project}").status_code, 200)
+
+    def test_a_project_invitation_also_assigns_that_build(self):
+        from db import query
+
+        self.login()
+        with self.app.app_context():
+            project = query("SELECT id, manager_id FROM projects WHERE code = 'YVK-0001'", one=True)
+
+        self.client.post(
+            f"/app/projects/{project['id']}/manager",
+            data={"csrf_token": self.csrf(), "email": "siteperson@example.com"},
+            follow_redirects=True,
+        )
+        invitation = self._token("siteperson@example.com")
+        self.assertIsNotNone(invitation)
+        self.assertEqual(invitation["project_id"], project["id"])
+
+    def test_assigning_an_existing_account_still_works(self):
+        self.login()
+        with self.app.app_context():
+            from db import query
+
+            project = query("SELECT id FROM projects WHERE code = 'YVK-0004'", one=True)
+
+        response = self.client.post(
+            f"/app/projects/{project['id']}/manager",
+            data={"csrf_token": self.csrf(), "email": "manager@yavaka.co.zw"},
+            follow_redirects=True,
+        )
+        self.assertIn("build manager on this project", response.get_data(as_text=True))
+
+    def test_a_manager_creating_a_project_for_an_existing_client_files_it_under_them(self):
+        from db import query
+
+        self.login("manager@yavaka.co.zw")
+        response = self.client.post(
+            "/app/projects",
+            data={
+                "csrf_token": self.csrf(),
+                "name": "Client Owned Build",
+                "city": "Harare",
+                "suburb": "Avondale",
+                "budget": "50000",
+                "client_email": "client@yavaka.co.zw",
+                "client_whatsapp": "+263 77 999 0000",
+                "stage_keys": ["foundation"],
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+
+        with self.app.app_context():
+            client, manager = self._people()
+            project = query(
+                "SELECT * FROM projects WHERE name = 'Client Owned Build'", one=True
+            )
+            self.assertEqual(project["owner_id"], client["id"])
+            self.assertEqual(project["manager_id"], manager["id"])
+            self.assertIsNotNone(
+                query(
+                    "SELECT * FROM manager_links WHERE client_id = ? AND manager_id = ?",
+                    (client["id"], manager["id"]),
+                    one=True,
+                )
+            )
+
+        # The client sees it without being assigned anything.
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        self.login()
+        self.assertIn("Client Owned Build", self.client.get("/app/projects").get_data(as_text=True))
+
+    def test_a_client_cannot_set_a_client_contact_on_their_own_project(self):
+        from db import query
+
+        self.login()
+        self.client.post(
+            "/app/projects",
+            data={
+                "csrf_token": self.csrf(),
+                "name": "Sneaky Contact Build",
+                "city": "Harare",
+                "budget": "20000",
+                "client_email": "victim@example.com",
+                "client_whatsapp": "+263 77 111 2222",
+                "stage_keys": ["foundation"],
+            },
+            follow_redirects=True,
+        )
+
+        with self.app.app_context():
+            project = query("SELECT * FROM projects WHERE name = 'Sneaky Contact Build'", one=True)
+            self.assertIsNone(project["client_email"])
+            self.assertIsNone(project["client_whatsapp"])
+
+    def test_registering_claims_a_project_filed_for_your_email(self):
+        from db import query
+
+        self.login("manager@yavaka.co.zw")
+        self.client.post(
+            "/app/projects",
+            data={
+                "csrf_token": self.csrf(),
+                "name": "Filed Before You Joined",
+                "city": "Harare",
+                "budget": "30000",
+                "client_email": "later@example.com",
+                "stage_keys": ["foundation"],
+            },
+            follow_redirects=True,
+        )
+
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        self.client.post(
+            "/register",
+            data={
+                "name": "Later Client",
+                "email": "later@example.com",
+                "password": "Later2026!",
+                "role": "client",
+                "country": "United Kingdom",
+                "terms": "yes",
+                "csrf_token": self.csrf(),
+            },
+            follow_redirects=True,
+        )
+
+        with self.app.app_context():
+            project = query("SELECT * FROM projects WHERE name = 'Filed Before You Joined'", one=True)
+            new_user = query("SELECT * FROM users WHERE email = 'later@example.com'", one=True)
+            self.assertIsNotNone(project)
+            self.assertIsNotNone(new_user)
+            self.assertEqual(project["owner_id"], new_user["id"])
+            self.assertIsNotNone(project["manager_id"])
+
+    def test_invitation_only_works_once(self):
+        self.login()
+        self.client.post(
+            "/app/team/invite",
+            data={"csrf_token": self.csrf(), "email": "once@example.com"},
+        )
+        invitation = self._token("once@example.com")
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        self.client.post(
+            "/register",
+            data={
+                "name": "Once Only",
+                "email": "once@example.com",
+                "password": "Once2026!",
+                "role": "manager",
+                "country": "United Kingdom",
+                "terms": "yes",
+                "csrf_token": self.csrf(),
+            },
+        )
+
+        # Registering with the invited address already claims it.
+        from db import query
+
+        with self.app.app_context():
+            row = query("SELECT * FROM invitations WHERE id = ?", (invitation["id"],), one=True)
+        self.assertEqual(row["status"], "accepted")
+
+        self.login("once@example.com", "Once2026!")
+        again = self.client.post(
+            f"/invite/{invitation['token']}",
+            data={"csrf_token": self.csrf()},
+            follow_redirects=True,
+        )
+        self.assertIn("already been used", again.get_data(as_text=True))
+
+    def test_only_a_client_can_invite_and_only_their_own(self):
+        # Anonymous: CSRF rejects it outright, and nothing is created.
+        self.assertIn(
+            self.client.post("/app/team/invite", data={"email": "x@example.com"}).status_code,
+            (302, 400),
+        )
+        from db import query as _query
+
+        with self.app.app_context():
+            self.assertIsNone(
+                _query("SELECT id FROM invitations WHERE email = 'x@example.com'", one=True)
+            )
+
+        self.login("manager@yavaka.co.zw")
+        page = self.client.post(
+            "/app/team/invite",
+            data={"csrf_token": self.csrf(), "email": "someone@example.com"},
+            follow_redirects=True,
+        ).get_data(as_text=True)
+        # A manager inviting on their own account is a client-side action only;
+        # they get the manager view, not an invite form.
+        self.assertIn("Clients you work with", page)

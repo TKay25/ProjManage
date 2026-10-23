@@ -192,6 +192,27 @@ def schedule_dispatch(app) -> None:
     future.add_done_callback(report_worker_failure)
 
 
+def send_email_async(recipient: str, subject: str, body: str) -> bool:
+    """Fire-and-forget email for things that are not project updates (invites).
+
+    Returns False when SMTP is not configured, so the caller can fall back to
+    showing the message in the app instead.
+    """
+    if not recipient or not email_configured():
+        return False
+
+    app = current_app._get_current_object()
+
+    def worker():
+        with app.app_context():
+            result = _send_email(recipient, subject, body)
+            if result.get("status") != "sent":
+                logger.warning("Could not email %s: %s", recipient, result.get("error"))
+
+    _executor.submit(worker)
+    return True
+
+
 def queue_manager_update(project_id, manager_id, manager_name, headline, detail) -> int:
     """Queue an update only when it was posted by this project's assigned manager."""
     project = query(

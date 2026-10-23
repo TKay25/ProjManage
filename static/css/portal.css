@@ -3392,7 +3392,8 @@ button.card-trigger {
     grid-template-columns: minmax(0, 1fr) 300px;
   }
 
-  .kpi-grid {
+  /* A three-card row stays three across; the modifier decides its own count. */
+  .kpi-grid:not(.kpi-grid--3) {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -3547,7 +3548,7 @@ button.card-trigger {
 }
 
 @media (max-width: 760px) {
-  .kpi-grid {
+  .kpi-grid:not(.kpi-grid--3) {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
@@ -3635,8 +3636,14 @@ button.card-trigger {
     width: 100%;
   }
 
-  .kpi-grid {
+  .kpi-grid:not(.kpi-grid--3) {
     grid-template-columns: 1fr 1fr;
+  }
+
+  /* Three KPIs: below this width the cards would be too narrow to read, so
+     they stack as full-width rows instead of a squeezed trio. */
+  .kpi-grid--3 {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .kpi-value {
@@ -3702,6 +3709,63 @@ button.card-trigger {
 
   .row-menu-panel {
     width: 220px;
+  }
+}
+
+/* Narrow phones: each KPI becomes one compact row — icon, label and amount on
+   a single line with the explanation underneath — rather than four tall cards
+   that push the actual work below the fold. */
+
+@media (max-width: 420px) {
+  /* Same specificity as the wider grid rules, so this wins by order. */
+  .kpi-grid:not(.kpi-grid--3),
+  .kpi-grid--3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kpi {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon label value"
+      "icon sub sub";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 1px;
+    padding: 11px 13px;
+  }
+
+  html[data-density="compact"] .kpi {
+    padding: 9px 11px;
+  }
+
+  /* The wrapper only exists to group label + icon; let both join the grid. */
+  .kpi-top {
+    display: contents;
+  }
+
+  .kpi-icon {
+    grid-area: icon;
+    width: 28px;
+    height: 28px;
+  }
+
+  .kpi-label {
+    grid-area: label;
+    font-size: 0.68rem;
+  }
+
+  .kpi-value {
+    grid-area: value;
+    justify-self: end;
+    margin: 0;
+    font-size: 1.24rem;
+    text-align: right;
+  }
+
+  .kpi-sub {
+    grid-area: sub;
+    font-size: 0.67rem;
   }
 }
 
@@ -3969,6 +4033,19 @@ button.card-trigger {
     transition: border-color 0.18s ease, box-shadow 0.18s ease;
   }
 
+  /* The scrollport is inset from the header by the work area's padding, so a
+     band above the header stops earlier content showing through that gap as it
+     scrolls underneath. */
+  .page-head::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 48px;
+    background: var(--sand-100);
+  }
+
   .page-head.is-stuck {
     border-bottom-color: var(--line);
     box-shadow: 0 16px 24px -24px rgba(7, 35, 31, 0.55);
@@ -4034,7 +4111,7 @@ button.card-trigger {
 }
 
 .sk-kpi {
-  height: 108px;
+  height: 76px;
   border-radius: var(--radius);
 }
 
@@ -4054,18 +4131,204 @@ button.card-trigger {
   border-radius: var(--radius);
 }
 
+.sk-panel--short {
+  height: 240px;
+}
+
+/* Page-shaped parts: these mirror the real card, list and form bones so the
+   swap from skeleton to content does not move anything. */
+
+.sk-kpis--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.sk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sk-chip {
+  width: 84px;
+  height: 28px;
+  border-radius: 999px;
+}
+
+.sk-frame {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+[data-theme="dark"] .sk-frame {
+  background: var(--sand-200);
+}
+
+.sk-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sk-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex: none;
+}
+
+.sk-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.sk-line {
+  width: 70%;
+  height: 11px;
+  border-radius: 6px;
+}
+
+.sk-line--short {
+  width: 45%;
+  height: 9px;
+}
+
+.sk-amount {
+  width: 72px;
+  height: 14px;
+  border-radius: 6px;
+  flex: none;
+}
+
+.sk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.sk-card {
+  height: 150px;
+  border-radius: var(--radius);
+}
+
+.sk-doc {
+  height: 190px;
+  border-radius: var(--radius);
+}
+
+.sk-hero {
+  height: 160px;
+  border-radius: var(--radius);
+}
+
+.sk-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+}
+
+.sk-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sk-field {
+  height: 38px;
+  border-radius: 10px;
+}
+
+.sk-field-label {
+  width: 30%;
+  height: 10px;
+  border-radius: 5px;
+}
+
+.sk-searchbar {
+  width: min(560px, 100%);
+  height: 46px;
+  border-radius: 999px;
+}
+
+.sk-chat {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 16px;
+  height: 420px;
+}
+
+.sk-chat-side,
+.sk-chat-main {
+  border-radius: var(--radius);
+}
+
 /* The dim is replaced by the skeleton, so drop it while one is on screen. */
 body.is-skeleton .shell-main {
   opacity: 1;
 }
 
 @media (max-width: 900px) {
-  .sk-kpis {
+  .sk-kpis,
+  .sk-kpis--3 {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sk-kpi {
+    height: 92px;
   }
 
   .sk-body {
     grid-template-columns: 1fr;
+  }
+
+  .sk-split,
+  .sk-chat {
+    grid-template-columns: 1fr;
+  }
+
+  .sk-chat {
+    height: auto;
+  }
+
+  .sk-chat-side {
+    height: 160px;
+  }
+
+  .sk-chat-main {
+    height: 300px;
+  }
+}
+
+@media (max-width: 560px) {
+  .sk-kpi {
+    height: 84px;
+  }
+}
+
+@media (max-width: 420px) {
+  .sk-kpis,
+  .sk-kpis--3 {
+    grid-template-columns: 1fr;
+  }
+
+  .sk-kpi {
+    height: 62px;
   }
 }
 
@@ -4276,6 +4539,12 @@ body.is-skeleton .shell-main {
     padding: var(--density-content-y) 20px 20px;
   }
 
+  /* The work area is the scroll container here, so the sticky header pins to
+     the top of that box. The 60px offset belongs to the window-scrolling layout
+     below 1100px and would push the header down over the first card. */
+  .page-head {
+    top: 0;
+  }
   .page-head {
     gap: 14px;
     margin-bottom: 14px;
@@ -4493,4 +4762,242 @@ body.is-skeleton .shell-main {
   .kpi-value {
     font-size: 1.18rem;
   }
+}
+
+/* ---------- Updates inbox ----------
+
+   A dated feed of what changed on a build. The tinted left edge on new items is
+   the only loud part: everything else stays a quiet list so a dozen entries in
+   one day still scan quickly. */
+
+.nav-count--live {
+  background: var(--forest-100);
+  color: var(--forest-700);
+}
+
+[data-theme="dark"] .nav-count--live {
+  background: var(--forest-100);
+  color: var(--forest-200);
+}
+
+.chip-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.update-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.update-day-label {
+  margin: 0 0 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.update-list {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .update-list {
+  background: var(--sand-200);
+}
+
+.update-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease;
+}
+
+.update-item:last-child {
+  border-bottom: 0;
+}
+
+.update-item:hover {
+  background: var(--sand-50);
+}
+
+[data-theme="dark"] .update-item:hover {
+  background: rgba(180, 220, 200, 0.05);
+}
+
+.update-item.is-new {
+  border-left-color: var(--brass-500);
+  background: var(--brass-100);
+}
+
+.update-item.is-new:hover {
+  background: var(--brass-100);
+}
+
+[data-theme="dark"] .update-item.is-new {
+  background: var(--sand-300);
+}
+
+.update-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  background: var(--sand-100);
+  color: var(--ink-soft);
+}
+
+.update-icon--success {
+  background: var(--success-soft);
+  color: var(--forest-600);
+}
+
+.update-icon--danger {
+  background: var(--brick-soft);
+  color: var(--brick);
+}
+
+.update-icon--warn {
+  background: var(--amber-soft);
+  color: var(--brass-700);
+}
+
+.update-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.update-title {
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.update-new {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--brass-500);
+  color: #3a2a08;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+
+.update-detail {
+  margin-top: 2px;
+  font-size: 0.79rem;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.update-meta {
+  margin-top: 3px;
+  font-size: 0.71rem;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 560px) {
+  .update-item {
+    padding: 11px 12px;
+    gap: 10px;
+  }
+
+  .update-icon {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* ---------- Team & invitations ---------- */
+
+.team-invite {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.team-invite .field {
+  flex: 1 1 240px;
+}
+
+.invite-list {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.invite-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+}
+
+.invite-row + .invite-row {
+  border-top: 1px solid var(--line);
+}
+
+.invite-link {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  background: var(--sand-50);
+}
+
+[data-theme="dark"] .invite-link {
+  background: var(--sand-300);
+}
+
+/* Public invitation page */
+
+.invite-page {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 32px 16px 64px;
+}
+
+.invite-card {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 28px;
+}
+
+.invite-card h1 {
+  font-size: 1.35rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.invite-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }

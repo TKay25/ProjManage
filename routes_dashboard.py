@@ -7,7 +7,6 @@ from flask import Blueprint, g, render_template, request
 from auth import accessible_projects, login_required
 from money import format_money
 from queries import (
-    latest_activity,
     missing_receipts,
     monthly_cashflow,
     next_stage,
@@ -15,6 +14,7 @@ from queries import (
     recent_transactions,
 )
 from stages import stage_by_key
+import updates as update_feed
 
 bp = Blueprint("dashboard", __name__)
 
@@ -114,7 +114,7 @@ def index():
             "missing": missing,
             "alerts": alerts,
             "upcoming": upcoming,
-            "activity": latest_activity(project["id"]),
+            "updates": update_feed.feed(g.user["id"], limit=5),
             "current": current,
             "current_definition": stage_by_key(current["key"]) if current else None,
             "completed_count": len([stage for stage in stages if stage["status"] == "complete"]),

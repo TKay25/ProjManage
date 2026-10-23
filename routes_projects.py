@@ -33,6 +33,7 @@ from stages import (
 )
 from whatsapp import display_phone, normalize_phone
 from workspaces import create_workspace, ensure_default_workspace, find_workspace, workspaces_for
+import team
 
 bp = Blueprint("projects", __name__)
 
@@ -167,8 +168,33 @@ def create():
             return web.fail(error)
         return render_template("app/project_new.html", title="New project", active="projects", values=values, error=error), 400
 
+    # Only a build manager (or staff) can file a build for somebody else. A
+    # client creating their own project never sets a client contact, whatever
+    # the form posts.
+    manages_for_others = g.user["role"] in {"manager", "admin"}
+    if not manages_for_others:
+        values["client_email"] = ""
+        values["client_whatsapp"] = ""
+
     project_id = new_id()
+    owner_id = g.user["id"]
     manager_id = g.user["id"] if g.user["role"] == "manager" else None
+    client_account = None
+
+    if manages_for_others and values["client_email"]:
+        client_account = query(
+            "SELECT id, name FROM users WHERE email = ? AND role = 'client'",
+            (values["client_email"],),
+            one=True,
+        )
+
+    if client_account:
+        # The build belongs to the client; the manager stays on it as the person
+        # running the work, and the two are linked from the start.
+        owner_id = client_account["id"]
+        team.link(owner_id, g.user["id"], created_by=g.user["id"])
+        manager_id = g.user["id"] if g.user["role"] == "manager" else manager_id
+
     workspace = find_workspace(g.user, request.form.get("workspace_id")) or ensure_default_workspace(g.user)
 
     execute(
@@ -182,7 +208,7 @@ def create():
             _next_code(),
             values["name"][:120],
             values["description"][:2000] or None,
-            g.user["id"],
+            owner_id,
             manager_id,
             values["city"][:80] or "Harare",
             values["suburb"][:80] or None,
@@ -227,8 +253,11 @@ def create():
         created["stages"] = stage_rows(project_id)
         created["totals"] = money_totals(project_id)
         created["progress"] = project_progress(created["stages"])
+        note = f"{values['name']} created with the full Zimbabwe stage plan."
+        if client_account:
+            note += f" {client_account['name']} owns it; you are the build manager."
         return web.ok(
-            f"{values['name']} created with the full Zimbabwe stage plan.",
+            note,
             fragment=render_template("partials/project_card.html", project=created),
             target="[data-project-grid]",
             mode="prepend",
@@ -274,6 +303,11 @@ def detail(project_id):
         if project["manager_id"]
         else None
     )
+    manager_invites = (
+        team.pending_for_project(project["id"])
+        if project["owner_id"] == g.user["id"] or g.user["role"] == "admin"
+        else []
+    )
 
     agreements = query(
         "SELECT * FROM agreements WHERE project_id = ? ORDER BY created_at DESC", (project_id,)
@@ -292,6 +326,8 @@ def detail(project_id):
         project=project,
         owner=owner,
         manager=manager,
+        manager_invites=manager_invites,
+        invite_url=team.invite_url,
         stages=stages,
         groups=groups,
         totals=totals,
@@ -418,21 +454,54 @@ def assign_manager(project_id):
         abort(403)
 
     email = (request.form.get("email") or "").strip().lower()
-    manager = query("SELECT * FROM users WHERE email = ? AND role IN ('manager', 'admin')", (email,), one=True)
 
-    if not manager:
-        message = "No build manager account matches that email. Ask them to register first."
+    # Anyone with an account can be added: permission comes from the project,
+    # not from the global role label.
+    manager = query("SELECT * FROM users WHERE email = ?", (email,), one=True)
+
+    if manager:
+        if manager["id"] == project["owner_id"]:
+            message = "That is the client's own address; they already own this build."
+            if web.wants_json():
+                return web.fail(message)
+            flash(message, "error")
+            return redirect(url_for("projects.detail", project_id=project_id))
+
+        execute(
+            "UPDATE projects SET manager_id = ?, updated_at = ? WHERE id = ?",
+            (manager["id"], now_iso(), project_id),
+        )
+        team.link(project["owner_id"], manager["id"], created_by=g.user["id"])
+        log_event(g.user["id"], project_id, "project.manager", f"{manager['name']} assigned as build manager")
+        message = f"{manager['name']} is now the build manager on this project."
+
         if web.wants_json():
-            return web.fail(message)
-        flash(message, "error")
+            return web.ok(message, fields={"[data-manager-name]": manager["name"]})
+
+        flash(message, "success")
         return redirect(url_for("projects.detail", project_id=project_id))
 
-    execute("UPDATE projects SET manager_id = ?, updated_at = ? WHERE id = ?", (manager["id"], now_iso(), project_id))
-    log_event(g.user["id"], project_id, "project.manager", f"{manager['name']} assigned as build manager")
-    message = f"{manager['name']} is now the build manager on this project."
+    # No account yet: raise an invitation that also assigns them to this build
+    # when they accept. The link is shown on the project page.
+    invite = team.invite(g.user, email, project_id=project_id)
+    if not invite["ok"]:
+        if web.wants_json():
+            return web.fail(invite["message"])
+        flash(invite["message"], "error")
+        return redirect(url_for("projects.detail", project_id=project_id))
+
+    if invite["invitation"]:
+        team.email_invitation(invite["invitation"], g.user, project)
+        log_event(g.user["id"], project_id, "team.invited", f"Invitation sent to {email}")
+        message = (
+            f"{email} does not have an account yet. An invitation is ready — "
+            "share the link shown under the build manager card."
+        )
+    else:
+        message = invite["message"]
 
     if web.wants_json():
-        return web.ok(message, fields={"[data-manager-name]": manager["name"]})
+        return web.ok(message, reload=True)
 
     flash(message, "success")
     return redirect(url_for("projects.detail", project_id=project_id))

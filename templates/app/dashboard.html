@@ -248,6 +248,40 @@
         {% endif %}
       </div>
 
+      <div class="card">
+        <div class="card-head">
+          <h2>Latest updates</h2>
+          <div class="row-buttons">
+            <a class="link-quiet" href="{{ url_for('updates.index') }}">View all</a>
+            {% if unread_updates %}<span class="count-pill">{{ unread_updates }} new</span>{% endif %}
+          </div>
+        </div>
+        {% if updates %}
+          <ul class="timeline">
+            {% for item in updates %}
+              <li>
+                <span class="timeline-dot"></span>
+                <div>
+                  <p class="mini-title">{{ item.title }}</p>
+                  <p class="mini-meta">
+                    {{ item.detail }}{% if item.detail %} · {% endif %}{{ item.project_name }}
+                  </p>
+                  <p class="mini-meta">{{ item.actor_name or 'YaVaKa' }} · {{ item.created_at|relative }}</p>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+          <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('updates.index') }}">
+            {{ icon('activity', 15) }} All updates
+          </a>
+        {% else %}
+          <p class="muted small">
+            Nothing has changed yet. Stage moves, uploads, payments and agreements
+            appear here the moment your build manager posts them.
+          </p>
+        {% endif %}
+      </div>
+
       {% if upcoming %}
         <div class="card">
           <div class="card-head"><h2>Coming up</h2></div>
@@ -269,23 +303,6 @@
               </li>
             {% endfor %}
           </ol>
-        </div>
-      {% endif %}
-
-      {% if activity %}
-        <div class="card">
-          <div class="card-head"><h2>Project log</h2></div>
-          <ul class="timeline">
-            {% for event in activity %}
-              <li>
-                <span class="timeline-dot"></span>
-                <div>
-                  <p class="mini-title">{{ event.detail }}</p>
-                  <p class="mini-meta">{{ event.user_name or 'System' }} · {{ event.created_at|date }}</p>
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
         </div>
       {% endif %}
     </aside>

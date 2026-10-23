@@ -102,9 +102,100 @@
       <p class="micro-note"><a class="link-quiet" href="#modal-shortcuts" data-modal-open="modal-shortcuts">Keyboard shortcuts</a></p>
     </div>
 
+    <div class="card" id="team">
+      <div class="card-head">
+        <h2>{{ 'Clients you work with' if user.role == 'manager' else 'Your build manager' }}</h2>
+        <span class="badge badge-soft">{{ team_managers|length if user.role != 'manager' else team_clients|length }}</span>
+      </div>
+
+      {% if user.role == 'manager' %}
+        {% if team_clients %}
+          <ul class="mini-list">
+            {% for client in team_clients %}
+              <li>
+                <span class="avatar avatar-sm" style="background:{{ client.avatar_color }}">{{ client.name|initials }}</span>
+                <div>
+                  <p class="mini-title">{{ client.name }}</p>
+                  <p class="mini-meta">{{ client.email }} · {{ client.project_count }} project{{ '' if client.project_count == 1 else 's' }}</p>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+          <p class="muted small">You can open every build these clients own, including ones they add later.</p>
+        {% else %}
+          <p class="muted small">
+            No client has added you yet. Ask them to invite this email address
+            ({{ user.email }}) from their Settings, or assign you on a project.
+          </p>
+        {% endif %}
+      {% else %}
+        {% if team_managers %}
+          <ul class="mini-list">
+            {% for manager in team_managers %}
+              <li>
+                <span class="avatar avatar-sm" style="background:{{ manager.avatar_color }}">{{ manager.name|initials }}</span>
+                <div>
+                  <p class="mini-title">{{ manager.name }}</p>
+                  <p class="mini-meta">
+                    {{ manager.email }}{% if manager.phone %} · {{ display_phone(manager.phone) }}{% endif %}
+                  </p>
+                </div>
+                <form method="post" action="{{ url_for('team.remove', manager_id=manager.id) }}" data-confirm="Remove {{ manager.name }}? They will lose access to your builds.">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button class="btn btn-ghost btn-xs" type="submit">Remove</button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted small">
+            Invite the person running your build. They see every project you own —
+            even before you create the first one.
+          </p>
+        {% endif %}
+
+        <form class="inline-form team-invite" method="post" action="{{ url_for('team.invite') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <label class="field">
+            <span class="field-label">Invite by email</span>
+            <input class="input" type="email" name="email" required placeholder="builder@example.com" />
+            <span class="field-hint">If they have no account yet we create a link you can share.</span>
+          </label>
+          <button class="btn btn-outline btn-sm" type="submit">{{ icon('users', 15) }} Invite build manager</button>
+        </form>
+
+        {% if team_invites %}
+          <div class="invite-list">
+            <p class="field-label">Waiting to be accepted</p>
+            {% for invite in team_invites %}
+              <div class="invite-row">
+                <div>
+                  <p class="mini-title">{{ invite.email }}</p>
+                  <p class="mini-meta">
+                    {% if invite.project_name %}For {{ invite.project_name }} · {% endif %}
+                    Invited {{ invite.created_at|relative }}
+                  </p>
+                  <input class="input input-sm invite-link" type="text" readonly
+                         value="{{ invite_url(invite.token) }}" aria-label="Invitation link"
+                         data-select-on-focus />
+                </div>
+                <div class="row-buttons">
+                  <button class="btn btn-ghost btn-xs" type="button"
+                          data-copy="{{ invite_url(invite.token) }}">Copy link</button>
+                  <form method="post" action="{{ url_for('team.revoke', invitation_id=invite.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button class="btn btn-ghost btn-xs" type="submit">Withdraw</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+
     <div class="card">
-      <div class="card-head"><h2>Change password</h2></div>
-      <form class="form" method="post" action="{{ url_for('settings.update_password') }}">
+      <div class="card-head"><h2>Change password</h2></div>      <form class="form" method="post" action="{{ url_for('settings.update_password') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
         <label class="field">

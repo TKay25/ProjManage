@@ -29,6 +29,7 @@ from money import (
 )
 from paging import page_list
 from queries import attention_counts
+import updates
 from stages import (
     PAYMENT_METHODS,
     PROJECT_STATUS_LABELS,
@@ -46,6 +47,7 @@ from workspaces import workspaces_for
 
 NAV_ITEMS = [
     {"key": "dashboard", "href": "/app", "label": "Dashboard", "icon": "dashboard"},
+    {"key": "updates", "href": "/app/updates", "label": "Updates", "icon": "activity"},
     {"key": "attention", "href": "/app/attention", "label": "Attention", "icon": "bell"},
     {"key": "projects", "href": "/app/projects", "label": "Projects", "icon": "building"},
     {"key": "money", "href": "/app/money", "label": "Money", "icon": "wallet"},
@@ -85,6 +87,8 @@ def create_app(config_object=Config):
     from routes_search import bp as search_bp
     from routes_settings import bp as settings_bp
     from routes_suppliers import bp as suppliers_bp
+    from routes_team import bp as team_bp
+    from routes_updates import bp as updates_bp
     from routes_whatsapp import bp as whatsapp_bp
 
     for blueprint in (
@@ -95,11 +99,13 @@ def create_app(config_object=Config):
         projects_bp,
         money_bp,
         notifications_bp,
+        updates_bp,
         documents_bp,
         agreements_bp,
         suppliers_bp,
         whatsapp_bp,
         settings_bp,
+        team_bp,
         search_bp,
         digest_bp,
         admin_bp,
@@ -128,7 +134,7 @@ def create_app(config_object=Config):
         progress_bar=progress_bar,
         progress_ring=progress_ring,
         nav_items=NAV_ITEMS,
-        tab_items=[item for item in NAV_ITEMS if item["key"] in {"dashboard", "projects", "money", "documents"}],
+        tab_items=[item for item in NAV_ITEMS if item["key"] in {"dashboard", "updates", "money", "documents"}],
         asset_url=asset_url,
         page_list=page_list,
         app_name=app.config["APP_NAME"],
@@ -181,12 +187,14 @@ def create_app(config_object=Config):
             if user
             else {"total": 0, "blocked": 0, "approvals": 0, "receipts": 0, "agreements": 0}
         )
+        unread_updates = updates.unread_count(user["id"]) if user else 0
         return {
             "user": user,
             "current_path": request.path,
             "demo_mode": app.config.get("DEMO_MODE", False),
             "sidebar_workspaces": workspaces_for(user),
             "attention": attention,
+            "unread_updates": unread_updates,
         }
 
     # ------------------------------------------------------------------

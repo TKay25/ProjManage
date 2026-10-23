@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Invitation · YaVaKa{% endblock %}
+{% block body_class %}public{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<section class="invite-page">
+  <div class="invite-card card">
+    {{ logo_mark(44) }}
+    <p class="eyebrow">Build manager invitation</p>
+    <h1>{{ invitation.client_name }} invited you to run their build{{ ' — ' ~ invitation.project_name if invitation.project_name }}.</h1>
+
+    <p class="muted">
+      Accepting lets you open {{ invitation.client_name }}'s projects: record money,
+      move stages, upload receipts and post updates. Nothing else on YaVaKa changes.
+    </p>
+
+    {% if invitation.status != 'pending' %}
+      <div class="notice notice-info" role="status">
+        {{ icon('check', 18) }}
+        <p>
+          {% if invitation.status == 'accepted' %}
+            This invitation has already been accepted.
+          {% else %}
+            This invitation was withdrawn. Ask {{ invitation.client_name }} for a new link.
+          {% endif %}
+        </p>
+      </div>
+      <a class="btn btn-outline" href="{{ url_for('auth.login') }}">Sign in</a>
+    {% elif matches %}
+      <form method="post" action="{{ url_for('team.invite_accept', token=token) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn-primary btn-lg" type="submit">
+          {{ icon('check', 16) }} Accept invitation
+        </button>
+      </form>
+      <p class="micro-note">Signed in as {{ g.user.email }}</p>
+    {% elif signed_in %}
+      <div class="notice notice-warning" role="alert">
+        {{ icon('alert', 18) }}
+        <p>This invitation was sent to <strong>{{ invitation.email }}</strong>, but you are signed in as {{ g.user.email }}.</p>
+      </div>
+      <a class="btn btn-outline" href="{{ url_for('settings.index') }}">Go to my settings</a>
+    {% else %}
+      <div class="invite-actions">
+        <a class="btn btn-primary" href="{{ url_for('auth.login', next=url_for('team.invite_landing', token=token)) }}">
+          Sign in to accept
+        </a>
+        <a class="btn btn-outline"
+           href="{{ url_for('auth.register', email=invitation.email, invite=token) }}">
+          Create an account
+        </a>
+      </div>
+      <p class="micro-note">Use {{ invitation.email }} — the invitation only works for that address.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

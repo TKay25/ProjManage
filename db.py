@@ -377,6 +377,70 @@ def run_migrations(connection):
             )
         connection.execute("PRAGMA user_version = 10")
 
+    if version < 11:
+        # Per-recipient notifications, derived from audit events. A client sees
+        # what their build manager did without reading the raw log, and read
+        # state is per person, not per project.
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS notifications (
+              id TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+              event_id TEXT,
+              actor_id TEXT REFERENCES users(id),
+              action TEXT NOT NULL,
+              title TEXT NOT NULL,
+              body TEXT,
+              href TEXT,
+              created_at TEXT NOT NULL,
+              read_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_notifications_user
+              ON notifications(user_id, created_at);
+            CREATE INDEX IF NOT EXISTS idx_notifications_unread
+              ON notifications(user_id, read_at);
+            """
+        )
+        connection.execute("PRAGMA user_version = 11")
+
+    if version < 12:
+        # A build manager can be attached to a client, not just to one project:
+        # the link grants access to every project that client owns, including
+        # ones created later. That is what makes an invitation possible before
+        # the client has created anything.
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS manager_links (
+              id TEXT PRIMARY KEY,
+              client_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              manager_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              created_by TEXT REFERENCES users(id),
+              created_at TEXT NOT NULL,
+              UNIQUE(client_id, manager_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_manager_links_client ON manager_links(client_id);
+            CREATE INDEX IF NOT EXISTS idx_manager_links_manager ON manager_links(manager_id);
+
+            CREATE TABLE IF NOT EXISTS invitations (
+              id TEXT PRIMARY KEY,
+              token TEXT NOT NULL UNIQUE,
+              inviter_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              client_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+              email TEXT NOT NULL,
+              role TEXT NOT NULL DEFAULT 'manager',
+              status TEXT NOT NULL DEFAULT 'pending',
+              created_at TEXT NOT NULL,
+              accepted_at TEXT,
+              accepted_by TEXT REFERENCES users(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email, status);
+            CREATE INDEX IF NOT EXISTS idx_invitations_client ON invitations(client_id, status);
+            """
+        )
+        connection.execute("PRAGMA user_version = 12")
+
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(
@@ -431,7 +495,14 @@ def touch_project(project_id: str):
 
 
 def log_event(user_id, project_id, action, detail=""):
+    event_id = new_id()
     execute(
         "INSERT INTO audit_events (id, user_id, project_id, action, detail, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (new_id(), user_id, project_id, action, detail, now_iso()),
+        (event_id, user_id, project_id, action, detail, now_iso()),
     )
+
+    # The audit log is the record; notifications are the "tell the people who
+    # own this build" side effect. Imported here to keep db.py import-cycle free.
+    import updates
+
+    updates.record(user_id, project_id, action, detail, event_id=event_id)

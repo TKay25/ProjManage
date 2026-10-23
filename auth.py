@@ -98,7 +98,16 @@ def logout_user():
 def can_manage_project(user, project) -> bool:
     if not user or not project:
         return False
-    return user["role"] == "admin" or project["owner_id"] == user["id"] or project["manager_id"] == user["id"]
+    if user["role"] == "admin" or project["owner_id"] == user["id"] or project["manager_id"] == user["id"]:
+        return True
+    # A manager linked to the client runs every build that client owns.
+    return bool(
+        query(
+            "SELECT id FROM manager_links WHERE client_id = ? AND manager_id = ?",
+            (project["owner_id"], user["id"]),
+            one=True,
+        )
+    )
 
 
 def accessible_projects(user):
@@ -108,9 +117,12 @@ def accessible_projects(user):
         return query("SELECT * FROM projects WHERE archived_at IS NULL ORDER BY created_at DESC")
     return query(
         """SELECT * FROM projects
-           WHERE archived_at IS NULL AND (owner_id = ? OR manager_id = ?)
+           WHERE archived_at IS NULL
+             AND (owner_id = ?
+                  OR manager_id = ?
+                  OR owner_id IN (SELECT client_id FROM manager_links WHERE manager_id = ?))
            ORDER BY created_at DESC""",
-        (user["id"], user["id"]),
+        (user["id"], user["id"], user["id"]),
     )
 
 
@@ -122,9 +134,12 @@ def archived_projects(user):
         return query("SELECT * FROM projects WHERE archived_at IS NOT NULL ORDER BY archived_at DESC")
     return query(
         """SELECT * FROM projects
-           WHERE archived_at IS NOT NULL AND (owner_id = ? OR manager_id = ?)
+           WHERE archived_at IS NOT NULL
+             AND (owner_id = ?
+                  OR manager_id = ?
+                  OR owner_id IN (SELECT client_id FROM manager_links WHERE manager_id = ?))
            ORDER BY archived_at DESC""",
-        (user["id"], user["id"]),
+        (user["id"], user["id"], user["id"]),
     )
 
 

@@ -23,6 +23,7 @@ from flask import (
 )
 
 import auth
+import team
 from auth import accessible_projects, admin_required, login_required
 from db import execute, query
 from whatsapp import display_phone, normalize_phone
@@ -48,6 +49,7 @@ def index():
         )["count"],
     }
 
+    is_manager = g.user["role"] == "manager"
     return render_template(
         "app/settings.html",
         title="Settings",
@@ -56,6 +58,10 @@ def index():
         contacts=contacts,
         counts=counts,
         display_phone=display_phone,
+        team_managers=[] if is_manager else team.managers_for(g.user["id"]),
+        team_clients=team.clients_for(g.user["id"]) if is_manager else [],
+        team_invites=[] if is_manager else team.pending_for_client(g.user["id"]),
+        invite_url=team.invite_url,
     )
 
 

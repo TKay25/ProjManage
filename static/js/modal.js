@@ -27,7 +27,7 @@
     error: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
   };
 
-  function toast(message, category = "success") {
+  function toast(message, category = "success", options = {}) {
     if (!message) return;
 
     const stack = toastStack();
@@ -57,6 +57,17 @@
       '<button class="notice-close" type="button" aria-label="Dismiss">&times;</button>';
 
     notice.querySelector("p").textContent = message;
+
+    // An optional action turns a notice into a notification: text is set with
+    // textContent and only http(s) links are honoured.
+    if (options.href && /^\/(?!\/)/.test(options.href)) {
+      const link = document.createElement("a");
+      link.className = "notice-action";
+      link.href = options.href;
+      link.textContent = options.label || "View";
+      notice.querySelector("p").append(" ", link);
+    }
+
     notice.querySelector("button").addEventListener("click", () => {
       notice.classList.add("is-leaving");
       setTimeout(() => notice.remove(), 240);

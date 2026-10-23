@@ -127,6 +127,24 @@
           {{ icon('wallet', 14) }} Change budget
         </button>
       </div>
+
+      {% if manager_invites %}
+        <div class="invite-list">
+          <p class="field-label">Invitation waiting</p>
+          {% for invite in manager_invites %}
+            <div class="invite-row">
+              <div>
+                <p class="mini-title">{{ invite.email }}</p>
+                <p class="mini-meta">Invited {{ invite.created_at|relative }} · not accepted yet</p>
+                <input class="input input-sm invite-link" type="text" readonly
+                       value="{{ invite_url(invite.token) }}" aria-label="Invitation link" />
+              </div>
+              <button class="btn btn-ghost btn-xs" type="button"
+                      data-copy="{{ invite_url(invite.token) }}">Copy link</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
     </div>
 
     <div class="card">

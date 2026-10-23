@@ -851,6 +851,20 @@ h3 {
   opacity: 1;
 }
 
+/* An inline action inside a toast, e.g. "3 new updates — View". */
+.notice-action {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.notice-action:hover {
+  color: inherit;
+  opacity: 0.85;
+}
+
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-10px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
