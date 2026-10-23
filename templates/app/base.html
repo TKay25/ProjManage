@@ -23,9 +23,16 @@
         </form>
       </noscript>
       <div class="topbar-spacer"></div>
+      <a class="icon-btn topbar-alert" href="{{ url_for('attention.index') }}"
+         aria-label="Attention{% if attention.total %}: {{ attention.total }} outstanding{% endif %}"
+         title="{{ attention.total ~ ' item' ~ ('' if attention.total == 1 else 's') ~ ' need attention' if attention.total else 'Nothing needs attention' }}">
+        {{ icon('bell', 18) }}
+        {% if attention.total %}<span class="topbar-alert-count" aria-hidden="true">{{ attention.total if attention.total < 100 else '99+' }}</span>{% endif %}
+      </a>
       <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch between light and dark" title="Switch theme">
         <span class="theme-icon-light">{{ icon('sun', 17) }}</span>
         <span class="theme-icon-dark">{{ icon('moon', 17) }}</span>
+        <span class="theme-icon-system">{{ icon('monitor', 17) }}</span>
       </button>
       <button class="btn btn-ghost btn-sm install-btn" type="button" id="install-btn" hidden>
         {{ icon('download', 16) }}<span>Install app</span>
@@ -57,6 +64,7 @@
 {# Available everywhere in the workspace: any page can raise it. #}
 {% include "partials/modal_workspace.html" %}
 {% include "partials/command_palette.html" %}
+{% include "partials/shortcuts.html" %}
 
 {# Shared reader dialog. Any record with a JSON-capable detail route can open in
    here by setting data-modal-remote on its link, so nothing has to redirect. #}
@@ -94,5 +102,6 @@
   <script src="{{ asset_url('js/signature.js') }}" defer></script>
   <script src="{{ asset_url('js/whatsapp.js') }}" defer></script>
   <script src="{{ asset_url('js/palette.js') }}" defer></script>
+  <script src="{{ asset_url('js/offline.js') }}" defer></script>
   <script src="{{ asset_url('js/views.js') }}" defer></script>
 {% endblock %}

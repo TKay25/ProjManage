@@ -1,8 +1,14 @@
 /* YaVaKa service worker — app shell caching + offline fallback.
-   Authenticated HTML is never cached, so a shared device cannot leak a project. */
 
-const VERSION = "vaka-v3";
+   Authenticated HTML is never cached implicitly, so a shared device cannot leak
+   a project. The only exception is a snapshot the user explicitly saves: it
+   lives in its own cache, is read-only, and is wiped on sign-out. */
+
+const VERSION = "vaka-v4";
 const STATIC_CACHE = `${VERSION}-static`;
+// Offline snapshots are opt-in and live in their own cache so a version bump
+// never resurrects or discards them.
+const SNAPSHOT_CACHE = "vaka-snapshots";
 
 const PRECACHE = [
   "/offline",
@@ -35,7 +41,13 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => !key.startsWith(VERSION)).map((key) => caches.delete(key))))
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== SNAPSHOT_CACHE && !key.startsWith(VERSION))
+            .map((key) => caches.delete(key)),
+        ),
+      )
       .then(() => self.clients.claim()),
   );
 });
@@ -51,6 +63,12 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).catch(async () => {
+        // A project the user chose to keep offline opens from its snapshot;
+        // everything else falls back to the generic offline page.
+        const snapshots = await caches.open(SNAPSHOT_CACHE);
+        const saved = await snapshots.match(url.pathname);
+        if (saved) return saved;
+
         const offline = await caches.match("/offline");
         return (
           offline ||

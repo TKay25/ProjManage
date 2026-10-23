@@ -1,15 +1,36 @@
 """Profile, security and workspace settings."""
 
 import re
+import shutil
+import sqlite3
+import tempfile
+import time
+import zipfile
+from datetime import datetime
+from pathlib import Path
 
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    url_for,
+)
 
 import auth
-from auth import accessible_projects, login_required
+from auth import accessible_projects, admin_required, login_required
 from db import execute, query
 from whatsapp import display_phone, normalize_phone
 
 bp = Blueprint("settings", __name__)
+
+DENSITIES = {"comfortable", "compact"}
+PAGE_SIZES = {25, 50, 100}
 
 
 @bp.get("/app/settings")
@@ -63,6 +84,91 @@ def update_profile():
 
     flash("Profile updated.", "success")
     return redirect(url_for("settings.index"))
+
+
+@bp.post("/app/settings/preferences")
+@login_required
+def update_preferences():
+    """Row density and page size. Both are presentation only, so junk input
+    falls back to what the user already had rather than erroring."""
+    density = (request.form.get("density") or "").strip()
+    if density not in DENSITIES:
+        density = g.user["density"]
+
+    try:
+        page_size = int(request.form.get("page_size") or "")
+    except (TypeError, ValueError):
+        page_size = g.user["page_size"]
+    if page_size not in PAGE_SIZES:
+        page_size = g.user["page_size"]
+
+    execute(
+        "UPDATE users SET density = ?, page_size = ? WHERE id = ?",
+        (density, page_size, g.user["id"]),
+    )
+
+    # The palette's density action posts here and stays on the current page.
+    if request.headers.get("X-Requested-With") == "fetch":
+        return jsonify({"ok": True, "density": density, "page_size": page_size})
+
+    if request.form.get("save") == "1":
+        flash("Display preferences saved.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.get("/app/settings/backup")
+@admin_required
+def backup():
+    """A consistent copy of the database, with the uploads folder optional.
+
+    Staff only: one client must never be able to download another client's
+    receipts. The archive is streamed from a temp file, so a large uploads
+    folder does not sit in memory.
+    """
+    include_uploads = request.args.get("uploads") != "0"
+    database = Path(current_app.config["DATABASE"])
+    uploads = Path(current_app.config["UPLOAD_FOLDER"])
+
+    # send_file keeps the archive open while it streams, so cleanup cannot
+    # happen on response teardown (Windows refuses to delete an open handle).
+    # Sweep the working folders left behind by earlier runs instead.
+    for stale in Path(tempfile.gettempdir()).glob("vaka-backup-*"):
+        try:
+            if time.time() - stale.stat().st_mtime <= 3600:
+                continue
+            if stale.is_dir():
+                shutil.rmtree(stale, ignore_errors=True)
+            else:
+                stale.unlink()
+        except OSError:
+            pass
+
+    workdir = Path(tempfile.mkdtemp(prefix="vaka-backup-"))
+    archive_path = workdir / "backup.zip"
+    snapshot_path = workdir / "vaka.db"
+
+    source = sqlite3.connect(str(database))
+    target = sqlite3.connect(str(snapshot_path))
+    try:
+        source.backup(target)
+    finally:
+        target.close()
+        source.close()
+
+    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.write(snapshot_path, "vaka.db")
+        if include_uploads and uploads.is_dir():
+            for path in sorted(uploads.rglob("*")):
+                if path.is_file():
+                    archive.write(path, f"uploads/{path.relative_to(uploads).as_posix()}")
+
+    stamp = datetime.now().strftime("%Y-%m-%d")
+    return send_file(
+        archive_path,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"yavaka-backup-{stamp}.zip",
+    )
 
 
 @bp.post("/app/settings/password")

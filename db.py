@@ -362,6 +362,21 @@ def run_migrations(connection):
             )
         connection.execute("PRAGMA user_version = 9")
 
+    if version < 10:
+        # Display preferences live on the user, not in localStorage, so a
+        # compact ledger follows the person across devices. The defaults match
+        # the look the app already had.
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
+        if "density" not in columns:
+            connection.execute(
+                "ALTER TABLE users ADD COLUMN density TEXT NOT NULL DEFAULT 'comfortable'"
+            )
+        if "page_size" not in columns:
+            connection.execute(
+                "ALTER TABLE users ADD COLUMN page_size INTEGER NOT NULL DEFAULT 25"
+            )
+        connection.execute("PRAGMA user_version = 10")
+
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(

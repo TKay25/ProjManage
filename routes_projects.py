@@ -594,3 +594,33 @@ def new_workspace():
 
     flash(message, "success")
     return redirect(url_for("projects.index", workspace=workspace["id"]))
+
+
+@bp.get("/app/projects/<project_id>/snapshot")
+@login_required
+def snapshot(project_id):
+    """A read-only copy of the project for the browser's offline cache.
+
+    Renders without forms, CSRF tokens or action buttons: the page is stored on
+    the device, so it must never carry anything that could be replayed.
+    """
+    project = require_project(project_id)
+    stages = stage_rows(project_id)
+
+    documents = query(
+        """SELECT filename, kind, created_at
+           FROM attachments WHERE project_id = ?
+           ORDER BY created_at DESC LIMIT 20""",
+        (project_id,),
+    )
+
+    return render_template(
+        "app/snapshot.html",
+        project=project,
+        stages=stages,
+        totals=money_totals(project_id),
+        transactions=recent_transactions(project_id, 12),
+        documents=documents,
+        progress=project_progress(stages),
+        saved_at=datetime.now(),
+    )

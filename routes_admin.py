@@ -6,7 +6,7 @@ import web
 from auth import admin_required
 from db import execute, log_event, new_id, now_iso, query
 from money import format_money
-from paging import offset, page_number, page_window
+from paging import offset, page_number, page_size, page_window
 from queries import (
     all_projects_with_people,
     count_events,
@@ -19,7 +19,6 @@ from stages import STAGE_GROUPS, stage_by_key
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 ROLES = {"client": "Client", "manager": "Build manager", "admin": "YaVaKa staff"}
-PAGE_SIZE = 30
 
 
 @bp.get("")
@@ -115,15 +114,16 @@ def projects():
 
     filtered = rows
     total_rows = len(filtered)
-    page, page_count = page_window(page_number(), total_rows, PAGE_SIZE)
-    start = offset(page, PAGE_SIZE)
+    size = page_size(default=30)
+    page, page_count = page_window(page_number(), total_rows, size)
+    start = offset(page, size)
 
     return render_template(
         "admin/projects.html",
         title="All projects",
         active="admin",
         admin_active="projects",
-        projects=rows[start : start + PAGE_SIZE],
+        projects=rows[start : start + size],
         status=status,
         search=search,
         total_rows=total_rows,
@@ -247,8 +247,9 @@ def invite_staff():
 def activity():
     search = (request.args.get("q") or "").strip()
     total_rows = count_events(search)
-    page, page_count = page_window(page_number(), total_rows, PAGE_SIZE)
-    events = recent_events(PAGE_SIZE, offset(page, PAGE_SIZE), search)
+    size = page_size(default=30)
+    page, page_count = page_window(page_number(), total_rows, size)
+    events = recent_events(size, offset(page, size), search)
     return render_template(
         "admin/activity.html",
         title="Activity log",

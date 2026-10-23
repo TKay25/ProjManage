@@ -9,6 +9,9 @@
       <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
          {% if active == item.key %}aria-current="page"{% endif %}>
         {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
+        {% if item.key == 'attention' and attention.total %}
+          <span class="nav-count" aria-hidden="true">{{ attention.total if attention.total < 100 else '99+' }}</span>
+        {% endif %}
       </a>
     {% endfor %}
   </nav>
@@ -21,8 +24,7 @@
            {% if active == item.key %}aria-current="page"{% endif %}>
           {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
         </a>
-      {% endfor %}
-    </nav>
+      {% endfor %}    </nav>
   </div>
 
   <div class="sidebar-section">

@@ -25,3 +25,8 @@ Thumbs.db
 
 # Artifacto — generated semantic artifacts (auto-updated by plugin)
 artifacts/
+
+# Desktop build (Electron)
+desktop/node_modules/
+desktop/dist/
+desktop/resources/server/

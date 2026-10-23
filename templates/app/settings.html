@@ -54,6 +54,55 @@
     </div>
 
     <div class="card">
+      <div class="card-head">
+        <h2>Display</h2>
+        <span class="badge badge-soft">Saved to your account</span>
+      </div>
+      <form class="form" method="post" action="{{ url_for('settings.update_preferences') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="field">
+          <span class="field-label">Theme</span>
+          <div class="segmented segmented--icons" role="radiogroup" aria-label="Theme" data-theme-choice>
+            {% for value, label, glyph in [('system', 'System', 'monitor'), ('light', 'Light', 'sun'), ('dark', 'Dark', 'moon')] %}
+              <button class="segment" type="button" role="radio" aria-checked="false" data-theme-set="{{ value }}">
+                {{ icon(glyph, 14) }}<span>{{ label }}</span>
+              </button>
+            {% endfor %}
+          </div>
+          <span class="field-hint">System follows your device's light or dark setting.</span>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Row density</span>
+          <div class="segmented" role="radiogroup" aria-label="Row density">
+            {% for value, label in [('comfortable', 'Comfortable'), ('compact', 'Compact')] %}
+              <label class="segment {% if user.density == value %}is-active{% endif %}">
+                <input class="sr-only" type="radio" name="density" value="{{ value }}"
+                       {% if user.density == value %}checked{% endif %} data-autosubmit />
+                <span>{{ label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+          <span class="field-hint">Compact tightens row spacing so a long ledger fits more on screen.</span>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Rows per page</span>
+          <select class="select" name="page_size" data-autosubmit>
+            {% for size in [25, 50, 100] %}
+              <option value="{{ size }}" {% if user.page_size == size %}selected{% endif %}>{{ size }} rows</option>
+            {% endfor %}
+          </select>
+          <span class="field-hint">Applies to the ledger, the document vault and staff tables.</span>
+        </label>
+
+        <button class="btn btn-outline" type="submit" name="save" value="1">{{ icon('check', 15) }} Save display settings</button>
+      </form>
+      <p class="micro-note"><a class="link-quiet" href="#modal-shortcuts" data-modal-open="modal-shortcuts">Keyboard shortcuts</a></p>
+    </div>
+
+    <div class="card">
       <div class="card-head"><h2>Change password</h2></div>
       <form class="form" method="post" action="{{ url_for('settings.update_password') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -116,6 +165,29 @@
       <p class="muted small">Use YaVaKa like an app on your phone or desktop. It opens full screen and keeps the last project state offline.</p>
       <button class="btn btn-outline btn-block btn-sm install-btn" type="button" id="install-btn">{{ icon('download', 15) }} Add to home screen</button>
     </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Offline copies</h2></div>
+      <p class="muted small">
+        A saved copy opens without a signal. It stays in this browser's cache, so anyone
+        using this device profile could read it — delete it when you are done.
+      </p>
+      <ul class="mini-list" data-offline-list>
+        <li><p class="muted small">Checking…</p></li>
+      </ul>
+      <button class="btn btn-ghost btn-block btn-sm" type="button" data-offline-clear>
+        {{ icon('trash', 15) }} Delete all offline copies
+      </button>
+    </div>
+
+    {% if user.role == 'admin' %}
+      <div class="card">
+        <div class="card-head"><h2>Back up your data</h2></div>
+        <p class="muted small">Download a zip of a consistent database snapshot and the uploaded files. Restore it by replacing <code>instance/vaka.db</code> and the <code>uploads/</code> folder.</p>
+        <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('settings.backup') }}">{{ icon('download', 15) }} Download backup</a>
+        <p class="micro-note"><a class="link-quiet" href="{{ url_for('settings.backup', uploads=0) }}">Database only (smaller)</a></p>
+      </div>
+    {% endif %}
 
     <div class="side-note">
       {{ icon('shield', 16) }}

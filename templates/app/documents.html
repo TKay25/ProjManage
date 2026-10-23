@@ -4,7 +4,7 @@
 {% block page_title %}Documents{% endblock %}
 {% block page_subtitle %}
   <p class="page-subtitle">
-    {{ attachments|length }} file{{ '' if attachments|length == 1 else 's' }} · {{ (total_size / 1048576)|round(1) }}MB stored
+    {{ total_rows }} file{{ '' if total_rows == 1 else 's' }} · {{ (total_size / 1048576)|round(1) }}MB stored
     <span class="page-tagline">The right proof, with the right build—not lost in someone's camera roll.</span>
   </p>
 {% endblock %}
@@ -76,6 +76,7 @@
             {% include "partials/doc_card.html" %}
           {% endfor %}
         </div>
+        {% include "partials/pager.html" %}
       {% else %}
         <div class="empty">
           <span class="empty-icon">{{ icon('folder', 26) }}</span>

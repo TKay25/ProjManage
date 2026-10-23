@@ -1526,3 +1526,317 @@ class MoneyFormatting(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class DisplayPreferences(VakaTestCase):
+    """Density and page size live on the user, so they follow the account."""
+
+    def _row(self):
+        from db import query
+
+        with self.app.app_context():
+            return query(
+                "SELECT density, page_size FROM users WHERE email = ?",
+                ("client@yavaka.co.zw",),
+                one=True,
+            )
+
+    def test_default_density_is_comfortable(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertIn('data-density="comfortable"', page)
+
+    def test_a_change_is_saved_and_rendered(self):
+        self.login()
+        response = self.client.post(
+            "/app/settings/preferences",
+            data={
+                "csrf_token": self.csrf(),
+                "density": "compact",
+                "page_size": "50",
+                "save": "1",
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Display preferences saved.", response.get_data(as_text=True))
+        self.assertIn('data-density="compact"', response.get_data(as_text=True))
+        self.assertEqual(self._row()["page_size"], 50)
+
+        self.client.post(
+            "/app/settings/preferences",
+            data={"csrf_token": self.csrf(), "density": "comfortable", "page_size": "25"},
+            follow_redirects=True,
+        )
+        self.assertEqual(self._row()["density"], "comfortable")
+
+    def test_junk_input_keeps_the_previous_value(self):
+        self.login()
+        before = self._row()
+
+        self.client.post(
+            "/app/settings/preferences",
+            data={"csrf_token": self.csrf(), "density": "enormous", "page_size": "9999"},
+            follow_redirects=True,
+        )
+
+        after = self._row()
+        self.assertEqual(after["density"], before["density"])
+        self.assertEqual(after["page_size"], before["page_size"])
+
+    def test_the_palette_posts_json(self):
+        self.login()
+        response = self.client.post(
+            "/app/settings/preferences",
+            data={"csrf_token": self.csrf(), "density": "compact"},
+            headers={"X-Requested-With": "fetch"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["density"], "compact")
+
+        self.client.post(
+            "/app/settings/preferences",
+            data={"csrf_token": self.csrf(), "density": "comfortable"},
+            headers={"X-Requested-With": "fetch"},
+        )
+
+
+class PagerWindow(unittest.TestCase):
+    """The numbered pager is pure arithmetic, so test it without a request."""
+
+    def test_small_lists_show_every_page(self):
+        from paging import page_list
+
+        self.assertEqual(page_list(1, 1), [1])
+        self.assertEqual(page_list(3, 7), [1, 2, 3, 4, 5, 6, 7])
+
+    def test_long_lists_keep_the_ends_and_the_neighbours(self):
+        from paging import page_list
+
+        self.assertEqual(page_list(1, 12), [1, 2, 3, 4, 5, None, 12])
+        self.assertEqual(page_list(6, 12), [1, None, 5, 6, 7, None, 12])
+        self.assertEqual(page_list(12, 12), [1, None, 8, 9, 10, 11, 12])
+
+    def test_offsets_never_go_negative(self):
+        from paging import offset
+
+        self.assertEqual(offset(1, 25), 0)
+        self.assertEqual(offset(4, 25), 75)
+
+
+class AttentionInbox(VakaTestCase):
+    def test_the_three_kinds_are_grouped(self):
+        self.login()
+        response = self.client.get("/app/attention")
+
+        self.assertEqual(response.status_code, 200)
+        page = response.get_data(as_text=True)
+        self.assertIn("Needs attention", page)
+        self.assertIn("Approvals due", page)
+        self.assertIn("Blocked stages", page)
+        self.assertIn("Receipts to chase", page)
+
+    def test_another_clients_blocked_stage_never_appears(self):
+        from db import execute, new_id, now_iso, query
+
+        with self.app.app_context():
+            owner = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            project_id = new_id()
+            execute(
+                """INSERT INTO projects (id, code, name, owner_id, city, status, budget_cents,
+                                         created_at, updated_at)
+                   VALUES (?, 'YVK-VAULT-A', 'Hidden Vault Build', ?, 'Harare', 'planning',
+                           100000, ?, ?)""",
+                (project_id, owner["id"], now_iso(), now_iso()),
+            )
+            execute(
+                """INSERT INTO stages (id, project_id, key, name, position, status,
+                                       budget_cents, notes, started_at)
+                   VALUES (?, ?, 'foundation', 'Secret Vault Stage', 1, 'blocked', 0,
+                           'Waiting on the owner', ?)""",
+                (new_id(), project_id, now_iso()),
+            )
+
+        self.login("manager@yavaka.co.zw")
+        page = self.client.get("/app/attention").get_data(as_text=True)
+        self.assertNotIn("Secret Vault Stage", page)
+        self.assertNotIn("Hidden Vault Build", page)
+
+
+class OfflineSnapshot(VakaTestCase):
+    def _project(self):
+        from db import query
+
+        with self.app.app_context():
+            return query("SELECT id, name FROM projects WHERE code = 'YVK-0001'", one=True)
+
+    def test_the_snapshot_is_read_only_and_token_free(self):
+        self.login()
+        project = self._project()
+
+        response = self.client.get(f"/app/projects/{project['id']}/snapshot")
+
+        self.assertEqual(response.status_code, 200)
+        page = response.get_data(as_text=True)
+        self.assertIn(project["name"], page)
+        self.assertIn("Offline copy", page)
+        # Cached on the device: nothing replayable may travel with it.
+        self.assertNotIn("csrf", page.lower())
+        self.assertNotIn("<form", page.lower())
+        self.assertNotIn("<script", page.lower())
+
+    def test_another_users_project_is_not_snapshotted(self):
+        from db import execute, new_id, now_iso, query
+
+        with self.app.app_context():
+            owner = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            project_id = new_id()
+            execute(
+                """INSERT INTO projects (id, code, name, owner_id, city, status, budget_cents,
+                                         created_at, updated_at)
+                   VALUES (?, 'YVK-SNAP-B', 'Snapshot Wall', ?, 'Harare', 'planning',
+                           1000, ?, ?)""",
+                (project_id, owner["id"], now_iso(), now_iso()),
+            )
+
+        self.login("manager@yavaka.co.zw")
+        self.assertEqual(self.client.get(f"/app/projects/{project_id}/snapshot").status_code, 404)
+
+
+class BackupDownload(VakaTestCase):
+    def test_staff_get_a_zip_with_the_database(self):
+        import io
+        import zipfile
+
+        self.login("admin@yavaka.co.zw")
+        response = self.client.get("/app/settings/backup?uploads=0")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/zip")
+        archive = zipfile.ZipFile(io.BytesIO(response.data))
+        self.assertIn("vaka.db", archive.namelist())
+        response.close()
+
+    def test_clients_cannot_download_the_platform_backup(self):
+        self.login()
+        self.assertEqual(self.client.get("/app/settings/backup").status_code, 403)
+
+
+class PaletteActions(VakaTestCase):
+    def test_the_workspace_offers_the_cheat_sheet_and_actions(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+
+        self.assertIn('id="modal-shortcuts"', page)
+        self.assertIn('data-palette-action="new-money"', page)
+        self.assertIn('data-palette-action="switch-project"', page)
+        self.assertIn("Toggle compact view", page)
+
+    def test_switch_project_lists_only_accessible_builds(self):
+        self.login()
+        response = self.client.get("/app/api/quick-find?group=projects")
+
+        self.assertEqual(response.status_code, 200)
+        groups = response.get_json()["groups"]
+        self.assertEqual(groups[0]["label"], "Switch project")
+        self.assertTrue(groups[0]["items"])
+        self.assertTrue(groups[0]["items"][0]["href"].startswith("/app/projects/"))
+
+    def test_switch_project_needs_a_session(self):
+        self.assertEqual(self.client.get("/app/api/quick-find?group=projects").status_code, 302)
+
+
+class ShellChrome(VakaTestCase):
+    """The workspace chrome: attention entry points and the theme control."""
+
+    def test_the_topbar_and_sidebar_link_to_attention(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+
+        self.assertIn('class="icon-btn topbar-alert"', page)
+        self.assertIn('href="/app/attention"', page)
+
+    def test_the_badge_appears_next_to_the_attention_nav_item(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        # Seeded demo data always has outstanding receipts, so the badge shows.
+        self.assertIn("nav-count", page)
+
+    def test_settings_offers_system_light_and_dark(self):
+        self.login()
+        page = self.client.get("/app/settings").get_data(as_text=True)
+
+        self.assertIn("data-theme-choice", page)
+        for mode in ("system", "light", "dark"):
+            self.assertIn(f'data-theme-set="{mode}"', page)
+        self.assertIn("Row density", page)
+
+    def test_the_theme_survives_a_page_render_without_javascript(self):
+        # theme.js is synchronous in <head> so the first paint is already right.
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertRegex(page, r'<script src="[^"]*theme\.js[^"]*"></script>')
+
+
+class AttentionCounts(unittest.TestCase):
+    """The badge tally must match what the attention page lists."""
+
+    def test_counts_blocked_unsigned_and_unreceipted(self):
+        from db import execute, new_id, now_iso, query
+        from queries import attention_counts
+
+        with APP.app_context():
+            owner = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            project_id = new_id()
+            execute(
+                """INSERT INTO projects (id, code, name, owner_id, city, status, budget_cents,
+                                         created_at, updated_at)
+                   VALUES (?, ?, 'Badge Count Build', ?, 'Harare', 'planning', 1000, ?, ?)""",
+                (project_id, f"YVK-B{new_id()[:5].upper()}", owner["id"], now_iso(), now_iso()),
+            )
+            execute(
+                """INSERT INTO stages (id, project_id, key, name, position, status,
+                                       budget_cents, started_at)
+                   VALUES (?, ?, 'plan_approval', 'Plan approval', 1, 'in_progress', 0, ?)""",
+                (new_id(), project_id, now_iso()),
+            )
+            execute(
+                """INSERT INTO stages (id, project_id, key, name, position, status,
+                                       budget_cents, started_at)
+                   VALUES (?, ?, 'foundation', 'Foundation', 2, 'blocked', 0, ?)""",
+                (new_id(), project_id, now_iso()),
+            )
+            execute(
+                """INSERT INTO agreements (id, project_id, title, scope, terms, client_name,
+                                           status, created_by, created_at)
+                   VALUES (?, ?, 'Unsigned build contract', 'Scope', 'Terms', 'Client',
+                           'awaiting_signature', ?, ?)""",
+                (new_id(), project_id, owner["id"], now_iso()),
+            )
+            # Both expenses are missing a receipt: the badge mirrors the list,
+            # which flags the older one as overdue further down the page.
+            for occurred in ("2026-01-05T09:00:00+00:00", now_iso()):
+                execute(
+                    """INSERT INTO transactions (id, project_id, type, amount_cents, description,
+                                                 category, method, occurred_at, created_by, created_at)
+                       VALUES (?, ?, 'EXPENSE', 5000, 'No receipt yet', 'materials',
+                               'CASH', ?, ?, ?)""",
+                    (new_id(), project_id, occurred, owner["id"], now_iso()),
+                )
+
+            counts = attention_counts([project_id])
+
+        self.assertEqual(counts["blocked"], 1)
+        self.assertEqual(counts["approvals"], 1)
+        self.assertEqual(counts["agreements"], 1)
+        self.assertEqual(counts["receipts"], 2)
+        self.assertEqual(counts["total"], 5)
+
+    def test_no_projects_means_no_work(self):
+        from queries import attention_counts
+
+        self.assertEqual(attention_counts([])["total"], 0)

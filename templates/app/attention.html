@@ -1,0 +1,99 @@
+{% extends "app/base.html" %}
+{% block title %}Attention · YaVaKa{% endblock %}
+
+{% block page_title %}Needs attention{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    Everything across {{ projects|length }} build{{ '' if projects|length == 1 else 's' }} that is waiting on a person, oldest first.
+  </p>
+{% endblock %}
+
+{% block content %}
+<div class="kpi-grid kpi-grid--3">
+  <a class="kpi card-hover" href="#attention-approvals">
+    <div class="kpi-top"><span class="kpi-label">Approvals due</span><span class="kpi-icon">{{ icon('shield', 17) }}</span></div>
+    <p class="kpi-value">{{ counts.approvals }}</p>
+    <p class="kpi-sub">Sign-offs and signatures outstanding</p>
+  </a>
+  <a class="kpi card-hover" href="#attention-blocked">
+    <div class="kpi-top"><span class="kpi-label">Blocked stages</span><span class="kpi-icon kpi-icon-warn">{{ icon('alert', 17) }}</span></div>
+    <p class="kpi-value">{{ counts.blocked }}</p>
+    <p class="kpi-sub">Stages on hold across your builds</p>
+  </a>
+  <a class="kpi card-hover" href="#attention-receipts">
+    <div class="kpi-top"><span class="kpi-label">Receipts to chase</span><span class="kpi-icon kpi-icon-warn">{{ icon('receipt', 17) }}</span></div>
+    <p class="kpi-value">{{ counts.receipts }}</p>
+    <p class="kpi-sub">{{ counts.overdue }} past the {{ grace_days }}-day grace</p>
+  </a>
+</div>
+
+{% if not projects %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('building', 26) }}</span>
+      <h3>No builds yet</h3>
+      <p>Once you have a project, everything that needs a decision lands here.</p>
+      <a class="btn btn-primary" href="{{ url_for('projects.new') }}">{{ icon('plus', 16) }} Create project</a>
+    </div>
+  </div>
+{% elif total == 0 %}
+  <div class="card">
+    <div class="all-clear">
+      <span>{{ icon('check', 18) }}</span>
+      <p>Nothing is waiting on you. No blocked stages, no missing receipts and no unsigned agreement.</p>
+    </div>
+  </div>
+{% else %}
+  <div class="split-grid">
+    <div>
+      {% for section in sections %}
+        <div class="card" id="attention-{{ section.key }}">
+          <div class="card-head">
+            <div>
+              <h2>{{ section.title }}</h2>
+              <p class="card-sub">{{ section.sub }}</p>
+            </div>
+            <span class="count-pill">{{ section.rows|length }}</span>
+          </div>
+
+          {% if section.rows %}
+            <ul class="alert-list alert-list--rows">
+              {% for item in section.rows %}
+                <li class="alert-item alert-{{ item.tone }}">
+                  <span class="alert-icon">{{ icon(item.icon, 16) }}</span>
+                  <div>
+                    <p class="alert-title">{{ item.title }}</p>
+                    <p class="alert-body">
+                      {% if item.project %}{{ item.project }} · {% endif %}{{ item.body }}
+                      <span class="alert-age">· {{ item.age_label }}</span>
+                    </p>
+                  </div>
+                  <a class="alert-link" href="{{ item.href }}" aria-label="Open">{{ icon('chevron-right', 16) }}</a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted small">{{ section.empty }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <aside class="detail-side">
+      <div class="card">
+        <div class="card-head"><h2>How this list works</h2></div>
+        <ul class="check-list compact">
+          <li>{{ icon('shield', 16) }}<span>Approvals appear once a stage that needs an authority is in progress, or an agreement is still unsigned.</span></li>
+          <li>{{ icon('alert', 16) }}<span>Blocked stages show the reason the manager recorded, so you can ask a specific question.</span></li>
+          <li>{{ icon('receipt', 16) }}<span>Receipts are chased after {{ grace_days }} days. Attaching proof clears the item straight away.</span></li>
+        </ul>
+      </div>
+
+      <div class="side-note">
+        {{ icon('clock', 16) }}
+        <p>Oldest first. The item that has waited longest is the one most likely to be forgotten.</p>
+      </div>
+    </aside>
+  </div>
+{% endif %}
+{% endblock %}

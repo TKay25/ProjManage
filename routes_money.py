@@ -11,7 +11,7 @@ from auth import accessible_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query, touch_project
 from money import format_money, parse_money_to_cents
 from notifications import queue_manager_update
-from paging import offset, page_number, page_window
+from paging import offset, page_number, page_size, page_window
 from queries import category_breakdown, missing_receipts, money_totals, stage_rows, stage_spend
 from stages import TRANSACTION_CATEGORIES, category_label, method_label, stage_name
 from storage import UploadError, delete_upload, save_upload
@@ -21,8 +21,6 @@ bp = Blueprint("money", __name__)
 
 VALID_CATEGORIES = {value for value, _label in TRANSACTION_CATEGORIES}
 VALID_METHODS = {"BANK_TRANSFER", "CARD", "ECOCASH", "INN_BUCKS", "CASH", "OTHER"}
-
-PAGE_SIZE = 25
 
 CSV_COLUMNS = [
     "Date",
@@ -78,7 +76,7 @@ def _ledger_filters(project):
 
 def _ledger_count(where, params) -> int:
     row = query(
-        f"""SELECT COUNT(*) AS total
+        f"""SELECT COUNT(DISTINCT t.id) AS total
             FROM transactions t
             LEFT JOIN attachments a ON a.transaction_id = t.id
             WHERE {' AND '.join(where)}""",
@@ -117,7 +115,10 @@ def export():
     rows = query(
         f"""SELECT t.*, a.id AS receipt_id
             FROM transactions t
-            LEFT JOIN attachments a ON a.transaction_id = t.id
+            LEFT JOIN attachments a ON a.id = (
+                SELECT id FROM attachments WHERE transaction_id = t.id
+                ORDER BY created_at LIMIT 1
+            )
             WHERE {' AND '.join(where)}
             ORDER BY t.occurred_at ASC, t.created_at ASC""",
         params,
@@ -185,16 +186,20 @@ def index():
 
     where, params, filter_type, search, stage_filter = _ledger_filters(project)
     total_rows = _ledger_count(where, params)
-    page, page_count = page_window(page_number(), total_rows, PAGE_SIZE)
+    size = page_size()
+    page, page_count = page_window(page_number(), total_rows, size)
 
     transactions = query(
         f"""SELECT t.*, a.id AS receipt_id, a.filename AS receipt_file
             FROM transactions t
-            LEFT JOIN attachments a ON a.transaction_id = t.id
+            LEFT JOIN attachments a ON a.id = (
+                SELECT id FROM attachments WHERE transaction_id = t.id
+                ORDER BY created_at LIMIT 1
+            )
             WHERE {' AND '.join(where)}
             ORDER BY t.occurred_at DESC, t.created_at DESC
             LIMIT ? OFFSET ?""",
-        [*params, PAGE_SIZE, offset(page, PAGE_SIZE)],
+        [*params, size, offset(page, size)],
     )
 
     totals = money_totals(project["id"])

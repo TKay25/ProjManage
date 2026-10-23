@@ -7,6 +7,7 @@ from flask import Blueprint, abort, current_app, flash, g, redirect, render_temp
 from auth import accessible_projects, can_manage_project, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query
 from notifications import queue_manager_update
+from paging import offset, page_number, page_size, page_window
 from stages import STAGE_GROUPS, stage_by_key
 from storage import UploadError, delete_upload, save_upload
 import web
@@ -48,7 +49,23 @@ def index():
         params.append(stage_key)
 
     attachments = []
+    total_rows = 0
+    total_size = 0
+    page, page_count = 1, 1
     if where:
+        clause = " AND ".join(where)
+        totals = query(
+            f"""SELECT COUNT(*) AS total, COALESCE(SUM(a.size), 0) AS bytes
+                FROM attachments a WHERE {clause}""",
+            params,
+            one=True,
+        )
+        total_rows = int(totals["total"] or 0)
+        total_size = int(totals["bytes"] or 0)
+
+        size = page_size()
+        page, page_count = page_window(page_number(), total_rows, size)
+
         attachments = query(
             f"""SELECT a.*, u.name AS uploader_name, p.name AS project_name,
                        t.description AS transaction_description, s.name AS stage_name
@@ -57,13 +74,11 @@ def index():
                 LEFT JOIN projects p ON p.id = a.project_id
                 LEFT JOIN transactions t ON t.id = a.transaction_id
                 LEFT JOIN stages s ON s.project_id = a.project_id AND s.key = a.stage_key
-                WHERE {' AND '.join(where)}
+                WHERE {clause}
                 ORDER BY a.created_at DESC
-                LIMIT 200""",
-            params,
+                LIMIT ? OFFSET ?""",
+            [*params, size, offset(page, size)],
         )
-
-    total_size = sum(item["size"] or 0 for item in attachments)
 
     stage_groups = []
     if project:
@@ -86,6 +101,11 @@ def index():
         stage_key=stage_key,
         stage_groups=stage_groups,
         total_size=total_size,
+        total_rows=total_rows,
+        page=page,
+        page_count=page_count,
+        pager_endpoint="documents.index",
+        pager_args={"project": project["id"] if project else "", "kind": kind, "stage": stage_key},
     )
 
 

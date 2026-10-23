@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from db import query
-from stages import project_progress
+from stages import project_progress, stage_by_key
 
 
 def money_totals(project_id: str) -> dict:
@@ -88,7 +88,10 @@ def recent_transactions(project_id: str, limit: int = 6):
     return query(
         """SELECT t.*, a.id AS receipt_id
            FROM transactions t
-           LEFT JOIN attachments a ON a.transaction_id = t.id
+           LEFT JOIN attachments a ON a.id = (
+               SELECT id FROM attachments WHERE transaction_id = t.id
+               ORDER BY created_at LIMIT 1
+           )
            WHERE t.project_id = ?
            ORDER BY t.occurred_at DESC, t.created_at DESC
            LIMIT ?""",
@@ -176,6 +179,50 @@ def next_stage(stages):
         if stage["status"] != "complete":
             return stage
     return None
+
+
+def attention_counts(project_ids) -> dict:
+    """The shell badge: the same work /app/attention lists, as counts.
+
+    Runs on every rendered workspace page, so it is one aggregate query plus a
+    single lookup of in-progress stages — never a loop over projects.
+    """
+    ids = list(project_ids)
+    counts = {"blocked": 0, "approvals": 0, "receipts": 0, "agreements": 0, "total": 0}
+    if not ids:
+        return counts
+
+    placeholders = ",".join("?" for _ in ids)
+    row = query(
+        f"""SELECT
+              (SELECT COUNT(*) FROM stages
+                WHERE project_id IN ({placeholders}) AND status = 'blocked') AS blocked,
+              (SELECT COUNT(*) FROM agreements
+                WHERE project_id IN ({placeholders}) AND status = 'awaiting_signature') AS agreements,
+              (SELECT COUNT(*) FROM transactions t
+                WHERE t.project_id IN ({placeholders}) AND t.type = 'EXPENSE'
+                  AND NOT EXISTS (SELECT 1 FROM attachments a WHERE a.transaction_id = t.id)
+              ) AS receipts""",
+        [*ids, *ids, *ids],
+        one=True,
+    )
+
+    live = query(
+        f"""SELECT key FROM stages
+            WHERE project_id IN ({placeholders}) AND status = 'in_progress'""",
+        ids,
+    )
+
+    counts["blocked"] = int(row["blocked"] or 0)
+    counts["agreements"] = int(row["agreements"] or 0)
+    counts["receipts"] = int(row["receipts"] or 0)
+    counts["approvals"] = sum(
+        1 for stage in live if (stage_by_key(stage["key"]) or {}).get("requires_authority")
+    )
+    counts["total"] = (
+        counts["blocked"] + counts["approvals"] + counts["receipts"] + counts["agreements"]
+    )
+    return counts
 
 
 def platform_totals() -> dict:

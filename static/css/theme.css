@@ -290,9 +290,16 @@
 /* ---------- Theme toggle ---------- */
 
 .theme-toggle .theme-icon-dark { display: none; }
+.theme-toggle .theme-icon-system { display: none; }
 
 [data-theme="dark"] .theme-toggle .theme-icon-light { display: none; }
 [data-theme="dark"] .theme-toggle .theme-icon-dark { display: inline-flex; }
+
+/* "Follow device" shows neither sun nor moon: it has not picked a side yet. */
+[data-theme-mode="system"] .theme-toggle .theme-icon-light,
+[data-theme-mode="system"] .theme-toggle .theme-icon-dark { display: none; }
+
+[data-theme-mode="system"] .theme-toggle .theme-icon-system { display: inline-flex; }
 
 [data-theme="dark"] .theme-toggle {
   color: var(--brass-300);
@@ -540,5 +547,39 @@ dialog.modal--auth-register {
 
   .modal-auth-aside .auth-brand small {
     font-size: 0.56rem;
+  }
+}
+
+/* ============================================================
+   High-contrast preference
+   Loaded after the workspace stylesheet so border widths win.
+   ============================================================ */
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: rgba(15, 93, 70, 0.34);
+    --line-strong: rgba(15, 93, 70, 0.56);
+    --ink-soft: #39473f;
+    --ink-faint: #56655d;
+  }
+
+  [data-theme="dark"] {
+    --line: rgba(190, 225, 210, 0.34);
+    --line-strong: rgba(190, 225, 210, 0.56);
+    --ink-soft: #cfdcd7;
+    --ink-faint: #a9bab3;
+  }
+
+  :focus-visible {
+    outline-width: 3px;
+  }
+
+  .card,
+  .kpi,
+  .doc-card,
+  .project-card,
+  .alert-item,
+  .side-note {
+    border-width: 2px;
   }
 }

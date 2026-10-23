@@ -10,7 +10,7 @@
   const DEBOUNCE = 160;
   const MIN_CHARS = 2;
 
-  let pagesHtml = "";
+  let defaultHtml = "";
   let timer = null;
   let controller = null;
   let activeIndex = -1;
@@ -55,13 +55,10 @@
   const renderPages = () => {
     const root = $results();
     if (!root) return;
-    if (!pagesHtml) {
-      pagesHtml = Array.from(root.children)
-        .filter((node) => !node.classList.contains("palette-group-label"))
-        .map((node) => node.outerHTML)
-        .join("");
-    }
-    root.innerHTML = '<p class="palette-group-label">Go to</p>' + pagesHtml;
+    // The first render carries both the Actions and Go to groups; keep the
+    // whole thing so clearing the search restores the same list.
+    if (!defaultHtml) defaultHtml = root.innerHTML;
+    root.innerHTML = defaultHtml;
     setActive(0);
   };
 
@@ -95,6 +92,84 @@
       )
       .join("");
     setActive(0);
+  };
+
+  const csrfToken = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+
+  const openDialog = (id) => {
+    const trigger = document.querySelector(`[data-modal-open="${id}"]`);
+    if (trigger) {
+      trigger.click();
+      return true;
+    }
+    const dialog = document.getElementById(id);
+    if (!dialog) return false;
+    if (!dialog.open) dialog.showModal();
+    document.body.classList.add("modal-open");
+    return true;
+  };
+
+  const toggleDensity = async () => {
+    const root = document.documentElement;
+    const next = root.dataset.density === "compact" ? "comfortable" : "compact";
+    root.dataset.density = next;
+    close();
+    try {
+      await fetch("/app/settings/preferences", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-CSRF-Token": csrfToken(),
+          "X-Requested-With": "fetch",
+        },
+        body: new URLSearchParams({ density: next }).toString(),
+      });
+    } catch (error) {
+      /* Offline: the attribute still applies until the next page load. */
+    }
+  };
+
+  const loadProjects = async () => {
+    setNote("Loading projects…");
+    try {
+      const response = await fetch("/app/api/quick-find?group=projects", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      renderGroups(payload.groups || []);
+      setNote("Pick a build");
+    } catch (error) {
+      setNote("Projects unavailable — open the Projects page instead.");
+    }
+  };
+
+  const runAction = (name) => {
+    if (name === "new-money") {
+      close();
+      if (!openDialog("modal-money")) window.location.assign("/app/money#modal-money");
+      return;
+    }
+    if (name === "new-document") {
+      close();
+      if (!openDialog("modal-document")) window.location.assign("/app/documents#modal-document");
+      return;
+    }
+    if (name === "switch-project") {
+      loadProjects();
+      return;
+    }
+    if (name === "toggle-density") {
+      toggleDensity();
+      return;
+    }
+    if (name === "shortcuts") {
+      close();
+      openDialog("modal-shortcuts");
+    }
   };
 
   const search = async (term) => {
@@ -167,6 +242,13 @@
       return;
     }
 
+    const action = event.target.closest("[data-palette-action]");
+    if (action) {
+      event.preventDefault();
+      runAction(action.dataset.paletteAction);
+      return;
+    }
+
     const item = event.target.closest(".palette-item");
     if (!item?.getAttribute("href")) return;
 
@@ -200,6 +282,9 @@
       if ((modifier && event.key.toLowerCase() === "k") || (event.key === "/" && !typing)) {
         event.preventDefault();
         open();
+      } else if (event.key === "?" && !typing && !modifier) {
+        event.preventDefault();
+        openDialog("modal-shortcuts");
       }
       return;
     }
@@ -218,7 +303,10 @@
       setActive(items().length - 1);
     } else if (event.key === "Enter") {
       const target = items()[activeIndex];
-      if (target?.getAttribute("href")) {
+      if (target?.dataset.paletteAction) {
+        event.preventDefault();
+        runAction(target.dataset.paletteAction);
+      } else if (target?.getAttribute("href")) {
         event.preventDefault();
         go(target.getAttribute("href"));
       }
@@ -230,7 +318,7 @@
 
   // A fresh document means fresh markup; drop the cached page list.
   document.addEventListener("vaka:pagechange", () => {
-    pagesHtml = "";
+    defaultHtml = "";
     activeIndex = -1;
     close();
   });

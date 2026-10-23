@@ -30,8 +30,28 @@ def quick_find():
     already open, and never more than a handful of rows per group.
     """
     term = (request.args.get("q") or "").strip()
+    scope = (request.args.get("group") or "").strip()
     projects = accessible_projects(g.user)
     groups = []
+
+    # "Switch project" in the palette: every build the caller can open, before
+    # they have typed anything.
+    if scope == "projects":
+        lowered = term.lower()
+        items = [
+            {
+                "title": project["name"],
+                "meta": f"{project['code']} · {project['city'] or 'Zimbabwe'}",
+                "href": f"/app/projects/{project['id']}",
+            }
+            for project in projects
+            if not lowered
+            or lowered in project["name"].lower()
+            or lowered in (project["code"] or "").lower()
+        ][:20]
+        return jsonify(
+            {"ok": True, "term": term, "groups": [{"label": "Switch project", "items": items}] if items else []}
+        )
 
     if term:
         like = f"%{term}%"

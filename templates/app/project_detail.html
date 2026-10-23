@@ -12,6 +12,9 @@
 {% block page_actions %}
   <a class="btn btn-ghost btn-sm" href="{{ url_for('projects.detail', project_id=project.id) }}"
      data-modal-open="modal-project-edit">{{ icon('settings', 15) }} Edit</a>
+  <button class="btn btn-ghost btn-sm" type="button" data-snapshot-save aria-pressed="false">
+    {{ icon('download', 15) }}<span data-snapshot-label>Save offline copy</span>
+  </button>
   <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}"
      data-modal-open="modal-money">{{ icon('wallet', 15) }} Record money</a>
   <a class="btn btn-primary btn-sm" href="{{ url_for('agreements.new', project=project.id) }}"

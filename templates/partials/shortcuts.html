@@ -1,0 +1,41 @@
+{# Keyboard reference. Every entry here is a shortcut that actually works. #}
+<dialog class="modal modal--shortcuts" id="modal-shortcuts" aria-labelledby="shortcuts-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Keyboard</p>
+        <h2 id="shortcuts-title">Shortcuts</h2>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+    <div class="modal-body">
+      <dl class="shortcut-list">
+        <div>
+          <dt><kbd>Ctrl</kbd><kbd>K</kbd><span class="shortcut-or">or</span><kbd>⌘</kbd><kbd>K</kbd></dt>
+          <dd>Jump to a page, project, payment or file</dd>
+        </div>
+        <div>
+          <dt><kbd>/</kbd></dt>
+          <dd>Open the same palette without leaving the home row</dd>
+        </div>
+        <div>
+          <dt><kbd>?</kbd></dt>
+          <dd>This list</dd>
+        </div>
+        <div>
+          <dt><kbd>↑</kbd><kbd>↓</kbd></dt>
+          <dd>Move through the palette results</dd>
+        </div>
+        <div>
+          <dt><kbd>↵</kbd></dt>
+          <dd>Open the highlighted result</dd>
+        </div>
+        <div>
+          <dt><kbd>Esc</kbd></dt>
+          <dd>Close a dialog, the palette or the mobile menu</dd>
+        </div>
+      </dl>
+      <p class="micro-note">Shortcuts work anywhere in the workspace. Typing in a field always wins.</p>
+    </div>
+  </div>
+</dialog>

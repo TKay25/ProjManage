@@ -57,6 +57,43 @@
     root.querySelectorAll('input[type="password"]').forEach(enhancePasswordField);
   }
 
+  /* ---------- Theme ---------- */
+
+  // Three modes: system, light, dark. The topbar button cycles through them in
+  // the order that makes one click always do something visible.
+  const themeMode = () => (window.vakaTheme ? window.vakaTheme.get() : "system");
+  const themeEffective = () =>
+    window.vakaTheme
+      ? window.vakaTheme.effective()
+      : document.documentElement.getAttribute("data-theme") === "dark"
+        ? "dark"
+        : "light";
+
+  const nextTheme = () => {
+    const mode = themeMode();
+    if (mode === "system") return themeEffective() === "dark" ? "light" : "dark";
+    return mode === "light" ? "dark" : "system";
+  };
+
+  function paintTheme() {
+    const mode = themeMode();
+    const next = nextTheme();
+    const labels = {
+      system: `Theme: follows your device. Switch to ${next}`,
+      light: "Theme: light. Switch to dark",
+      dark: "Theme: dark. Switch to follow your device",
+    };
+    $$("[data-theme-toggle]").forEach((button) => {
+      button.setAttribute("aria-label", labels[mode]);
+      button.title = labels[mode];
+    });
+    $$("[data-theme-set]").forEach((button) => {
+      const on = button.dataset.themeSet === mode;
+      button.classList.toggle("is-active", on);
+      button.setAttribute("aria-checked", on ? "true" : "false");
+    });
+  }
+
   /* ---------- Shell: drawer + tab bar ---------- */
 
   function initPage() {
@@ -284,21 +321,23 @@
 
     enhancePasswords();
 
-    /* ---------- Theme toggle ---------- */
+    /* ---------- Theme controls ---------- */
 
     $$("[data-theme-toggle]").forEach((button) => {
       button.addEventListener("click", () => {
-        const root = document.documentElement;
-        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
-        if (next === "dark") root.setAttribute("data-theme", "dark");
-        else root.removeAttribute("data-theme");
-        try {
-          localStorage.setItem("yavaka-theme", next);
-        } catch (error) {
-          /* private mode: the choice lasts for this page only */
-        }
+        if (window.vakaTheme) window.vakaTheme.set(nextTheme());
+        paintTheme();
       });
     });
+
+    $$("[data-theme-set]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (window.vakaTheme) window.vakaTheme.set(button.dataset.themeSet);
+        paintTheme();
+      });
+    });
+
+    paintTheme();
 
     /* ---------- Stage picker ---------- */
 
@@ -376,6 +415,15 @@
       });
     });
 
+    /* ---------- Deep links that open a dialog ---------- */
+
+    // /app/money#modal-money and friends: the palette and any shared link can
+    // land on a page with the dialog already open.
+    const hashId = decodeURIComponent(window.location.hash.slice(1));
+    if (hashId) {
+      document.querySelector(`[data-modal-open="${hashId}"]`)?.click();
+    }
+
   }
 
   // Gentle scroll reveal on the public site. The class is only added when
@@ -412,6 +460,7 @@
   initReveal();
   syncStuckHeader();
   document.addEventListener("vaka:pagechange", initPage);
+  document.addEventListener("vaka:themechange", paintTheme);
   document.addEventListener("vaka:fragment", (event) =>
     enhancePasswords((event.detail && event.detail.root) || document),
   );

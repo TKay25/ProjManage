@@ -9,6 +9,21 @@
       <span class="btn btn-ghost btn-sm is-disabled" aria-disabled="true">{{ icon('arrow-left', 14) }} Previous</span>
     {% endif %}
 
+    <ol class="pager-pages">
+      {% for number in page_list(page, page_count) %}
+        {% if number is none %}
+          <li class="pager-gap" aria-hidden="true">…</li>
+        {% elif number == page %}
+          <li><span class="pager-page is-active" aria-current="page">{{ number }}</span></li>
+        {% else %}
+          <li>
+            <a class="pager-page" href="{{ url_for(pager_endpoint, **dict(pager_args, page=number)) }}"
+               aria-label="Page {{ number }}">{{ number }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ol>
+
     <p class="pager-status">Page {{ page }} of {{ page_count }}</p>
 
     {% if page < page_count %}

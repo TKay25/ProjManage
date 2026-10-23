@@ -222,7 +222,10 @@
       <div class="card">
         <div class="card-head">
           <h2>Needs your attention</h2>
-          <span class="count-pill">{{ alerts|length }}</span>
+          <div class="row-buttons">
+            <a class="link-quiet" href="{{ url_for('attention.index') }}">All builds</a>
+            <span class="count-pill">{{ alerts|length }}</span>
+          </div>
         </div>
         {% if alerts %}
           <ul class="alert-list">

@@ -13,6 +13,48 @@
     </header>
 
     <div class="palette-results" id="palette-results" role="listbox" aria-label="Results">
+      <p class="palette-group-label">Actions</p>
+      <button class="palette-item" type="button" role="option" aria-selected="false" data-palette-action="new-money">
+        <span class="palette-icon">{{ icon('wallet', 17) }}</span>
+        <span class="palette-text">
+          <span class="palette-title">Record money</span>
+          <span class="palette-meta">Deposit or expense</span>
+        </span>
+        <span class="palette-enter">{{ icon('arrow-right', 15) }}</span>
+      </button>
+      <button class="palette-item" type="button" role="option" aria-selected="false" data-palette-action="new-document">
+        <span class="palette-icon">{{ icon('upload', 17) }}</span>
+        <span class="palette-text">
+          <span class="palette-title">Upload a document</span>
+          <span class="palette-meta">Receipt, approval or photo</span>
+        </span>
+        <span class="palette-enter">{{ icon('arrow-right', 15) }}</span>
+      </button>
+      <button class="palette-item" type="button" role="option" aria-selected="false" data-palette-action="switch-project">
+        <span class="palette-icon">{{ icon('building', 17) }}</span>
+        <span class="palette-text">
+          <span class="palette-title">Switch project</span>
+          <span class="palette-meta">Jump to another build</span>
+        </span>
+        <span class="palette-enter">{{ icon('arrow-right', 15) }}</span>
+      </button>
+      <button class="palette-item" type="button" role="option" aria-selected="false" data-palette-action="toggle-density">
+        <span class="palette-icon">{{ icon('layout', 17) }}</span>
+        <span class="palette-text">
+          <span class="palette-title">Toggle compact view</span>
+          <span class="palette-meta" data-palette-density-label>{{ 'Comfortable' if user.density != 'compact' else 'Compact' }} rows</span>
+        </span>
+        <span class="palette-enter">{{ icon('arrow-right', 15) }}</span>
+      </button>
+      <button class="palette-item" type="button" role="option" aria-selected="false" data-palette-action="shortcuts">
+        <span class="palette-icon">{{ icon('command', 17) }}</span>
+        <span class="palette-text">
+          <span class="palette-title">Keyboard shortcuts</span>
+          <span class="palette-meta">What every key does</span>
+        </span>
+        <span class="palette-enter">{{ icon('arrow-right', 15) }}</span>
+      </button>
+
       <p class="palette-group-label">Go to</p>
       {% for item in nav_items %}
         <a class="palette-item" role="option" aria-selected="false" href="{{ item.href }}"

@@ -28,7 +28,8 @@ def load_user():
     user_id = session.get("uid")
     g.user = (
         query(
-            """SELECT id, name, email, role, phone, country, avatar_color, created_at
+            """SELECT id, name, email, role, phone, country, avatar_color,
+                      density, page_size, created_at
                FROM users WHERE id = ?""",
             (user_id,),
             one=True,

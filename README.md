@@ -37,19 +37,24 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Agreements | Scope, terms, milestone payment schedule, on-screen signature capture, print/PDF view, void |
 | Suppliers | Directory of Zimbabwean material suppliers with links out to their own catalogues |
 | WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), stored conversation history, in-app simulator |
-| PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons |
+| PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons; a project can be saved as an explicit read-only offline copy that survives a signal drop |
 | Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, attention feed (blocked stages, missing receipts, overdraw), project log |
+| **Attention inbox** | `/app/attention` — one cross-project list of approvals due (regulatory gates and unsigned agreements), blocked stages and missing receipts, oldest first; the sidebar and topbar carry a live count of the same items |
 | Interaction | Action flows run in dialogs (new project, money, agreement, upload, stage update) with an AJAX form enhancer; sidebar navigation swaps the page in place under a branded overlay loader; public sections fade in on scroll, respecting reduced-motion |
 | Record reader | Clicking an agreement opens it in a wide dialog over the list, with signing inside the dialog; a direct link still renders the full page for printing and sharing |
 | Sign-up | The header "Get started", the landing CTAs and the login link open a registration dialog; `/register` still works standalone for direct links and no-JavaScript browsers |
 | Stage planning | A new project starts with the 19-stage Zimbabwe sequence pre-selected; untick stages the build does not need and the budget re-splits across what is left |
 | Search | `Ctrl/⌘ K` (or `/`) opens a command palette that jumps to any section and live-searches projects, ledger entries, documents and agreements, limited to builds the user can already open; the full search page remains for deeper results |
-| Themes | Light by default; the workspace follows the OS setting and the toggle in the topbar overrides it, applied before first paint so there is no flash |
+| Shortcuts | `?` opens a cheat-sheet of every key that works (palette, arrows, `↵`, `Esc`); the palette also carries quick actions — record money, upload a document, switch project, toggle compact view |
+| Display | Row density (comfortable/compact) and rows per page are saved on the account, so the choice follows the person between devices; density applies to card and row spacing on desktop and phone |
+| Themes | `System` (follows the device), `Light` and `Dark`; the topbar button cycles them, Settings picks one directly, and the choice is applied before first paint so there is no flash |
 | Weekly digest | `POST /api/whatsapp/digest` with `X-Digest-Token` sends each client a progress-and-balance summary per active project |
 | Manager updates | Assigned-manager stage changes, document uploads and ledger entries queue prompt progress/balance updates over each configured email and WhatsApp channel |
 | Statements | `GET /app/money/export` streams a CSV of the ledger with a running balance, filtered to whatever the user is viewing; spreadsheet-formula cells are neutralised |
-| Search & paging | Server-side search and paging on the ledger, projects and staff activity, with page numbers clamped so a stale link never shows a blank screen |
-| Accessibility | Skip link, `aria-current` on navigation, labelled search and filter controls, scoped table headers, focus trapping and focus restore in dialogs |
+| Search & paging | Server-side search and paging on the ledger, document vault, projects and staff activity, with numbered pages, a clamped page window and a per-user page size; off-screen rows skip layout work |
+| Backups | `GET /app/settings/backup` (staff only) streams a zip of a consistent SQLite snapshot plus the uploads folder, from the browser or the desktop menu |
+| Desktop app | `desktop/` wraps the same Flask app in an Electron window with a native menu, a local-only server, per-user data folder and optional auto-update |
+| Accessibility | Skip link, `aria-current` on navigation plus a non-colour active marker in the mobile tab bar, labelled search and filter controls, scoped table headers, focus trapping and focus restore in dialogs, `prefers-contrast` and reduced-motion support |
 
 ---
 
@@ -100,6 +105,25 @@ YaVaKa staff sign in and use **/admin** (`admin` role only):
 
 Clients and managers get `403` on every `/admin` route.
 
+### Desktop app
+
+`desktop/` is an Electron shell around the same Flask app: it starts the server
+on a free loopback port and opens it in a native window with a menu (reload,
+open data folder, back up database, check for updates).
+
+```powershell
+cd desktop
+npm install
+npm start          # development: uses .venv and instance/vaka.db
+npm run dist       # NSIS installer + portable .exe in desktop/dist
+```
+
+A packaged build keeps its database, uploads and session key under `%APPDATA%\YaVaKa`.
+Ship a self-contained server by dropping a PyInstaller build in
+`desktop/resources/server/` (see [desktop/README.md](desktop/README.md)); until
+then the shell expects Python on the machine. Auto-update stays dormant until
+`YAVAKA_UPDATE_URL` points at a published generic feed.
+
 ### Tests
 
 ```powershell
@@ -116,6 +140,7 @@ config.py               Configuration and secrets handling
 db.py                   SQLite connection, schema, query helpers
 auth.py                 Sessions, password hashing, CSRF, access control
 money.py                Money/date formatting (integer cents everywhere)
+paging.py               Shared page numbers, clamping and per-user page size
 stages.py               The 19-stage Zimbabwe build sequence and budgets
 suppliers.py            Seed supplier directory
 queries.py              Read models (totals, cash flow, missing receipts)
@@ -127,14 +152,15 @@ ui.py                   Icon set and small render helpers
 routes_auth.py          Register / login / logout
 routes_public.py        Landing, public suppliers, PWA assets, health
 routes_dashboard.py     Signed-in dashboard
-routes_projects.py      Projects, stage tracking, budget, manager assignment
+routes_attention.py     Cross-project approvals, blocked stages and missing receipts
+routes_projects.py      Projects, stage tracking, budget, manager assignment, offline snapshot
 routes_money.py         Funding, expenses, receipts
 routes_documents.py     Document vault and file serving
 routes_agreements.py    Agreements, signing, print view
 routes_suppliers.py     In-app supplier directory
 routes_whatsapp.py      WhatsApp inbox, simulator, webhook
 routes_notifications.py Protected notification outbox dispatcher
-routes_settings.py      Profile and password
+routes_settings.py      Profile, password, display preferences, backups
 
 templates/              Jinja templates
   base.html             Public shell
@@ -149,10 +175,13 @@ static/css/portal.css   Workspace, tables, charts, chat, print
 static/js/app.js        Progressive enhancement (drawer, money form, uploads, install)
 static/js/signature.js  Signature pad
 static/js/whatsapp.js   Simulator chat
-static/sw.js            Service worker
+static/js/palette.js    Command palette, quick actions, `?` cheat sheet
+static/js/offline.js    Opt-in offline snapshot cache and wipe rules
+static/sw.js            Service worker (app shell + saved snapshots)
 static/icons/           PWA icons
 static/img/seed/        Demo receipt images
 tests/test_app.py       Smoke and behaviour tests
+desktop/                Electron shell, build config and packaging notes
 ```
 
 ---

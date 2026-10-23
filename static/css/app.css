@@ -69,30 +69,44 @@
   display: none !important;
 }
 
-/* Scrollbars: forest-green thumb in a brass track, on every surface. */
+/* Scrollbars: a quiet thumb that gains weight on hover, so long ledgers and
+   the workspace shell do not grow a bright green stripe. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--forest-500) var(--brass-100);
+  scrollbar-color: rgba(15, 93, 70, 0.26) transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
 }
 
 *::-webkit-scrollbar-track,
 *::-webkit-scrollbar-corner {
-  background: var(--brass-100);
+  background: transparent;
 }
 
 *::-webkit-scrollbar-thumb {
-  border: 2px solid var(--brass-100);
+  border: 3px solid transparent;
+  background-clip: padding-box;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--forest-500), var(--forest-700));
+  background-color: rgba(15, 93, 70, 0.26);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--forest-400), var(--forest-600));
+  background-color: rgba(15, 93, 70, 0.42);
+}
+
+[data-theme="dark"] {
+  scrollbar-color: rgba(190, 225, 210, 0.26) transparent;
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb {
+  background-color: rgba(190, 225, 210, 0.24);
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(190, 225, 210, 0.4);
 }
 
 html {
@@ -2870,5 +2884,28 @@ h3 {
     left: 12px;
     right: 12px;
     max-width: none;
+  }
+}
+
+/* ============================================================
+   Motion preferences
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover,
+  .card-hover:hover,
+  .doc-card:hover,
+  .project-card:hover {
+    transform: none;
+  }
+
+  .btn,
+  .card-hover,
+  .doc-card,
+  .project-card,
+  .ledger-row,
+  .nav-link,
+  .side-project {
+    transition: none;
   }
 }

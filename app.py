@@ -27,6 +27,8 @@ from money import (
     relative_time,
     to_date_input,
 )
+from paging import page_list
+from queries import attention_counts
 from stages import (
     PAYMENT_METHODS,
     PROJECT_STATUS_LABELS,
@@ -44,6 +46,7 @@ from workspaces import workspaces_for
 
 NAV_ITEMS = [
     {"key": "dashboard", "href": "/app", "label": "Dashboard", "icon": "dashboard"},
+    {"key": "attention", "href": "/app/attention", "label": "Attention", "icon": "bell"},
     {"key": "projects", "href": "/app/projects", "label": "Projects", "icon": "building"},
     {"key": "money", "href": "/app/money", "label": "Money", "icon": "wallet"},
     {"key": "documents", "href": "/app/documents", "label": "Documents", "icon": "folder"},
@@ -70,6 +73,7 @@ def create_app(config_object=Config):
 
     from routes_agreements import DEFAULT_TERMS, bp as agreements_bp
     from routes_admin import bp as admin_bp
+    from routes_attention import bp as attention_bp
     from routes_auth import bp as auth_bp
     from routes_dashboard import bp as dashboard_bp
     from routes_digest import bp as digest_bp
@@ -87,6 +91,7 @@ def create_app(config_object=Config):
         public_bp,
         auth_bp,
         dashboard_bp,
+        attention_bp,
         projects_bp,
         money_bp,
         notifications_bp,
@@ -125,6 +130,7 @@ def create_app(config_object=Config):
         nav_items=NAV_ITEMS,
         tab_items=[item for item in NAV_ITEMS if item["key"] in {"dashboard", "projects", "money", "documents"}],
         asset_url=asset_url,
+        page_list=page_list,
         app_name=app.config["APP_NAME"],
         app_tagline=app.config["APP_TAGLINE"],
         current_year=datetime.now().year,
@@ -169,11 +175,18 @@ def create_app(config_object=Config):
 
     @app.context_processor
     def inject_globals():
+        user = getattr(g, "user", None)
+        attention = (
+            attention_counts([project["id"] for project in auth.accessible_projects(user)])
+            if user
+            else {"total": 0, "blocked": 0, "approvals": 0, "receipts": 0, "agreements": 0}
+        )
         return {
-            "user": getattr(g, "user", None),
+            "user": user,
             "current_path": request.path,
             "demo_mode": app.config.get("DEMO_MODE", False),
-            "sidebar_workspaces": workspaces_for(getattr(g, "user", None)),
+            "sidebar_workspaces": workspaces_for(user),
+            "attention": attention,
         }
 
     # ------------------------------------------------------------------
@@ -259,6 +272,8 @@ app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "3000"))
+    # The desktop shell pins this to loopback; deployments use a WSGI server.
+    host = os.environ.get("HOST", "0.0.0.0")
     debug = os.environ.get("FLASK_DEBUG", "0") == "1"
     print(f"\n  YaVaKa running at http://localhost:{port}\n")
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(host=host, port=port, debug=debug)
