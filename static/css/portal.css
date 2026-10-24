@@ -3444,6 +3444,7 @@ button.card-trigger {
   overflow-x: auto;
   margin: 0 -20px -20px;
   padding: 0 20px 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-table {
@@ -5152,4 +5153,271 @@ body.is-skeleton .shell-main {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+
+/* ============================================================
+   Mobile & touch
+   Behaviour that only matters on a real phone or tablet:
+   finger-sized targets, no iOS focus zoom, and a table that
+   stops being a sideways scroll.
+   ============================================================ */
+
+/* ---------- Touch ergonomics ---------- */
+
+/* A 44px minimum is the size a finger can hit without aiming. Applied to
+   coarse pointers only, so a mouse-driven desktop keeps its tighter rhythm. */
+@media (pointer: coarse) {
+  .btn,
+  .btn-sm,
+  .icon-btn,
+  .nav-link,
+  .tab,
+  .view-chip,
+  .chip,
+  .wa-quick-btn,
+  .pager a,
+  .pager button,
+  .doc-action,
+  .link-quiet,
+  .alert-link,
+  .segmented a,
+  .segmented button {
+    min-height: 44px;
+  }
+
+  .btn-sm,
+  .view-chip,
+  .chip,
+  .wa-quick-btn {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .icon-btn {
+    min-width: 44px;
+  }
+
+  .nav-link {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* Inline links inside running text keep their line height; only block-ish
+     controls are enlarged. */
+  .link-quiet {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* These read as text links but act as the main way into a shop or a section,
+     so on a phone they get a full finger's worth of height. */
+  .supplier-name a,
+  .link-arrow,
+  .footer-links a,
+  .auth-foot a,
+  .micro-note a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .footer-links a {
+    display: flex;
+  }
+
+  /* Remaining icon-sized controls: the wordmark, the password reveal and the
+     contact links in a project's fact list. */
+  .topbar-brand,
+  .pw-toggle,
+  .fact-contact a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .pw-toggle {
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  /* iOS zooms the whole page when a control under 16px takes focus. Matching
+     the platform default keeps the layout still and the text readable.
+     `!important` is deliberate: it must beat the many per-context font sizes
+     scattered through the stylesheet, and it applies to touch devices only. */
+  input,
+  select,
+  textarea,
+  .input,
+  .select,
+  .select-sm,
+  .input-sm,
+  .topbar-search-input {
+    font-size: 16px !important;
+    min-height: 44px;
+  }
+
+  /* Remove the grey flash and the legacy 300ms delay. */
+  a,
+  button,
+  [role="button"],
+  input[type="submit"],
+  .tab,
+  .view-chip {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+/* Optical refinements that help on any small screen, not just touch. */
+@media (max-width: 640px) {
+  /* Tighter page gutters buy back reading width. */
+  .content {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    line-height: 1.2;
+  }
+
+  /* Long words and email addresses should wrap, not push the layout wide. */
+  .content p,
+  .content li,
+  .content dd {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ---------- Tables that stack ---------- */
+
+@media (max-width: 760px) {
+  .admin-table--stack {
+    min-width: 0;
+  }
+
+  /* Stacked cards need the card's own padding, not the scroll gutter the
+     wide table used. */
+  .admin-table-wrap--stack {
+    overflow-x: visible;
+    margin: 0;
+    padding: 0 14px 14px;
+  }
+
+  .admin-table--stack thead {
+    display: none;
+  }
+
+  .admin-table--stack,
+  .admin-table--stack tbody,
+  .admin-table--stack tfoot,
+  .admin-table--stack tr,
+  .admin-table--stack td,
+  .admin-table--stack th {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table--stack tbody tr {
+    margin: 0 0 12px;
+    padding: 4px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .admin-table--stack tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Each cell becomes a label/value row instead of a column. */
+  .admin-table--stack tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+    text-align: right;
+  }
+
+  .admin-table--stack tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    text-align: left;
+  }
+
+  /* The project name heads the card instead of sitting in a labelled row. */
+  .admin-table--stack tbody td.cell-title {
+    display: block;
+    padding: 12px 0 10px;
+    border-top: 0;
+    text-align: left;
+    font-size: 0.92rem;
+  }
+
+  .admin-table--stack tbody td.cell-title::before {
+    content: none;
+  }
+
+  .admin-table--stack tbody td:not(.cell-title):empty {
+    display: none;
+  }
+
+  .admin-table--stack tfoot tr {
+    margin-top: 4px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--forest-50);
+    border: 1px solid var(--forest-100);
+  }
+
+  .admin-table--stack tfoot th {
+    padding: 0 0 6px;
+    text-align: left;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--forest-800);
+  }
+
+  .admin-table--stack tfoot td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    border-top: 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .admin-table--stack tfoot td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
+  .admin-table--stack tfoot td:empty {
+    display: none;
+  }
+}
+
+/* ---------- Dynamic viewport height ---------- */
+
+/* 100vh includes the collapsing browser chrome on a phone, which leaves a gap
+   under the content. dvh tracks the real visible area. */
+@supports (height: 100dvh) {
+  .shell {
+    min-height: 100dvh;
+  }
+
+  .sidebar {
+    height: 100dvh;
+  }
 }

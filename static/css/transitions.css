@@ -36,6 +36,9 @@
   z-index: 200;
   pointer-events: none;
   opacity: 0;
+  /* The sweep travels past the right edge; clipping it here stops the page
+     from gaining a horizontal scrollbar while a navigation is in flight. */
+  overflow: hidden;
   transition: opacity 0.2s ease;
 }
 
@@ -45,11 +48,17 @@
 
 .page-progress::after {
   content: "";
-  display: block;
+  display: none;
   height: 100%;
   width: 40%;
   border-radius: 0 3px 3px 0;
   background: linear-gradient(90deg, var(--forest-600), var(--brass-400));
+}
+
+/* Animating only while a navigation is running keeps an idle page idle — a
+   permanently looping animation costs battery on a phone. */
+.page-progress.is-active::after {
+  display: block;
   animation: progress-slide 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 

@@ -45,7 +45,13 @@
           {% if supplier.verified %}<span class="badge badge-success">{{ icon('check', 12) }} Verified</span>{% endif %}
           <span class="badge badge-soft">{{ supplier.category }}</span>
         </div>
-        <h3>{{ supplier.name }}</h3>
+        <h3 class="supplier-name">
+          {% if supplier.website %}
+            <a href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">{{ supplier.name }}</a>
+          {% else %}
+            {{ supplier.name }}
+          {% endif %}
+        </h3>
         <p class="supplier-city">{{ icon('map-pin', 13) }} {{ supplier.city }}</p>
         <p class="supplier-desc">{{ supplier.description }}</p>
         <div class="tag-row">

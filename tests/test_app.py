@@ -3422,3 +3422,76 @@ class PublicHeader(VakaTestCase):
         header = page.split("</header>", 1)[0]
         self.assertIn("Open dashboard", header)
         self.assertNotIn('data-modal-open="modal-login"', header)
+
+class MobileErgonomics(VakaTestCase):
+    """The rules that keep a phone usable, asserted against the stylesheet."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        from pathlib import Path
+
+        cls.portal = Path("static/css/portal.css").read_text(encoding="utf-8")
+        cls.app_css = Path("static/css/app.css").read_text(encoding="utf-8")
+        cls.transitions = Path("static/css/transitions.css").read_text(encoding="utf-8")
+
+    def test_touch_controls_are_never_smaller_than_the_ios_zoom_threshold(self):
+        # Safari zooms the page when a control under 16px takes focus, so the
+        # touch rule has to win against every per-context size in the sheet.
+        self.assertIn("(pointer: coarse)", self.portal)
+        self.assertIn("font-size: 16px !important", self.portal)
+
+    def test_finger_sized_targets_are_declared_for_touch(self):
+        coarse = self.portal.split("(pointer: coarse)", 1)[1]
+        self.assertIn("min-height: 44px", coarse)
+
+    def test_wide_tables_stack_instead_of_scrolling_sideways(self):
+        self.assertIn(".admin-table--stack", self.portal)
+        self.assertIn("attr(data-label)", self.portal)
+
+    def test_the_loading_bar_cannot_widen_the_page(self):
+        block = self.transitions.split(".page-progress {", 1)[1].split("}", 1)[0]
+        self.assertIn("overflow: hidden", block)
+        # The sweep only animates while a navigation is actually running.
+        self.assertIn(".page-progress.is-active::after", self.transitions)
+
+    def test_dynamic_viewport_height_is_used_where_supported(self):
+        self.assertIn("100dvh", self.portal)
+
+
+class SupplierDirectory(VakaTestCase):
+    def test_every_supplier_has_a_link_and_appears_once(self):
+        from db import query
+
+        with self.app.app_context():
+            rows = query("SELECT name, website FROM suppliers ORDER BY name")
+
+        self.assertEqual(len(rows), 16)
+        names = [row["name"] for row in rows]
+        self.assertEqual(len(names), len(set(names)), "duplicate supplier names")
+        for row in rows:
+            with self.subTest(supplier=row["name"]):
+                self.assertTrue(row["website"], f"{row['name']} has no website")
+                self.assertTrue(row["website"].startswith("http"))
+
+    def test_both_directories_link_the_shop_name(self):
+        self.login()
+        page = self.client.get("/app/suppliers").get_data(as_text=True)
+        self.assertIn('class="supplier-name"', page)
+        self.assertIn('href="https://www.halsted.co.zw"', page)
+
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        public = self.client.get("/suppliers").get_data(as_text=True)
+        self.assertIn('class="supplier-name"', public)
+
+    def test_reseeding_does_not_duplicate_the_directory(self):
+        from db import query
+        import seed
+
+        with self.app.app_context():
+            before = query("SELECT COUNT(*) AS n FROM suppliers", one=True)["n"]
+            seed._seed_suppliers()
+            seed._seed_suppliers()
+            after = query("SELECT COUNT(*) AS n FROM suppliers", one=True)["n"]
+
+        self.assertEqual(before, after)

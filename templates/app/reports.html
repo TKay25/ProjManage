@@ -105,8 +105,8 @@
     </div>
   </div>
 
-  <div class="admin-table-wrap">
-    <table class="admin-table">
+  <div class="admin-table-wrap admin-table-wrap--stack">
+    <table class="admin-table admin-table--stack">
       <thead>
         <tr>
           <th scope="col">Project</th>
@@ -123,33 +123,33 @@
       <tbody>
         {% for row in rows %}
           <tr>
-            <td>
+            <td class="cell-title">
               <a class="link-quiet" href="{{ url_for('projects.detail', project_id=row.id) }}">{{ row.name }}</a>
               <p class="mini-meta">{{ row.code }}{% if row.suburb %} · {{ row.suburb }}{% endif %}</p>
             </td>
-            <td>
+            <td data-label="Progress">
               <div class="bar-track bar-track--slim"><span class="bar-fill" style="width:{{ row.progress }}%"></span></div>
               <p class="mini-meta">{{ row.progress }}%</p>
             </td>
-            <td class="align-right">{{ row.budget_cents|money }}</td>
-            <td class="align-right">{{ row.funded_cents|money }}</td>
-            <td class="align-right">{{ row.spent_cents|money }}</td>
-            <td class="align-right">{{ row.balance_cents|money }}</td>
-            <td class="align-right">
+            <td data-label="Budget" class="align-right">{{ row.budget_cents|money }}</td>
+            <td data-label="Funded" class="align-right">{{ row.funded_cents|money }}</td>
+            <td data-label="Spent" class="align-right">{{ row.spent_cents|money }}</td>
+            <td data-label="Balance" class="align-right">{{ row.balance_cents|money }}</td>
+            <td data-label="Variance" class="align-right">
               {% if row.variance_cents < 0 %}
                 <span class="badge badge-danger">{{ row.variance_cents|money }}</span>
               {% else %}
                 <span class="badge badge-success">{{ row.variance_cents|money }}</span>
               {% endif %}
             </td>
-            <td class="align-right">
+            <td data-label="Runway" class="align-right">
               {% if row.runway_days is none %}
                 <span class="mini-meta">—</span>
               {% else %}
                 {{ row.runway_days }}d
               {% endif %}
             </td>
-            <td class="align-right">
+            <td data-label="Project pack" class="align-right">
               <a class="link-quiet" href="{{ url_for('reports.project_pack', project_id=row.id) }}"
                  target="_blank" rel="noopener" title="Open the printable project pack">Pack {{ icon('external', 13) }}</a>
             </td>
@@ -160,11 +160,11 @@
         <tr>
           <th scope="row">All builds</th>
           <td></td>
-          <td class="align-right">{{ totals.budget|money }}</td>
-          <td class="align-right">{{ totals.funded|money }}</td>
-          <td class="align-right">{{ totals.spent|money }}</td>
-          <td class="align-right">{{ totals.balance|money }}</td>
-          <td class="align-right">{{ totals.variance|money }}</td>
+          <td data-label="Budget" class="align-right">{{ totals.budget|money }}</td>
+          <td data-label="Funded" class="align-right">{{ totals.funded|money }}</td>
+          <td data-label="Spent" class="align-right">{{ totals.spent|money }}</td>
+          <td data-label="Balance" class="align-right">{{ totals.balance|money }}</td>
+          <td data-label="Variance" class="align-right">{{ totals.variance|money }}</td>
           <td colspan="2"></td>
         </tr>
       </tfoot>

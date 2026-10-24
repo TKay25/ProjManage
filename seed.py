@@ -48,7 +48,13 @@ def _ensure_staff_account():
 
 
 def _seed_suppliers():
-    """Idempotent, so concurrent gunicorn workers cannot duplicate the directory."""
+    """Idempotent, so concurrent gunicorn workers cannot duplicate the directory.
+
+    The id is derived from the name, which makes the row stable across boots.
+    Fields are refreshed rather than skipped, so a corrected website or phone
+    number in the source list actually reaches a database that was seeded
+    earlier.
+    """
     for index, supplier in enumerate(SUPPLIERS):
         supplier_id = "sup-" + "".join(
             char for char in supplier["name"].lower() if char.isalnum()
@@ -57,7 +63,17 @@ def _seed_suppliers():
             """INSERT INTO suppliers
                  (id, name, category, city, website, phone, address, description, tags, verified, position)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-               ON CONFLICT (id) DO NOTHING""",
+               ON CONFLICT (id) DO UPDATE SET
+                 name = excluded.name,
+                 category = excluded.category,
+                 city = excluded.city,
+                 website = excluded.website,
+                 phone = excluded.phone,
+                 address = excluded.address,
+                 description = excluded.description,
+                 tags = excluded.tags,
+                 verified = excluded.verified,
+                 position = excluded.position""",
             (
                 supplier_id,
                 supplier["name"],

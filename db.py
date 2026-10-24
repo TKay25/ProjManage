@@ -297,6 +297,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS session_epoch INTEGER NOT NULL DEFAUL
 ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled INTEGER NOT NULL DEFAULT 0;
+-- The random-id duplicates came from the old seeding; collapse them if an
+-- existing SQLite database was copied across by tools/migrate_to_postgres.py.
+DELETE FROM suppliers a USING suppliers b
+ WHERE lower(a.name) = lower(b.name) AND a.ctid > b.ctid;
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_events(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_events(action, created_at);
 CREATE INDEX IF NOT EXISTS idx_tx_type_date ON transactions(project_id, type, occurred_at);
@@ -721,6 +725,21 @@ def run_migrations(connection):
            )""",
     ):
         connection.execute(statement)
+
+    if version < 15:
+        # The directory used to be seeded with a random id, so every boot added
+        # another copy of all sixteen suppliers. Collapse them onto one row per
+        # name, preferring the stable name-derived id.
+        connection.execute(
+            """DELETE FROM suppliers
+               WHERE id NOT LIKE 'sup-%'
+                 AND lower(name) IN (SELECT lower(name) FROM suppliers WHERE id LIKE 'sup-%')"""
+        )
+        connection.execute(
+            """DELETE FROM suppliers
+               WHERE rowid NOT IN (SELECT MIN(rowid) FROM suppliers GROUP BY lower(name))"""
+        )
+        connection.execute("PRAGMA user_version = 15")
 
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
