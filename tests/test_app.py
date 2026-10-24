@@ -3381,3 +3381,44 @@ class CombinedExport(VakaTestCase):
 
         self.assertTrue(header.startswith("Date"), header)
         self.assertNotIn("Project", header)
+
+class PublicHeader(VakaTestCase):
+    """The public navbar: mobile reachable, section-aware, accessible."""
+
+    def test_every_public_page_offers_a_phone_menu(self):
+        for path in ("/", "/suppliers"):
+            with self.subTest(path=path):
+                page = self.client.get(path).get_data(as_text=True)
+                self.assertIn('aria-controls="site-menu"', page)
+                self.assertIn('aria-expanded="false"', page)
+                # The drawer must exist in the markup; JS only un-hides it.
+                self.assertIn('id="site-menu"', page)
+
+    def test_nav_links_carry_section_targets_for_highlighting(self):
+        page = self.client.get("/").get_data(as_text=True)
+
+        for section in ("how", "stages", "money", "whatsapp"):
+            with self.subTest(section=section):
+                self.assertIn(f'data-spy="{section}"', page)
+                self.assertIn(f'id="{section}"', page.replace('href="/#', 'href="#'))
+
+    def test_suppliers_is_marked_current_not_merely_styled(self):
+        page = self.client.get("/suppliers").get_data(as_text=True)
+
+        self.assertIn('aria-current="page"', page)
+        self.assertIn("is-active", page)
+
+    def test_the_landing_page_does_not_claim_a_current_section(self):
+        page = self.client.get("/").get_data(as_text=True)
+
+        # Highlighting is decided by scroll position on the landing page, so the
+        # server must not stamp one link as current.
+        self.assertNotIn('aria-current="page"', page)
+
+    def test_signed_in_visitors_get_a_dashboard_link(self):
+        self.login()
+        page = self.client.get("/suppliers").get_data(as_text=True)
+
+        header = page.split("</header>", 1)[0]
+        self.assertIn("Open dashboard", header)
+        self.assertNotIn('data-modal-open="modal-login"', header)

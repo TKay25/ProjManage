@@ -1,19 +1,49 @@
-<header class="site-header">
+{# Public site header. Sticky, glassy, section-aware and usable on a phone:
+   the links collapse into a drawer instead of disappearing. #}
+<header class="site-header" id="site-header">
   <div class="container header-inner">
     {{ brand('/') }}
+
     <nav class="site-nav" aria-label="Main">
-      <a class="site-nav-link" href="/#how">How it works</a>
-      <a class="site-nav-link" href="/#stages">Build stages</a>
-      <a class="site-nav-link" href="/#money">Money</a>
-      <a class="site-nav-link" href="/#whatsapp">WhatsApp</a>
-      <a class="site-nav-link {% if current_path == '/suppliers' %}is-active{% endif %}" href="/suppliers">Suppliers</a>
+      <a class="site-nav-link" href="/#how" data-spy="how">How it works</a>
+      <a class="site-nav-link" href="/#stages" data-spy="stages">Build stages</a>
+      <a class="site-nav-link" href="/#money" data-spy="money">Money</a>
+      <a class="site-nav-link" href="/#whatsapp" data-spy="whatsapp">WhatsApp</a>
+      <a class="site-nav-link {% if current_path == '/suppliers' %}is-active{% endif %}"
+         href="/suppliers"
+         {% if current_path == '/suppliers' %}aria-current="page"{% endif %}>Suppliers</a>
     </nav>
+
     <div class="header-actions">
       {% if user %}
-        <a class="btn btn-primary btn-sm" href="/app">Open dashboard</a>
+        <a class="btn btn-primary btn-sm" href="/app">
+          Open dashboard {{ icon('arrow-right', 15) }}
+        </a>
       {% else %}
         <a class="btn btn-ghost btn-sm hide-sm" href="/login" data-modal-open="modal-login">Sign in</a>
-        <a class="btn btn-primary btn-sm" href="/register" data-modal-open="modal-register">Get started</a>
+        <a class="btn btn-primary btn-sm hide-sm" href="/register" data-modal-open="modal-register">Get started</a>
+      {% endif %}
+      <button class="icon-btn site-menu-toggle" type="button"
+              aria-label="Open menu" aria-expanded="false" aria-controls="site-menu">
+        <span class="site-menu-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="site-menu" id="site-menu" hidden>
+    <nav class="site-menu-nav" aria-label="Sections">
+      <a href="/#how" data-spy="how">How it works</a>
+      <a href="/#stages" data-spy="stages">Build stages</a>
+      <a href="/#money" data-spy="money">Money</a>
+      <a href="/#whatsapp" data-spy="whatsapp">WhatsApp</a>
+      <a href="/suppliers">Suppliers</a>
+    </nav>
+    <div class="site-menu-actions">
+      {% if user %}
+        <a class="btn btn-primary btn-block" href="/app">Open dashboard</a>
+      {% else %}
+        <a class="btn btn-outline btn-block" href="/login" data-modal-open="modal-login">Sign in</a>
+        <a class="btn btn-primary btn-block" href="/register" data-modal-open="modal-register">Get started</a>
       {% endif %}
     </div>
   </div>

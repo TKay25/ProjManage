@@ -21,8 +21,13 @@
     <div>
       <p class="footer-title">Get started</p>
       <ul class="footer-links">
-        <li><a href="/register">Create an account</a></li>
-        <li><a href="/login" data-modal-open="modal-login">Sign in</a></li>
+        {% if user %}
+          <li><a href="/app">Open dashboard</a></li>
+          <li><a href="/app/settings">Your settings</a></li>
+        {% else %}
+          <li><a href="/register">Create an account</a></li>
+          <li><a href="/login" data-modal-open="modal-login">Sign in</a></li>
+        {% endif %}
         <li><a href="mailto:hello@yavaka.co.zw">hello@yavaka.co.zw</a></li>
       </ul>
     </div>
