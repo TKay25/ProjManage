@@ -23,11 +23,13 @@
         </form>
       </noscript>
       <div class="topbar-spacer"></div>
-      <a class="icon-btn topbar-alert" href="{{ url_for('attention.index') }}"
-         aria-label="Attention{% if attention.total %}: {{ attention.total }} outstanding{% endif %}"
-         title="{{ attention.total ~ ' item' ~ ('' if attention.total == 1 else 's') ~ ' need attention' if attention.total else 'Nothing needs attention' }}">
+      {# The bell is the notification inbox: what changed. Outstanding work has
+         its own entry in the sidebar. #}
+      <a class="icon-btn topbar-alert" href="{{ url_for('updates.index') }}"
+         aria-label="Updates{% if unread_updates %}: {{ unread_updates }} new{% endif %}"
+         title="{{ unread_updates ~ ' new update' ~ ('' if unread_updates == 1 else 's') if unread_updates else 'No new updates' }}">
         {{ icon('bell', 18) }}
-        {% if attention.total %}<span class="topbar-alert-count" aria-hidden="true">{{ attention.total if attention.total < 100 else '99+' }}</span>{% endif %}
+        {% if unread_updates %}<span class="topbar-alert-count" aria-hidden="true">{{ unread_updates if unread_updates < 100 else '99+' }}</span>{% endif %}
       </a>
       <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch between light and dark" title="Switch theme">
         <span class="theme-icon-light">{{ icon('sun', 17) }}</span>

@@ -44,9 +44,13 @@
     <div class="empty">
       <span class="empty-icon">{{ icon('pen', 26) }}</span>
       <h3>No agreements yet</h3>
-      <p>Agree the work, value and payment milestones up front. Keep the signed record with the build so everyone can refer to the same terms.</p>
-      <a class="btn btn-primary" href="{{ url_for('agreements.new', project=project.id if project else '') }}"
-         data-modal-open="modal-agreement">{{ icon('plus', 16) }} Build an agreement</a>
+      {% if runs_build %}
+        <p>Agree the work, value and payment milestones up front. Keep the signed record with the build so everyone can refer to the same terms.</p>
+        <a class="btn btn-primary" href="{{ url_for('agreements.new', project=project.id if project else '') }}"
+           data-modal-open="modal-agreement">{{ icon('plus', 16) }} Build an agreement</a>
+      {% else %}
+        <p>The agreement your build manager drafts will appear here for you to read and sign, so both sides work from the same terms.</p>
+      {% endif %}
     </div>
   </div>
 {% endif %}

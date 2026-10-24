@@ -110,6 +110,60 @@ def can_manage_project(user, project) -> bool:
     )
 
 
+MANAGER_ROLES = {"manager", "admin"}
+
+
+def self_managed(user) -> bool:
+    """A client who runs their own build.
+
+    True when the account is a client and nobody else manages their builds: no
+    assigned build manager, no linked manager, and no manager activity recorded
+    against their projects. A client with nothing filed yet counts as running
+    their own build, because they are the only one who could start it.
+    """
+    if not user or user["role"] != "client":
+        return False
+
+    cached = getattr(g, "_self_managed", None)
+    if cached is not None:
+        return cached
+
+    managed = query(
+        """SELECT COUNT(*) AS total FROM projects
+           WHERE owner_id = ? AND manager_id IS NOT NULL AND manager_id <> owner_id""",
+        (user["id"],),
+        one=True,
+    )
+    linked = query(
+        "SELECT COUNT(*) AS total FROM manager_links WHERE client_id = ?",
+        (user["id"],),
+        one=True,
+    )
+    worked = query(
+        """SELECT COUNT(*) AS total FROM audit_events e
+           JOIN projects p ON p.id = e.project_id
+           WHERE p.owner_id = ? AND e.user_id IS NOT NULL AND e.user_id <> ?""",
+        (user["id"], user["id"]),
+        one=True,
+    )
+
+    value = not (managed["total"] or linked["total"] or worked["total"])
+    g._self_managed = value
+    return value
+
+
+def runs_build(user) -> bool:
+    """True when this account does the build work itself.
+
+    Build managers and staff always do. A client does when they own their
+    projects outright, because there is no manager to record money or upload
+    proof for them.
+    """
+    if not user:
+        return False
+    return user["role"] in MANAGER_ROLES or self_managed(user)
+
+
 def accessible_projects(user):
     if not user:
         return []

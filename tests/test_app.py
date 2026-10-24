@@ -118,6 +118,112 @@ class Authentication(VakaTestCase):
         self.assertEqual(self.client.get("/app").status_code, 302)
 
 
+class RoleAwareCopy(VakaTestCase):
+    """Copy addresses whoever is signed in, not a generic 'user'."""
+
+    PASSWORD = "Str0ngPassw0rd!"
+
+    def test_build_manager_reads_recording_language(self):
+        self.login("manager@yavaka.co.zw")
+        text = self.client.get("/app/money").get_data(as_text=True)
+
+        self.assertIn("Record money", text)
+        self.assertNotIn("Report a deposit", text)
+
+    def test_client_with_a_manager_reads_receiving_language(self):
+        self.login()
+        text = self.client.get("/app/money").get_data(as_text=True)
+
+        self.assertIn("Report a deposit", text)
+        self.assertNotIn("Record money", text)
+
+    def test_client_who_runs_the_build_reads_recording_language(self):
+        from db import execute, new_id, now_iso
+
+        email = f"selfrun-{os.urandom(4).hex()}@example.test"
+        with self.app.app_context():
+            user_id = new_id()
+            project_id = new_id()
+            execute(
+                """INSERT INTO users
+                     (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Self Runner', ?, ?, 'client', '#0F5D46', ?)""",
+                (user_id, email, __import__("auth").hash_password(self.PASSWORD), now_iso()),
+            )
+            execute(
+                """INSERT INTO projects
+                     (id, code, name, owner_id, manager_id, created_at, updated_at)
+                   VALUES (?, ?, 'Own Build', ?, NULL, ?, ?)""",
+                (project_id, f"YVK-9{os.urandom(3).hex()}", user_id, now_iso(), now_iso()),
+            )
+        self.addCleanup(self._cleanup, user_id, project_id)
+
+        self.login(email, self.PASSWORD)
+        text = self.client.get("/app/money").get_data(as_text=True)
+
+        self.assertIn("Record money", text)
+        self.assertNotIn("Report a deposit", text)
+
+    def test_self_managed_turns_off_once_a_manager_works_the_project(self):
+        import auth
+        from db import execute, new_id, now_iso, query
+
+        email = f"managed-{os.urandom(4).hex()}@example.test"
+        with self.app.app_context():
+            user_id = new_id()
+            manager_id = new_id()
+            project_id = new_id()
+            for identifier, name, role in (
+                (user_id, "Managed Client", "client"),
+                (manager_id, "Working Manager", "manager"),
+            ):
+                execute(
+                    """INSERT INTO users
+                         (id, name, email, password_hash, role, avatar_color, created_at)
+                       VALUES (?, ?, ?, ?, ?, '#0F5D46', ?)""",
+                    (
+                        identifier,
+                        name,
+                        f"{role}-{identifier}@example.test",
+                        __import__("auth").hash_password(self.PASSWORD),
+                        role,
+                        now_iso(),
+                    ),
+                )
+            execute(
+                """INSERT INTO projects
+                     (id, code, name, owner_id, manager_id, created_at, updated_at)
+                   VALUES (?, ?, 'Managed Build', ?, NULL, ?, ?)""",
+                (project_id, f"YVK-8{os.urandom(3).hex()}", user_id, now_iso(), now_iso()),
+            )
+
+            client = query("SELECT * FROM users WHERE id = ?", (user_id,), one=True)
+
+        # A fresh app context per check: the answer is cached for one request.
+        with self.app.app_context():
+            self.assertTrue(auth.runs_build(client))
+
+        with self.app.app_context():
+            execute(
+                "UPDATE projects SET manager_id = ? WHERE id = ?", (manager_id, project_id)
+            )
+
+        with self.app.app_context():
+            client = query("SELECT * FROM users WHERE id = ?", (user_id,), one=True)
+            self.assertFalse(auth.runs_build(client))
+
+        self.addCleanup(self._cleanup, user_id, project_id, manager_id)
+
+    def _cleanup(self, user_id, project_id, manager_id=None):
+        from db import execute
+
+        with self.app.app_context():
+            execute("DELETE FROM projects WHERE id = ?", (project_id,))
+            execute("DELETE FROM users WHERE id = ?", (user_id,))
+            if manager_id:
+                execute("DELETE FROM users WHERE id = ?", (manager_id,))
+
+
 class PasswordReset(VakaTestCase):
     EMAIL = "client@yavaka.co.zw"
 
@@ -2004,7 +2110,10 @@ class AttentionInbox(VakaTestCase):
         self.assertIn("Needs attention", page)
         self.assertIn("Approvals due", page)
         self.assertIn("Blocked stages", page)
-        self.assertIn("Receipts to chase", page)
+        # The demo client has a build manager, so the receipt group is framed
+        # as proof they are waiting on rather than something they chase.
+        self.assertIn("Missing receipts", page)
+        self.assertNotIn("Receipts to chase", page)
 
     def test_another_clients_blocked_stage_never_appears(self):
         from db import execute, new_id, now_iso, query
@@ -2126,11 +2235,15 @@ class PaletteActions(VakaTestCase):
 class ShellChrome(VakaTestCase):
     """The workspace chrome: attention entry points and the theme control."""
 
-    def test_the_topbar_and_sidebar_link_to_attention(self):
+    def test_the_bell_opens_updates_and_attention_keeps_its_sidebar_entry(self):
         self.login()
         page = self.client.get("/app").get_data(as_text=True)
 
-        self.assertIn('class="icon-btn topbar-alert"', page)
+        bell = re.search(r"<a[^>]*class=\"icon-btn topbar-alert\"[^>]*>", page)
+        self.assertIsNotNone(bell)
+        self.assertIn('href="/app/updates"', bell.group(0))
+        self.assertIn("Updates", bell.group(0))
+        # Attention still has its own entry point in the sidebar.
         self.assertIn('href="/app/attention"', page)
 
     def test_the_badge_appears_next_to_the_attention_nav_item(self):

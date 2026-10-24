@@ -4,8 +4,13 @@
 {% block page_title %}WhatsApp{% endblock %}
 {% block page_subtitle %}
   <p class="page-subtitle">
-    The same project record, through the app your family already uses
-    <span class="page-tagline">A quick message can bring the build back into view.</span>
+    {% if runs_build %}
+      The same project record, through the app the people on site already use
+      <span class="page-tagline">Answer a client without leaving the build file.</span>
+    {% else %}
+      The same project record, through the app your family already uses
+      <span class="page-tagline">A quick message can bring the build back into view.</span>
+    {% endif %}
   </p>
 {% endblock %}
 

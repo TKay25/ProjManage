@@ -17,7 +17,7 @@
       <button class="palette-item" type="button" role="option" aria-selected="false" data-palette-action="new-money">
         <span class="palette-icon">{{ icon('wallet', 17) }}</span>
         <span class="palette-text">
-          <span class="palette-title">Record money</span>
+          <span class="palette-title">{{ 'Record money' if runs_build else 'Report a deposit' }}</span>
           <span class="palette-meta">Deposit or expense</span>
         </span>
         <span class="palette-enter">{{ icon('arrow-right', 15) }}</span>

@@ -6,7 +6,9 @@
   {% if project %}
     <p class="page-subtitle">
       {{ project.name }} · every deposit, expense and receipt in one ledger
-      <span class="page-tagline">Money sent. Money spent. Balance explained.</span>
+      <span class="page-tagline">
+        {% if runs_build %}Money sent. Money spent. Balance explained.{% else %}See where every dollar you send actually goes.{% endif %}
+      </span>
     </p>
   {% endif %}
 {% endblock %}
@@ -16,7 +18,7 @@
       {{ icon('download', 15) }} Export CSV
     </a>
     <a class="btn btn-primary btn-sm" href="{{ url_for('money.index', project=project.id) }}" data-modal-open="modal-money">
-      {{ icon('plus', 15) }} Record money
+      {{ icon('plus', 15) }} {{ 'Record money' if runs_build else 'Report a deposit' }}
     </a>
   {% endif %}
 {% endblock %}
@@ -134,8 +136,13 @@
         <div class="empty">
           <span class="empty-icon">{{ icon('receipt', 26) }}</span>
           <h3>No entries match</h3>
-          <p>Every recorded movement makes the balance easier to explain. Add a deposit or project expense, or clear the filters.</p>
-          <a class="btn btn-primary" href="{{ url_for('money.index', project=project.id) }}" data-modal-open="modal-money">{{ icon('plus', 15) }} Record money</a>
+          {% if runs_build %}
+            <p>Every recorded movement makes the balance easier to explain. Add a deposit or project expense, or clear the filters.</p>
+            <a class="btn btn-primary" href="{{ url_for('money.index', project=project.id) }}" data-modal-open="modal-money">{{ icon('plus', 15) }} Record money</a>
+          {% else %}
+            <p>Every movement your build manager records appears here with its receipt. Clear the filters to see everything.</p>
+            <a class="btn btn-outline" href="{{ url_for('money.index', project=project.id) }}">Clear filters</a>
+          {% endif %}
         </div>
       {% endif %}
     </div>

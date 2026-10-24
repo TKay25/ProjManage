@@ -44,8 +44,9 @@
   {% endblock %}
 
   {# Every public page can raise the sign-in and registration dialogs, except the
-     standalone auth pages that already show the forms. #}
-  {% if request.endpoint not in ['auth.register', 'auth.login'] %}
+     standalone auth pages that already show the forms. Signed-in pages never
+     need them, and their copy addresses a new visitor. #}
+  {% if not user and request.endpoint not in ['auth.register', 'auth.login'] %}
     {% include "partials/modal_login.html" %}
     {% include "partials/modal_register.html" %}
   {% endif %}

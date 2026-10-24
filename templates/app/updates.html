@@ -64,8 +64,13 @@
       <span class="empty-icon">{{ icon('activity', 26) }}</span>
       <h3>Nothing here yet</h3>
       <p>
-        When your build manager records a payment, completes a stage, uploads a
-        document or signs an agreement, it shows up here straight away.
+        {% if runs_build %}
+          Stage moves, uploads, payments and agreements land here as they happen
+          across your builds.
+        {% else %}
+          When your build manager records a payment, completes a stage, uploads a
+          document or signs an agreement, it shows up here straight away.
+        {% endif %}
       </p>
       <a class="btn btn-outline" href="{{ url_for('projects.index') }}">{{ icon('building', 15) }} Open projects</a>
     </div>

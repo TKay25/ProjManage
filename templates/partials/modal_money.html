@@ -2,8 +2,8 @@
   <div class="modal-panel">
     <header class="modal-head">
       <div>
-        <p class="eyebrow">Record money</p>
-        <h2 id="modal-money-title">Add a deposit or an expense</h2>
+        <p class="eyebrow">{{ 'Record money' if runs_build else 'Report a deposit' }}</p>
+        <h2 id="modal-money-title">{{ 'Add a deposit or an expense' if runs_build else 'Tell us what you sent' }}</h2>
         <p class="modal-sub">
           {% if project %}{{ project.name }} · {% endif %}Give every movement a date, purpose and place in the build story.
         </p>
@@ -21,11 +21,11 @@
         <div class="form">
           <div class="type-toggle">
             <label class="type-option">
-              <input type="radio" name="type" value="EXPENSE" checked />
+              <input type="radio" name="type" value="EXPENSE" {{ 'checked' if runs_build }} />
               <span>{{ icon('receipt', 15) }} Money out</span>
             </label>
             <label class="type-option">
-              <input type="radio" name="type" value="FUNDING" />
+              <input type="radio" name="type" value="FUNDING" {{ '' if runs_build else 'checked' }} />
               <span>{{ icon('wallet', 15) }} Money in</span>
             </label>
           </div>

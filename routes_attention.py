@@ -9,7 +9,7 @@ from datetime import date, datetime
 
 from flask import Blueprint, g, render_template
 
-from auth import accessible_projects, login_required
+from auth import accessible_projects, login_required, runs_build
 from db import query
 from money import format_money
 from stages import stage_by_key
@@ -45,6 +45,7 @@ def index():
     projects = accessible_projects(g.user)
     by_id = {project["id"]: project for project in projects}
     ids = list(by_id)
+    does_build = runs_build(g.user)
 
     approvals, blocked, overdue, recent = [], [], [], []
 
@@ -165,10 +166,19 @@ def index():
         },
         {
             "key": "receipts",
-            "title": "Receipts to chase",
-            "sub": f"Expenses with no proof attached. Overdue after {RECEIPT_GRACE_DAYS} days.",
+            # A client is waiting on proof; only whoever runs the build chases it.
+            "title": "Receipts to chase" if does_build else "Missing receipts",
+            "sub": (
+                f"Expenses with no proof attached. Overdue after {RECEIPT_GRACE_DAYS} days."
+                if does_build
+                else f"Payments without proof attached. Flagged after {RECEIPT_GRACE_DAYS} days."
+            ),
             "rows": overdue + recent,
-            "empty": "Every expense has a receipt attached.",
+            "empty": (
+                "Every expense has a receipt attached."
+                if does_build
+                else "Every payment has a receipt attached."
+            ),
         },
     ]
 

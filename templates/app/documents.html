@@ -5,12 +5,18 @@
 {% block page_subtitle %}
   <p class="page-subtitle">
     {{ total_rows }} file{{ '' if total_rows == 1 else 's' }} · {{ (total_size / 1048576)|round(1) }}MB stored
-    <span class="page-tagline">The right proof, with the right build—not lost in someone's camera roll.</span>
+    <span class="page-tagline">
+      {% if runs_build %}
+        The right proof, with the right build—not lost in someone's camera roll.
+      {% else %}
+        Every plan, receipt and site photo your build manager files, in one place.
+      {% endif %}
+    </span>
   </p>
 {% endblock %}
 {% block page_actions %}
   {% if projects %}
-    <a class="btn btn-primary btn-sm" href="{{ url_for('documents.index') }}" data-modal-open="modal-document">{{ icon('upload', 15) }} Upload</a>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('documents.index') }}" data-modal-open="modal-document">{{ icon('upload', 15) }} {{ 'Upload' if runs_build else 'Add a document' }}</a>
   {% endif %}
 {% endblock %}
 
@@ -81,8 +87,12 @@
         <div class="empty">
           <span class="empty-icon">{{ icon('folder', 26) }}</span>
           <h3>No documents yet</h3>
-          <p>Save the evidence of progress here: approved plans, council receipts, delivery notes and site photos.</p>
-          <a class="btn btn-primary" href="{{ url_for('documents.index') }}" data-modal-open="modal-document">{{ icon('upload', 15) }} Upload a file</a>
+          {% if runs_build %}
+            <p>Save the evidence of progress here: approved plans, council receipts, delivery notes and site photos.</p>
+            <a class="btn btn-primary" href="{{ url_for('documents.index') }}" data-modal-open="modal-document">{{ icon('upload', 15) }} Upload a file</a>
+          {% else %}
+            <p>Approved plans, council receipts, delivery notes and site photos your build manager uploads will appear here.</p>
+          {% endif %}
         </div>
       {% endif %}
     </div>

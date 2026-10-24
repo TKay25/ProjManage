@@ -16,7 +16,7 @@
     {{ icon('download', 15) }}<span data-snapshot-label>Save offline copy</span>
   </button>
   <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}"
-     data-modal-open="modal-money">{{ icon('wallet', 15) }} Record money</a>
+     data-modal-open="modal-money">{{ icon('wallet', 15) }} {{ 'Record money' if runs_build else 'Report a deposit' }}</a>
   <a class="btn btn-primary btn-sm" href="{{ url_for('agreements.new', project=project.id) }}"
      data-modal-open="modal-agreement">{{ icon('pen', 15) }} New agreement</a>
 {% endblock %}
@@ -91,7 +91,11 @@
         <div class="empty">
           <span class="empty-icon">{{ icon('wallet', 26) }}</span>
           <h3>No money recorded</h3>
-          <p>Record funds received and make the first project payment visible to the team.</p>
+          {% if runs_build %}
+            <p>Record funds received and make the first project payment visible to the team.</p>
+          {% else %}
+            <p>Deposits you send and the payments your build manager makes will show up here.</p>
+          {% endif %}
         </div>
       {% endif %}
     </div>

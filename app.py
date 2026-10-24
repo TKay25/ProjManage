@@ -191,6 +191,9 @@ def create_app(config_object=Config):
         return {
             "user": user,
             "current_path": request.path,
+            # Copy addresses whoever is signed in: a client with a manager reads
+            # about what they receive, everyone else about what they record.
+            "runs_build": auth.runs_build(user),
             "demo_mode": app.config.get("DEMO_MODE", False),
             "sidebar_workspaces": workspaces_for(user),
             "attention": attention,

@@ -21,7 +21,7 @@
     <p class="kpi-sub">Stages on hold across your builds</p>
   </a>
   <a class="kpi card-hover" href="#attention-receipts">
-    <div class="kpi-top"><span class="kpi-label">Receipts to chase</span><span class="kpi-icon kpi-icon-warn">{{ icon('receipt', 17) }}</span></div>
+    <div class="kpi-top"><span class="kpi-label">{{ 'Receipts to chase' if runs_build else 'Missing receipts' }}</span><span class="kpi-icon kpi-icon-warn">{{ icon('receipt', 17) }}</span></div>
     <p class="kpi-value">{{ counts.receipts }}</p>
     <p class="kpi-sub">{{ counts.overdue }} past the {{ grace_days }}-day grace</p>
   </a>
@@ -85,7 +85,13 @@
         <ul class="check-list compact">
           <li>{{ icon('shield', 16) }}<span>Approvals appear once a stage that needs an authority is in progress, or an agreement is still unsigned.</span></li>
           <li>{{ icon('alert', 16) }}<span>Blocked stages show the reason the manager recorded, so you can ask a specific question.</span></li>
-          <li>{{ icon('receipt', 16) }}<span>Receipts are chased after {{ grace_days }} days. Attaching proof clears the item straight away.</span></li>
+          <li>{{ icon('receipt', 16) }}<span>
+            {% if runs_build %}
+              Receipts are chased after {{ grace_days }} days. Attaching proof clears the item straight away.
+            {% else %}
+              A payment without proof shows here after {{ grace_days }} days, so you can see what is still unaccounted for.
+            {% endif %}
+          </span></li>
         </ul>
       </div>
 

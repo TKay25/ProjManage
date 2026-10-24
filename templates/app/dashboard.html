@@ -16,10 +16,10 @@
 {% block page_actions %}
   {% if project %}
     <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}"
-       data-modal-open="modal-money">{{ icon('plus', 15) }} Record money</a>
+       data-modal-open="modal-money">{{ icon('plus', 15) }} {{ 'Record money' if runs_build else 'Report a deposit' }}</a>
   {% endif %}
   <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}"
-     data-modal-open="modal-project">{{ icon('plus', 15) }} New project</a>
+     data-modal-open="modal-project">{{ icon('plus', 15) }} {{ 'New project' if runs_build else 'Start a build' }}</a>
 {% endblock %}
 
 {% block content %}
@@ -154,8 +154,12 @@
           <div class="empty">
             <span class="empty-icon">{{ icon('wallet', 26) }}</span>
             <h3>No money recorded yet</h3>
-            <p>Record the first funds received and give every future project payment a clear place in the ledger.</p>
-            <a class="btn btn-primary" href="{{ url_for('money.index', project=project.id) }}#record">Record money</a>
+            {% if runs_build %}
+              <p>Record the first funds received and give every future project payment a clear place in the ledger.</p>
+              <a class="btn btn-primary" href="{{ url_for('money.index', project=project.id) }}#record">Record money</a>
+            {% else %}
+              <p>Deposits you send and payments your build manager makes will appear here, with the receipts beside them.</p>
+            {% endif %}
           </div>
         {% endif %}
       </div>
@@ -163,7 +167,7 @@
       {% if missing %}
         <div class="card">
           <div class="card-head">
-            <h2>Receipts to chase</h2>
+            <h2>{{ 'Receipts to chase' if runs_build else 'Missing receipts' }}</h2>
             <a class="link-quiet" href="{{ url_for('money.index', project=project.id, filter='missing') }}">View all</a>
           </div>
           <ul class="mini-list">
@@ -276,8 +280,13 @@
           </a>
         {% else %}
           <p class="muted small">
-            Nothing has changed yet. Stage moves, uploads, payments and agreements
-            appear here the moment your build manager posts them.
+            {% if runs_build %}
+              Nothing has changed yet. Stage moves, uploads, payments and
+              agreements appear here the moment they are posted.
+            {% else %}
+              Nothing has changed yet. Stage moves, uploads, payments and agreements
+              appear here the moment your build manager posts them.
+            {% endif %}
           </p>
         {% endif %}
       </div>

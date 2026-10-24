@@ -9,7 +9,7 @@
   </p>
 {% endblock %}
 {% block page_actions %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 15) }} New project</a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 15) }} {{ 'New project' if runs_build else 'Start a build' }}</a>
 {% endblock %}
 
 {% block content %}
@@ -67,9 +67,15 @@
   <div class="card">
     <div class="empty">
       <span class="empty-icon">{{ icon('building', 26) }}</span>
-      <h3>No projects yet</h3>
-      <p>Start with the stand and budget. YaVaKa gives the people on the ground—and the family abroad—a shared plan to follow.</p>
-      <a class="btn btn-primary" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 16) }} Create your first project</a>
+      <h3>{{ 'No projects yet' if runs_build else 'No builds yet' }}</h3>
+      {% if runs_build %}
+        <p>Start with the stand and budget. YaVaKa lays out the stages so you, the client and the people on site follow one plan.</p>
+      {% else %}
+        <p>Your build manager sets the project up. As soon as it is filed against your account, the stages, money and proof appear here.</p>
+      {% endif %}
+      {% if runs_build %}
+        <a class="btn btn-primary" href="{{ url_for('projects.new') }}" data-modal-open="modal-project">{{ icon('plus', 16) }} Create your first project</a>
+      {% endif %}
     </div>
   </div>
 {% endif %}
