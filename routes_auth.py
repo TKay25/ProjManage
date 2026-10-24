@@ -4,10 +4,21 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, current_app, flash, g, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 import auth
 import team
+import totp
 import web
 from db import execute, new_id, now_iso, query
 from whatsapp import normalize_phone
@@ -15,11 +26,11 @@ from whatsapp import normalize_phone
 bp = Blueprint("auth", __name__)
 
 AVATAR_COLORS = ["#0F5D46", "#C8963E", "#2A7A5E", "#A9573C", "#3E6B8A", "#6B5B95"]
-ATTEMPTS = {}
 MAX_ATTEMPTS = 8
-WINDOW = timedelta(minutes=15)
-MAX_TRACKED_KEYS = 5000
 RESET_TTL = timedelta(hours=1)
+# How long a correct password may wait for its second factor.
+PENDING_2FA_KEY = "pending_2fa"
+PENDING_TTL = timedelta(minutes=5)
 
 
 def _reset_hash(token: str) -> str:
@@ -49,40 +60,53 @@ def _load_reset(token: str):
     return row
 
 
-def _prune_attempts(now: datetime):
-    """Keeps the in-memory throttle bounded; each worker has its own map."""
-    if len(ATTEMPTS) < MAX_TRACKED_KEYS:
-        return
-    for key, entry in list(ATTEMPTS.items()):
-        if now - entry["start"] > WINDOW:
-            del ATTEMPTS[key]
-
-
 def _is_blocked(key: str) -> bool:
     """Only failed attempts are recorded, so a legitimate sign-in never counts."""
-    now = datetime.now(timezone.utc)
-    entry = ATTEMPTS.get(key)
-    if not entry:
-        return False
-    if now - entry["start"] > WINDOW:
-        del ATTEMPTS[key]
-        return False
-    return entry["count"] >= MAX_ATTEMPTS
+    return auth.throttle_blocked(key, MAX_ATTEMPTS)
 
 
 def _register_failure(key: str):
-    now = datetime.now(timezone.utc)
-    _prune_attempts(now)
-
-    entry = ATTEMPTS.get(key)
-    if not entry or now - entry["start"] > WINDOW:
-        ATTEMPTS[key] = {"start": now, "count": 1}
-    else:
-        entry["count"] += 1
+    auth.throttle_failure(key)
 
 
 def _clear_attempts(key: str):
-    ATTEMPTS.pop(key, None)
+    auth.throttle_clear(key)
+
+
+def _client_key(scope: str, email: str) -> str:
+    ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "")).split(",")[0].strip()
+    return f"{scope}:{ip}:{email}"
+
+
+def _pending_two_factor():
+    """The verified-password state waiting for a TOTP code, or None."""
+    pending = session.get(PENDING_2FA_KEY)
+    if not pending:
+        return None
+    try:
+        started = datetime.fromisoformat(pending["started"])
+    except (KeyError, TypeError, ValueError):
+        session.pop(PENDING_2FA_KEY, None)
+        return None
+    if datetime.now(timezone.utc) - started > PENDING_TTL:
+        session.pop(PENDING_2FA_KEY, None)
+        return None
+    return pending
+
+
+def _finish_login(user, next_url: str):
+    session.pop(PENDING_2FA_KEY, None)
+    auth.login_user(user["id"])
+    auth.audit_auth("login.success", user["email"], user_id=user["id"])
+    message = f"Welcome back, {user['name'].split()[0]}."
+
+    if web.wants_json():
+        # The dialog hands off to a page load, so flash rather than toast.
+        flash(message, "success")
+        return web.ok(message, redirect_to=next_url or url_for("dashboard.index"))
+
+    flash(message, "success")
+    return redirect(next_url)
 
 
 def _colour_for(email: str) -> str:
@@ -107,7 +131,7 @@ def login_post():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
     next_url = auth.safe_next(request.form.get("next", ""))
-    throttle_key = f"{request.remote_addr}:{email}"
+    throttle_key = _client_key("login", email)
 
     def failure(message, status):
         if web.wants_json():
@@ -130,19 +154,102 @@ def login_post():
 
     if not user or not auth.verify_password(password, user["password_hash"]):
         _register_failure(throttle_key)
+        auth.audit_auth(
+            "login.failed",
+            f"{email} from {request.remote_addr}",
+            user_id=user["id"] if user else None,
+        )
         return failure("That email and password do not match.", 401)
 
     _clear_attempts(throttle_key)
-    auth.login_user(user["id"])
-    message = f"Welcome back, {user['name'].split()[0]}."
 
-    if web.wants_json():
-        # The dialog hands off to a page load, so flash rather than toast.
-        flash(message, "success")
-        return web.ok(message, redirect_to=next_url or url_for("dashboard.index"))
+    if int(user["totp_enabled"] or 0):
+        session[PENDING_2FA_KEY] = {
+            "user_id": user["id"],
+            "next": next_url,
+            "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+        return redirect(url_for("auth.two_factor"))
 
-    flash(message, "success")
-    return redirect(next_url)
+    return _finish_login(user, next_url)
+
+
+@bp.route("/login/2fa", methods=["GET", "POST"])
+def two_factor():
+    """Second step for accounts with an authenticator app enrolled."""
+    pending = _pending_two_factor()
+    if not pending:
+        flash("Sign in again to continue.", "error")
+        return redirect(url_for("auth.login"))
+    if g.user:
+        return redirect(url_for("dashboard.index"))
+
+    user = query(
+        "SELECT * FROM users WHERE id = ?",
+        (pending["user_id"],),
+        one=True,
+    )
+    if not user or not int(user["totp_enabled"] or 0):
+        session.pop(PENDING_2FA_KEY, None)
+        return redirect(url_for("auth.login"))
+
+    throttle_key = _client_key("2fa", user["email"])
+    error = None
+
+    if request.method == "POST":
+        supplied = (request.form.get("code") or "").strip()
+        if _is_blocked(throttle_key):
+            error = "Too many attempts. Wait 15 minutes and try again."
+        elif _consume_recovery_code(user["id"], supplied) or totp.verify(
+            user["totp_secret"] or "", supplied
+        ):
+            _clear_attempts(throttle_key)
+            return _finish_login(user, pending.get("next") or "")
+        else:
+            _register_failure(throttle_key)
+            auth.audit_auth("login.2fa_failed", user["email"], user_id=user["id"])
+            error = "That code is not correct. Try the next one."
+
+    return (
+        render_template(
+            "auth/two_factor.html",
+            title="Two-step verification",
+            error=error,
+            remaining=_recovery_remaining(user["id"]),
+        ),
+        429 if error and error.startswith("Too many") else 200,
+    )
+
+
+def _consume_recovery_code(user_id: str, supplied: str) -> bool:
+    """Uses one recovery code up. They are single-use by design."""
+    candidate = (supplied or "").strip()
+    if len(candidate.replace("-", "")) < 8:
+        return False
+
+    hashed = totp.hash_code(candidate)
+    row = query(
+        """SELECT id FROM totp_recovery_codes
+           WHERE user_id = ? AND code_hash = ? AND used_at IS NULL""",
+        (user_id, hashed),
+        one=True,
+    )
+    if not row:
+        return False
+
+    execute("UPDATE totp_recovery_codes SET used_at = ? WHERE id = ?", (now_iso(), row["id"]))
+    auth.audit_auth("login.recovery_code", user_id=user_id)
+    return True
+
+
+def _recovery_remaining(user_id: str) -> int:
+    row = query(
+        """SELECT COUNT(*) AS total FROM totp_recovery_codes
+           WHERE user_id = ? AND used_at IS NULL""",
+        (user_id,),
+        one=True,
+    )
+    return int(row["total"] or 0)
 
 
 @bp.get("/forgot-password")
@@ -159,7 +266,7 @@ def forgot_password():
 @bp.post("/forgot-password")
 def forgot_password_post():
     email = (request.form.get("email") or "").strip().lower()
-    throttle_key = f"reset:{request.remote_addr}:{email}"
+    throttle_key = _client_key("reset", email)
 
     if _is_blocked(throttle_key):
         flash("Too many attempts. Wait 15 minutes and try again.", "error")
@@ -257,6 +364,12 @@ def reset_password(token):
                 "DELETE FROM password_resets WHERE user_id = ? AND id <> ?",
                 (row["user_id"], row["id"]),
             )
+            # Retire every session opened with the old password.
+            execute(
+                "UPDATE users SET session_epoch = session_epoch + 1 WHERE id = ?",
+                (row["user_id"],),
+            )
+            auth.audit_auth("password.reset", row["email"], user_id=row["user_id"])
             flash("Password changed. Sign in with your new password.", "success")
             return redirect(url_for("auth.login"))
 
@@ -382,6 +495,8 @@ def register_post():
 
 @bp.post("/logout")
 def logout():
+    if g.user:
+        auth.audit_auth("logout", user_id=g.user["id"])
     auth.logout_user()
     flash("You have signed out.", "success")
     return redirect(url_for("public.landing"))

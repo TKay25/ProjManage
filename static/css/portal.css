@@ -2619,6 +2619,138 @@ body.app {
 }
 
 /* ============================================================
+   Security settings
+   ============================================================ */
+
+.secret-box {
+  margin: 12px 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--forest-200, #cfe3dc);
+  border-radius: 10px;
+  background: var(--forest-50, #f1f7f4);
+  text-align: center;
+}
+
+.secret-box code {
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  word-break: break-word;
+  color: var(--forest-800);
+}
+
+.break-all {
+  word-break: break-all;
+  font-size: 0.68rem;
+}
+
+.recovery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  padding: 16px;
+  list-style: none;
+}
+
+.recovery-grid li {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--sand-100);
+  text-align: center;
+}
+
+.recovery-grid code {
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+}
+
+.auth-foot--actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.card-head--sub {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+/* ============================================================
+   First-run checklist
+   ============================================================ */
+
+.onboarding-card {
+  margin-bottom: 18px;
+}
+
+.checklist {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px 16px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 10px;
+  border-radius: 9px;
+}
+
+.checklist-item + .checklist-item {
+  border-top: 1px solid var(--line);
+}
+
+.checklist-mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 50%;
+  background: var(--sand-100);
+  color: var(--ink-faint);
+}
+
+.checklist-item.is-done .checklist-mark {
+  background: var(--success-soft);
+  color: var(--forest-700);
+}
+
+.checklist-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.checklist-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.checklist-item.is-done .checklist-title {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.bar-track--slim {
+  height: 4px;
+}
+
+.pack-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 0.82rem;
+}
+
+.pack-list li {
+  margin-bottom: 4px;
+}
+
+/* ============================================================
    Modals
    ============================================================ */
 

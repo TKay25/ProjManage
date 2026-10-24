@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Two-step verification · YaVaKa{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block chrome %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <div class="container auth-grid">
+    <aside class="auth-aside">
+      <a class="auth-brand" href="/">
+        {{ logo_mark(44) }}
+        <span><strong>YaVaKa</strong><small>Build from anywhere</small></span>
+      </a>
+
+      <div class="auth-quote">
+        <p class="eyebrow eyebrow-light">One more check</p>
+        <blockquote class="auth-quote-statement">Your money and your paperwork are behind this door.</blockquote>
+        <p class="auth-quote-sub">
+          A short code from your authenticator app keeps someone with your
+          password from walking in.
+        </p>
+      </div>
+    </aside>
+
+    <div class="auth-card">
+      <div class="auth-head">
+        <p class="eyebrow">Two-step verification</p>
+        <h1>Enter your code</h1>
+        <p class="muted">Open your authenticator app and type the six digits shown for YaVaKa.</p>
+      </div>
+
+      <form class="form" method="post" action="{{ url_for('auth.two_factor') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        {% if error %}
+          <div class="form-error">{{ icon('alert', 17) }}<span>{{ error }}</span></div>
+        {% endif %}
+
+        <label class="field">
+          <span class="field-label">Code or recovery code</span>
+          <input class="input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code"
+                 maxlength="12" required placeholder="123 456" autofocus />
+        </label>
+
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Verify {{ icon('arrow-right', 17) }}</button>
+      </form>
+
+      <p class="micro-note">
+        {{ icon('alert', 13) }} Lost your phone? Enter one of your recovery codes instead.
+        {% if remaining %}You have {{ remaining }} left.{% endif %}
+      </p>
+
+      <div class="auth-foot auth-foot--actions">
+        <span>Not you?</span>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="btn btn-outline btn-sm" type="submit">Cancel sign-in</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

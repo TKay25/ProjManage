@@ -2,12 +2,13 @@
 
 import hmac
 import secrets
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-from flask import abort, g, redirect, request, session, url_for
+from flask import abort, current_app, g, redirect, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from db import query
+from db import execute, log_event, query
 
 CSRF_EXEMPT_ENDPOINTS = {
     # Server-to-server calls that carry their own shared secret instead of a
@@ -26,17 +27,33 @@ def init_app(app):
 
 def load_user():
     user_id = session.get("uid")
-    g.user = (
-        query(
-            """SELECT id, name, email, role, phone, country, avatar_color,
-                      density, page_size, created_at
-               FROM users WHERE id = ?""",
-            (user_id,),
-            one=True,
-        )
-        if user_id
-        else None
+    g.user = None
+    if not user_id:
+        return
+
+    user = query(
+        """SELECT id, name, email, role, phone, country, avatar_color,
+                  density, page_size, session_epoch, onboarded_at,
+                  totp_enabled, created_at
+           FROM users WHERE id = ?""",
+        (user_id,),
+        one=True,
     )
+    if not user:
+        session.clear()
+        return
+
+    # A password change bumps the epoch, which retires every older cookie —
+    # including one an attacker already copied.
+    current_epoch = int(user["session_epoch"] or 0)
+    expected = session.get("epoch")
+    if expected is None:
+        session["epoch"] = current_epoch
+    elif int(expected) != current_epoch:
+        session.clear()
+        return
+
+    g.user = user
 
 
 def csrf_token() -> str:
@@ -85,14 +102,85 @@ def admin_required(view):
 
 
 def login_user(user_id: str):
+    row = query("SELECT session_epoch FROM users WHERE id = ?", (user_id,), one=True)
     session.clear()
     session["uid"] = user_id
     session.permanent = True
     session["csrf"] = secrets.token_urlsafe(32)
+    session["epoch"] = int((row["session_epoch"] if row else 0) or 0)
 
 
 def logout_user():
     session.clear()
+
+
+def bump_session_epoch(user_id: str):
+    """Signs this person out everywhere, then re-seats the current browser."""
+    execute("UPDATE users SET session_epoch = session_epoch + 1 WHERE id = ?", (user_id,))
+    row = query("SELECT session_epoch FROM users WHERE id = ?", (user_id,), one=True)
+    if session.get("uid") == user_id:
+        session["epoch"] = int((row["session_epoch"] if row else 0) or 0)
+
+
+def audit_auth(action: str, detail: str = "", user_id=None):
+    """Records a security event. These have no project, so they never fan out."""
+    actor = user_id or (g.user["id"] if getattr(g, "user", None) else None)
+    try:
+        log_event(actor, None, action, str(detail or "")[:200])
+    except Exception:  # noqa: BLE001 - auditing must never break a sign-in
+        current_app.logger.exception("Could not record %s", action)
+
+
+THROTTLE_WINDOW = timedelta(minutes=15)
+
+
+def _window_expired(stamp: str) -> bool:
+    try:
+        started = datetime.fromisoformat(stamp)
+    except (TypeError, ValueError):
+        return True
+    return datetime.now(timezone.utc) - started > THROTTLE_WINDOW
+
+
+def _sweep_throttle():
+    """Cheap opportunistic cleanup so the table cannot grow without bound."""
+    if secrets.randbelow(50):
+        return
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="microseconds")
+    execute("DELETE FROM auth_throttle WHERE window_start < ?", (cutoff,))
+
+
+def throttle_blocked(key: str, limit: int) -> bool:
+    row = query(
+        "SELECT window_start, count FROM auth_throttle WHERE key = ?", (key,), one=True
+    )
+    if not row:
+        return False
+    if _window_expired(row["window_start"]):
+        execute("DELETE FROM auth_throttle WHERE key = ?", (key,))
+        return False
+    return int(row["count"] or 0) >= limit
+
+
+def throttle_failure(key: str):
+    """Counts one failed attempt. Shared by every worker, so the cap holds."""
+    _sweep_throttle()
+    row = query(
+        "SELECT window_start FROM auth_throttle WHERE key = ?", (key,), one=True
+    )
+    if row and not _window_expired(row["window_start"]):
+        execute("UPDATE auth_throttle SET count = count + 1 WHERE key = ?", (key,))
+        return
+
+    execute("DELETE FROM auth_throttle WHERE key = ?", (key,))
+    execute(
+        "INSERT INTO auth_throttle (key, window_start, count) VALUES (?, ?, 1)",
+        (key, datetime.now(timezone.utc).isoformat(timespec="microseconds")),
+    )
+
+
+def throttle_clear(key: str):
+    execute("DELETE FROM auth_throttle WHERE key = ?", (key,))
 
 
 def can_manage_project(user, project) -> bool:
@@ -165,19 +253,34 @@ def runs_build(user) -> bool:
 
 
 def accessible_projects(user):
+    """Projects this account may see. Memoised for the life of one request.
+
+    Pages and the sidebar both need the list; caching it keeps that to a single
+    query and stops a template from rendering a misleading empty sidebar just
+    because its view forgot to pass the list through.
+    """
     if not user:
         return []
+
+    cached = getattr(g, "_accessible_projects", None)
+    if cached is not None:
+        return cached
+
     if user["role"] == "admin":
-        return query("SELECT * FROM projects WHERE archived_at IS NULL ORDER BY created_at DESC")
-    return query(
-        """SELECT * FROM projects
-           WHERE archived_at IS NULL
-             AND (owner_id = ?
-                  OR manager_id = ?
-                  OR owner_id IN (SELECT client_id FROM manager_links WHERE manager_id = ?))
-           ORDER BY created_at DESC""",
-        (user["id"], user["id"], user["id"]),
-    )
+        projects = query("SELECT * FROM projects WHERE archived_at IS NULL ORDER BY created_at DESC")
+    else:
+        projects = query(
+            """SELECT * FROM projects
+               WHERE archived_at IS NULL
+                 AND (owner_id = ?
+                      OR manager_id = ?
+                      OR owner_id IN (SELECT client_id FROM manager_links WHERE manager_id = ?))
+               ORDER BY created_at DESC""",
+            (user["id"], user["id"], user["id"]),
+        )
+
+    g._accessible_projects = projects
+    return projects
 
 
 def archived_projects(user):

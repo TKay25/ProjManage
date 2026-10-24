@@ -4,9 +4,11 @@ from datetime import datetime
 
 from flask import Blueprint, g, render_template, request
 
+import onboarding
 from auth import accessible_projects, login_required
 from money import format_money
 from queries import (
+    burn_rate,
     missing_receipts,
     monthly_cashflow,
     next_stage,
@@ -28,6 +30,15 @@ def _greeting() -> str:
     return "Good evening"
 
 
+@bp.post("/app/onboarding/dismiss")
+@login_required
+def dismiss_onboarding():
+    from db import execute, now_iso
+
+    execute("UPDATE users SET onboarded_at = ? WHERE id = ?", (now_iso(), g.user["id"]))
+    return ("", 204)
+
+
 @bp.get("/app")
 @login_required
 def index():
@@ -43,6 +54,7 @@ def index():
         "project": project,
         "greeting": _greeting(),
         "first_name": (g.user["name"] or "").split()[0],
+        "onboarding": onboarding.should_show(g.user),
     }
 
     if not project:
@@ -114,6 +126,7 @@ def index():
             "missing": missing,
             "alerts": alerts,
             "upcoming": upcoming,
+            "runway": burn_rate(project["id"]),
             "updates": update_feed.feed(g.user["id"], limit=5),
             "current": current,
             "current_definition": stage_by_key(current["key"]) if current else None,

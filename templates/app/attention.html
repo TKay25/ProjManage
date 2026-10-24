@@ -84,7 +84,13 @@
         <div class="card-head"><h2>How this list works</h2></div>
         <ul class="check-list compact">
           <li>{{ icon('shield', 16) }}<span>Approvals appear once a stage that needs an authority is in progress, or an agreement is still unsigned.</span></li>
-          <li>{{ icon('alert', 16) }}<span>Blocked stages show the reason the manager recorded, so you can ask a specific question.</span></li>
+          <li>{{ icon('alert', 16) }}<span>
+            {% if runs_build %}
+              Blocked stages carry the reason recorded, so the person chasing it knows what has to clear first.
+            {% else %}
+              Blocked stages show the reason the manager recorded, so you can ask a specific question.
+            {% endif %}
+          </span></li>
           <li>{{ icon('receipt', 16) }}<span>
             {% if runs_build %}
               Receipts are chased after {{ grace_days }} days. Attaching proof clears the item straight away.

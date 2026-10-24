@@ -217,6 +217,53 @@
         <button class="btn btn-outline" type="submit">{{ icon('lock', 15) }} Update password</button>
       </form>
     </div>
+
+    <div class="card" id="security">
+      <div class="card-head">
+        <h2>Sign-in security</h2>
+        {% if user.totp_enabled %}
+          <span class="badge badge-success">Two-step on</span>
+        {% else %}
+          <span class="badge badge-warn">Password only</span>
+        {% endif %}
+      </div>
+
+      {% if user.totp_enabled %}
+        <p class="muted small pad-x">
+          {{ icon('shield', 15) }} A code from your authenticator app is required at sign-in.
+        </p>
+        <form class="form pad-x" method="post" action="{{ url_for('settings.two_factor_disable') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <label class="field">
+            <span class="field-label">Password</span>
+            <input class="input" type="password" name="password" autocomplete="current-password" required />
+            <span class="field-hint">Required to turn two-step verification off.</span>
+          </label>
+          <button class="btn btn-ghost btn-sm" type="submit">{{ icon('lock', 15) }} Turn off two-step verification</button>
+        </form>
+      {% else %}
+        <p class="muted small pad-x">
+          {{ icon('shield', 15) }} Add a code from your phone on top of your password. Recommended for any account that can move money.
+        </p>
+        <div class="pad">
+          <a class="btn btn-outline btn-sm" href="{{ url_for('settings.two_factor_setup') }}">
+            {{ icon('shield', 15) }} Set up two-step verification
+          </a>
+        </div>
+      {% endif %}
+
+      <div class="card-head card-head--sub">
+        <h2>Signed-in devices</h2>
+      </div>
+      <p class="muted small pad-x">
+        Changing your password already signs other devices out. Use this if you think a device is still open somewhere.
+      </p>
+      <form class="pad-x" method="post" action="{{ url_for('settings.revoke_sessions') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn-ghost btn-sm" type="submit">{{ icon('logout', 15) }} Sign out everywhere else</button>
+      </form>
+      <p class="micro-note pad-x">This browser stays signed in.</p>
+    </div>
   </div>
 
   <aside class="detail-side">

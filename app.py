@@ -29,6 +29,7 @@ from money import (
 )
 from paging import page_list
 from queries import attention_counts
+import observability
 import updates
 from stages import (
     PAYMENT_METHODS,
@@ -52,6 +53,7 @@ NAV_ITEMS = [
     {"key": "projects", "href": "/app/projects", "label": "Projects", "icon": "building"},
     {"key": "money", "href": "/app/money", "label": "Money", "icon": "wallet"},
     {"key": "documents", "href": "/app/documents", "label": "Documents", "icon": "folder"},
+    {"key": "reports", "href": "/app/reports", "label": "Reports", "icon": "trending-up"},
     {"key": "agreements", "href": "/app/agreements", "label": "Agreements", "icon": "pen"},
     {"key": "search", "href": "/app/search", "label": "Search", "icon": "search"},
     {"key": "suppliers", "href": "/app/suppliers", "label": "Suppliers", "icon": "store"},
@@ -71,6 +73,9 @@ def create_app(config_object=Config):
     Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
+    # Tracing starts first, so even a rejected CSRF token or an auth failure is
+    # logged with a request id.
+    observability.init_app(app)
     auth.init_app(app)
 
     from routes_agreements import DEFAULT_TERMS, bp as agreements_bp
@@ -84,6 +89,7 @@ def create_app(config_object=Config):
     from routes_notifications import bp as notifications_bp
     from routes_projects import bp as projects_bp
     from routes_public import bp as public_bp
+    from routes_reports import bp as reports_bp
     from routes_search import bp as search_bp
     from routes_settings import bp as settings_bp
     from routes_suppliers import bp as suppliers_bp
@@ -104,6 +110,7 @@ def create_app(config_object=Config):
         agreements_bp,
         suppliers_bp,
         whatsapp_bp,
+        reports_bp,
         settings_bp,
         team_bp,
         search_bp,
@@ -195,6 +202,9 @@ def create_app(config_object=Config):
             # about what they receive, everyone else about what they record.
             "runs_build": auth.runs_build(user),
             "demo_mode": app.config.get("DEMO_MODE", False),
+            # The sidebar owns its own list, so a view that does not pass
+            # `projects` can never make it claim there are none.
+            "sidebar_projects": auth.accessible_projects(user) if user else [],
             "sidebar_workspaces": workspaces_for(user),
             "attention": attention,
             "unread_updates": unread_updates,
@@ -262,11 +272,18 @@ def create_app(config_object=Config):
             413: "That file is larger than 8MB. Try a smaller photo or PDF.",
             500: "Something went wrong on our side. Please try again.",
         }
+        reference = ""
+        if code >= 500:
+            # One log line with the traceback, keyed by an id the person on the
+            # other end can quote.
+            reference = observability.report(error, context=f"http {code}")
+
         return (
             render_template(
                 "errors/error.html",
                 code=code,
                 message=messages.get(code, "Something went wrong."),
+                reference=reference,
                 title="Error",
             ),
             code,

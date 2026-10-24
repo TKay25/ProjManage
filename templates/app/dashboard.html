@@ -23,6 +23,35 @@
 {% endblock %}
 
 {% block content %}
+{% if onboarding %}
+  <div class="card onboarding-card" id="onboarding">
+    <div class="card-head">
+      <div>
+        <h2>Set up your workspace</h2>
+        <p class="card-sub">
+          {{ onboarding.completed }} of {{ onboarding.total }} done · this disappears once it is finished
+        </p>
+      </div>
+      <button class="btn btn-ghost btn-sm" type="button" data-onboarding-dismiss>Hide for now</button>
+    </div>
+    <div class="bar-track"><span class="bar-fill" style="width:{{ onboarding.percent }}%"></span></div>
+    <ul class="checklist">
+      {% for step in onboarding.steps %}
+        <li class="checklist-item {{ 'is-done' if step.done }}">
+          <span class="checklist-mark">{{ icon('check', 14) if step.done else icon('chevron-right', 14) }}</span>
+          <div class="checklist-text">
+            <p class="checklist-title">{{ step.title }}</p>
+            <p class="mini-meta">{{ step.hint }}</p>
+          </div>
+          {% if not step.done %}
+            <a class="btn btn-outline btn-sm" href="{{ step.href }}">{{ step.cta }}</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
 {% if not project %}
   <div class="card">
     <div class="empty">
@@ -140,6 +169,12 @@
           <div>
             <h2>Latest money movements</h2>
             <p class="card-sub">Keep the proof beside the payment, not buried in a chat.</p>
+            {% if runway and runway.runway_days %}
+              <p class="mini-meta">
+                {{ icon('clock', 12) }} About {{ runway.runway_days }} days of funding left
+                at roughly {{ runway.monthly|money }} a month.
+              </p>
+            {% endif %}
           </div>
           <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">View all {{ icon('arrow-right', 14) }}</a>
         </div>

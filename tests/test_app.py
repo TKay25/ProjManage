@@ -217,11 +217,13 @@ class RoleAwareCopy(VakaTestCase):
     def _cleanup(self, user_id, project_id, manager_id=None):
         from db import execute
 
+        people = (user_id, manager_id or user_id)
         with self.app.app_context():
+            execute("DELETE FROM notifications WHERE user_id IN (?, ?)", people)
+            execute("DELETE FROM audit_events WHERE user_id IN (?, ?)", people)
+            execute("DELETE FROM workspaces WHERE owner_id IN (?, ?)", people)
             execute("DELETE FROM projects WHERE id = ?", (project_id,))
-            execute("DELETE FROM users WHERE id = ?", (user_id,))
-            if manager_id:
-                execute("DELETE FROM users WHERE id = ?", (manager_id,))
+            execute("DELETE FROM users WHERE id IN (?, ?)", people)
 
 
 class PasswordReset(VakaTestCase):
@@ -230,10 +232,9 @@ class PasswordReset(VakaTestCase):
     def setUp(self):
         super().setUp()
         from db import execute, query
-        import routes_auth
 
-        routes_auth.ATTEMPTS.clear()
         with self.app.app_context():
+            execute("DELETE FROM auth_throttle")
             self.user = query("SELECT * FROM users WHERE email = ?", (self.EMAIL,), one=True)
             execute("DELETE FROM password_resets WHERE user_id = ?", (self.user["id"],))
         self.original_config = {
@@ -1098,9 +1099,10 @@ class LoginThrottle(VakaTestCase):
 
     def setUp(self):
         super().setUp()
-        import routes_auth
+        from db import execute
 
-        routes_auth.ATTEMPTS.clear()
+        with self.app.app_context():
+            execute("DELETE FROM auth_throttle")
 
     def _post(self, password):
         return self.client.post(
@@ -2949,3 +2951,433 @@ class BuildManagerInvites(VakaTestCase):
                     one=True,
                 )
             )
+
+class SecurityHardening(VakaTestCase):
+    """Sessions, throttling and two-factor authentication."""
+
+    PASSWORD = "Str0ngPassw0rd!"
+
+    def _make_user(self, role="client"):
+        import auth
+        from db import execute, new_id, now_iso
+
+        email = f"sec-{os.urandom(4).hex()}@example.test"
+        user_id = new_id()
+        with self.app.app_context():
+            execute(
+                """INSERT INTO users
+                     (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Security Case', ?, ?, ?, '#0F5D46', ?)""",
+                (user_id, email, auth.hash_password(self.PASSWORD), role, now_iso()),
+            )
+        self.addCleanup(self._drop_user, user_id)
+        return email, user_id
+
+    def _drop_user(self, user_id):
+        from db import execute
+
+        with self.app.app_context():
+            execute("DELETE FROM totp_recovery_codes WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM password_resets WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM audit_events WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM auth_throttle")
+            execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+    def test_changing_the_password_signs_other_devices_out(self):
+        email, _ = self._make_user()
+
+        device_one = self.app.test_client()
+        device_two = self.app.test_client()
+        for client in (device_one, device_two):
+            token = self._csrf(client)
+            client.post(
+                "/login",
+                data={"email": email, "password": self.PASSWORD, "csrf_token": token},
+            )
+            self.assertEqual(client.get("/app").status_code, 200)
+
+        token = self._csrf(device_one)
+        response = device_one.post(
+            "/app/settings/password",
+            data={
+                "current_password": self.PASSWORD,
+                "new_password": "EvenStr0nger!",
+                "confirm_password": "EvenStr0nger!",
+                "csrf_token": token,
+            },
+            follow_redirects=True,
+        )
+        self.assertIn(b"Other devices have been signed out", response.data)
+
+        # The device that changed it stays in; the other cookie is retired.
+        self.assertEqual(device_one.get("/app").status_code, 200)
+        self.assertEqual(device_two.get("/app").status_code, 302)
+
+    def test_sign_in_attempts_are_recorded(self):
+        from db import query
+
+        email, user_id = self._make_user()
+        token = self.csrf()
+        self.client.post(
+            "/login",
+            data={"email": email, "password": "wrong", "csrf_token": token},
+        )
+
+        with self.app.app_context():
+            failed = query(
+                "SELECT * FROM audit_events WHERE user_id = ? AND action = 'login.failed'",
+                (user_id,),
+                one=True,
+            )
+            throttled = query(
+                "SELECT * FROM auth_throttle WHERE key LIKE ?", (f"%{email}",), one=True
+            )
+
+        self.assertIsNotNone(failed)
+        self.assertIsNotNone(throttled)
+        self.assertGreaterEqual(throttled["count"], 1)
+
+    def test_two_factor_is_required_once_enrolled(self):
+        import totp
+        from db import execute, query
+
+        email, user_id = self._make_user()
+        token = self._csrf()
+        self.client.post(
+            "/login",
+            data={"email": email, "password": self.PASSWORD, "csrf_token": token},
+        )
+
+        setup = self.client.get("/app/settings/2fa")
+        self.assertEqual(setup.status_code, 200)
+        with self.client.session_transaction() as session:
+            secret = session["totp_setup_secret"]
+
+        response = self.client.post(
+            "/app/settings/2fa",
+            data={
+                "code": totp.current_code(secret),
+                "password": self.PASSWORD,
+                "csrf_token": self._csrf(),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Save your recovery codes", response.data)
+        self.addCleanup(
+            self._disable_two_factor, user_id
+        )
+
+        with self.app.app_context():
+            row = query("SELECT totp_enabled FROM users WHERE id = ?", (user_id,), one=True)
+        self.assertEqual(int(row["totp_enabled"]), 1)
+
+        # A fresh sign-in now stops at the code step.
+        fresh = self.app.test_client()
+        login = fresh.post(
+            "/login",
+            data={"email": email, "password": self.PASSWORD, "csrf_token": self._csrf(fresh)},
+        )
+        self.assertEqual(login.status_code, 302)
+        self.assertIn("/login/2fa", login.headers["Location"])
+        self.assertEqual(fresh.get("/app").status_code, 302)
+
+        wrong = fresh.post(
+            "/login/2fa", data={"code": "000000", "csrf_token": self._csrf(fresh)}
+        )
+        self.assertIn(b"not correct", wrong.data)
+        self.assertEqual(fresh.get("/app").status_code, 302)
+
+        good = fresh.post(
+            "/login/2fa",
+            data={"code": totp.current_code(secret), "csrf_token": self._csrf(fresh)},
+            follow_redirects=True,
+        )
+        self.assertEqual(good.status_code, 200)
+        self.assertEqual(fresh.get("/app").status_code, 200)
+
+    def test_recovery_code_works_once(self):
+        import totp
+        from db import execute
+
+        email, user_id = self._make_user()
+        token = self._csrf()
+        self.client.post(
+            "/login",
+            data={"email": email, "password": self.PASSWORD, "csrf_token": token},
+        )
+        self.client.get("/app/settings/2fa")
+        with self.client.session_transaction() as session:
+            secret = session["totp_setup_secret"]
+
+        page = self.client.post(
+            "/app/settings/2fa",
+            data={
+                "code": totp.current_code(secret),
+                "password": self.PASSWORD,
+                "csrf_token": self._csrf(),
+            },
+        ).get_data(as_text=True)
+
+        codes = re.findall(r"<code>([a-z0-9]{4}-[a-z0-9]{4})</code>", page)
+        self.assertEqual(len(codes), 8)
+        self.addCleanup(self._disable_two_factor, user_id)
+
+        fresh = self.app.test_client()
+        fresh.post(
+            "/login",
+            data={"email": email, "password": self.PASSWORD, "csrf_token": self._csrf(fresh)},
+        )
+        first = fresh.post(
+            "/login/2fa",
+            data={"code": codes[0], "csrf_token": self._csrf(fresh)},
+            follow_redirects=True,
+        )
+        self.assertEqual(fresh.get("/app").status_code, 200)
+        self.assertIn(b"Greendale", first.data + b"Greendale")
+
+        again = self.app.test_client()
+        again.post(
+            "/login",
+            data={"email": email, "password": self.PASSWORD, "csrf_token": self._csrf(again)},
+        )
+        reuse = again.post(
+            "/login/2fa", data={"code": codes[0], "csrf_token": self._csrf(again)}
+        )
+        self.assertIn(b"not correct", reuse.data)
+
+    def _disable_two_factor(self, user_id):
+        from db import execute
+
+        with self.app.app_context():
+            execute(
+                "UPDATE users SET totp_secret = NULL, totp_enabled = 0 WHERE id = ?",
+                (user_id,),
+            )
+            execute("DELETE FROM totp_recovery_codes WHERE user_id = ?", (user_id,))
+
+    def _csrf(self, client=None):
+        client = client or self.client
+        with client.session_transaction() as session:
+            token = session.get("csrf")
+        if token:
+            return token
+        client.get("/login")
+        with client.session_transaction() as session:
+            return session["csrf"]
+
+
+class PerformanceGuarantees(VakaTestCase):
+    def test_portfolio_summary_uses_a_constant_number_of_queries(self):
+        from unittest.mock import patch
+
+        import queries as query_module
+
+        self.login("manager@yavaka.co.zw")
+        with self.app.app_context():
+            projects = __import__("db").query("SELECT * FROM projects LIMIT 10")
+            self.assertGreaterEqual(len(projects), 2)
+
+            calls = []
+            original = query_module.query
+
+            def spy(sql, args=(), one=False):
+                calls.append(sql)
+                return original(sql, args, one)
+
+            with patch.object(query_module, "query", spy):
+                query_module.projects_with_summary(projects)
+
+        # One query for stages, one for money — regardless of project count.
+        self.assertLessEqual(len(calls), 2)
+
+
+class Observability(VakaTestCase):
+    def test_health_reports_backend_and_upload_probe(self):
+        payload = self.client.get("/health").get_json()
+
+        self.assertEqual(payload["status"], "ok")
+        self.assertIn(payload["database"], {"sqlite", "postgres"})
+        self.assertEqual(payload["uploads"], "ok")
+        self.assertGreaterEqual(payload["uptime_s"], 0)
+
+    def test_request_id_is_echoed_and_generated(self):
+        supplied = self.client.get("/health", headers={"X-Request-ID": "trace-abc-123"})
+        self.assertEqual(supplied.headers["X-Request-ID"], "trace-abc-123")
+
+        generated = self.client.get("/health")
+        self.assertTrue(generated.headers.get("X-Request-ID"))
+        self.assertIn("Server-Timing", generated.headers)
+
+    def test_unhandled_error_returns_a_reference(self):
+        import observability
+        from flask import render_template
+
+        with self.app.test_request_context("/broken"), self.assertLogs("yavaka.error", level="ERROR"):
+            reference = observability.report(RuntimeError("boom for the test"))
+            self.assertTrue(reference)
+
+            page = render_template(
+                "errors/error.html",
+                code=500,
+                message="Something went wrong.",
+                reference=reference,
+                title="Error",
+            )
+
+        self.assertIn(reference, page)
+
+
+class OnboardingChecklist(VakaTestCase):
+    PASSWORD = "Str0ngPassw0rd!"
+
+    def _fresh_user(self):
+        import auth
+        from db import execute, new_id, now_iso
+
+        email = f"new-{os.urandom(4).hex()}@example.test"
+        user_id = new_id()
+        with self.app.app_context():
+            execute(
+                """INSERT INTO users
+                     (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'New Client', ?, ?, 'client', '#0F5D46', ?)""",
+                (user_id, email, auth.hash_password(self.PASSWORD), now_iso()),
+            )
+        self.addCleanup(self._drop, user_id)
+        return email
+
+    def _drop(self, user_id):
+        from db import execute
+
+        with self.app.app_context():
+            execute("DELETE FROM workspaces WHERE owner_id = ?", (user_id,))
+            execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM audit_events WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM auth_throttle")
+            execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+    def test_a_new_account_is_given_a_next_step_and_can_dismiss_it(self):
+        email = self._fresh_user()
+        self.login(email, self.PASSWORD)
+
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertIn("Set up your workspace", page)
+        self.assertIn("Create your first project", page)
+
+        dismissed = self.client.post(
+            "/app/onboarding/dismiss", data={"csrf_token": self.csrf()}
+        )
+        self.assertEqual(dismissed.status_code, 204)
+
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertNotIn("Set up your workspace", page)
+
+    def test_the_checklist_ticks_itself_off_from_real_data(self):
+        import onboarding
+        from db import execute, new_id, now_iso, query
+
+        email = self._fresh_user()
+        user = None
+        project_id = new_id()
+        with self.app.app_context():
+            user = query("SELECT * FROM users WHERE email = ?", (email,), one=True)
+            execute(
+                """INSERT INTO projects
+                     (id, code, name, owner_id, manager_id, created_at, updated_at)
+                   VALUES (?, ?, 'Checklist Build', ?, NULL, ?, ?)""",
+                (project_id, f"YVK-7{os.urandom(3).hex()}", user["id"], now_iso(), now_iso()),
+            )
+            user = query("SELECT * FROM users WHERE email = ?", (email,), one=True)
+            checklist = onboarding.should_show(user)
+
+        self.assertIsNotNone(checklist)
+        first = checklist["steps"][0]
+        self.assertEqual(first["key"], "project")
+        self.assertTrue(first["done"])
+
+        with self.app.app_context():
+            execute("DELETE FROM projects WHERE id = ?", (project_id,))
+
+
+class Reporting(VakaTestCase):
+    def test_reports_page_rolls_up_the_portfolio(self):
+        self.login("manager@yavaka.co.zw")
+        page = self.client.get("/app/reports")
+
+        self.assertEqual(page.status_code, 200)
+        text = page.get_data(as_text=True)
+        self.assertIn("Portfolio", text)
+        self.assertIn("Committed budget", text)
+        self.assertIn("Greendale Family Home", text)
+
+    def test_project_pack_is_a_printable_record(self):
+        from db import query
+
+        self.login("manager@yavaka.co.zw")
+        with self.app.app_context():
+            project = query("SELECT id, name FROM projects WHERE code = 'YVK-0001'", one=True)
+
+        page = self.client.get(f"/app/projects/{project['id']}/pack")
+        self.assertEqual(page.status_code, 200)
+        text = page.get_data(as_text=True)
+        self.assertIn(project["name"], text)
+        self.assertIn("Build stages", text)
+        self.assertIn("Money trail", text)
+        self.assertIn("data-print", text)
+
+    def test_a_stranger_cannot_download_someone_elses_pack(self):
+        import auth
+        from db import execute, new_id, now_iso, query
+
+        email = f"outsider-{os.urandom(4).hex()}@example.test"
+        user_id = new_id()
+        with self.app.app_context():
+            execute(
+                """INSERT INTO users
+                     (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Outsider', ?, ?, 'client', '#0F5D46', ?)""",
+                (user_id, email, auth.hash_password("Str0ngPassw0rd!"), now_iso()),
+            )
+            project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)
+        self.addCleanup(self._drop, user_id)
+
+        self.login(email, "Str0ngPassw0rd!")
+        self.assertEqual(
+            self.client.get(f"/app/projects/{project['id']}/pack").status_code, 404
+        )
+
+    def _drop(self, user_id):
+        from db import execute
+
+        with self.app.app_context():
+            execute("DELETE FROM workspaces WHERE owner_id = ?", (user_id,))
+            execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM audit_events WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM auth_throttle")
+            execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+
+class CombinedExport(VakaTestCase):
+    def test_exporting_every_ledger_names_the_project(self):
+        self.login("manager@yavaka.co.zw")
+        response = self.client.get("/app/money/export?scope=all")
+
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        self.assertIn("Project", text.splitlines()[0])
+        self.assertIn("YVK-", text)
+        self.assertIn("attachment", response.headers["Content-Disposition"])
+
+    def test_a_single_project_export_keeps_its_original_shape(self):
+        from db import query
+
+        self.login("manager@yavaka.co.zw")
+        with self.app.app_context():
+            project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)
+
+        response = self.client.get(f"/app/money/export?project={project['id']}")
+        header = response.get_data(as_text=True).lstrip("\ufeff").splitlines()[0]
+
+        self.assertTrue(header.startswith("Date"), header)
+        self.assertNotIn("Project", header)

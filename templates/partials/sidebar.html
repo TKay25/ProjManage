@@ -46,8 +46,8 @@
 
   <div class="sidebar-section sidebar-projects">
     <p class="sidebar-label">Your projects</p>
-    {% if projects %}
-      {% for item in projects[:4] %}
+    {% if sidebar_projects %}
+      {% for item in sidebar_projects[:4] %}
         <a class="side-project" href="{{ url_for('projects.detail', project_id=item.id) }}">
           <span class="project-dot tone-{{ loop.index0 % 4 + 1 }}"></span>
           <span class="side-project-name">{{ item.name }}</span>

@@ -484,6 +484,28 @@
       button.hidden = true;
     });
   });
+  /* First-run checklist. Dismissing is remembered on the account, so it does
+     not come back on another device or after a cache clear. */
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-onboarding-dismiss]");
+    if (!button) return;
+    event.preventDefault();
+
+    const card = document.getElementById("onboarding");
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
+    card?.classList.add("is-hiding");
+
+    try {
+      await fetch("/app/onboarding/dismiss", {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrf, Accept: "text/html" },
+        credentials: "same-origin",
+      });
+    } finally {
+      card?.remove();
+    }
+  });
+
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/sw.js").catch(() => {

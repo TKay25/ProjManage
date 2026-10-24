@@ -1,0 +1,36 @@
+{% extends "app/base.html" %}
+{% block title %}Recovery codes · YaVaKa{% endblock %}
+
+{% block page_title %}Save your recovery codes{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    Each code works once, if you ever lose your phone
+    <span class="page-tagline">Print them, or keep them in your password manager.</span>
+  </p>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2>Your eight codes</h2>
+      <p class="card-sub">They are shown once. YaVaKa keeps only a hash of each.</p>
+    </div>
+  </div>
+
+  <ul class="recovery-grid">
+    {% for code in codes %}
+      <li><code>{{ code }}</code></li>
+    {% endfor %}
+  </ul>
+
+  <div class="all-clear">
+    <span>{{ icon('check', 18) }}</span>
+    <p>Two-step verification is on. You will be asked for a code the next time you sign in.</p>
+  </div>
+
+  <div class="pad">
+    <a class="btn btn-primary" href="{{ url_for('settings.index') }}">{{ icon('settings', 15) }} Back to settings</a>
+  </div>
+</div>
+{% endblock %}

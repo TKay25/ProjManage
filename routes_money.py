@@ -105,28 +105,54 @@ def _csv_safe(value) -> str:
 @bp.get("/app/money/export")
 @login_required
 def export():
-    """A statement a diaspora client can keep and open in Excel or Sheets."""
-    _projects, project = _selected_project()
-    if not project:
-        return redirect(url_for("money.index"))
+    """A statement a diaspora client can keep and open in Excel or Sheets.
 
-    where, params, _f, _s, _st = _ledger_filters(project)
+    With ``?scope=all`` it exports every build the account can see, which is
+    what the Reports page links to.
+    """
+    if request.args.get("scope") == "all":
+        projects = accessible_projects(g.user)
+        if not projects:
+            return redirect(url_for("money.index"))
 
-    rows = query(
-        f"""SELECT t.*, a.id AS receipt_id
-            FROM transactions t
-            LEFT JOIN attachments a ON a.id = (
-                SELECT id FROM attachments WHERE transaction_id = t.id
-                ORDER BY created_at LIMIT 1
-            )
-            WHERE {' AND '.join(where)}
-            ORDER BY t.occurred_at ASC, t.created_at ASC""",
-        params,
-    )
+        placeholders = ",".join("?" for _ in projects)
+        rows = query(
+            f"""SELECT t.*, p.name AS project_name, p.code AS project_code,
+                       a.id AS receipt_id
+                FROM transactions t
+                JOIN projects p ON p.id = t.project_id
+                LEFT JOIN attachments a ON a.id = (
+                    SELECT id FROM attachments WHERE transaction_id = t.id
+                    ORDER BY created_at LIMIT 1
+                )
+                WHERE t.project_id IN ({placeholders})
+                ORDER BY p.code, t.occurred_at ASC, t.created_at ASC""",
+            [project["id"] for project in projects],
+        )
+        project = None
+    else:
+        _projects, project = _selected_project()
+        if not project:
+            return redirect(url_for("money.index"))
+
+        where, params, _f, _s, _st = _ledger_filters(project)
+        rows = query(
+            f"""SELECT t.*, a.id AS receipt_id
+                FROM transactions t
+                LEFT JOIN attachments a ON a.id = (
+                    SELECT id FROM attachments WHERE transaction_id = t.id
+                    ORDER BY created_at LIMIT 1
+                )
+                WHERE {' AND '.join(where)}
+                ORDER BY t.occurred_at ASC, t.created_at ASC""",
+            params,
+        )
 
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\r\n")
-    writer.writerow(CSV_COLUMNS)
+    # A combined export is meaningless without saying which build each row is.
+    combined = project is None
+    writer.writerow((["Project"] if combined else []) + CSV_COLUMNS)
 
     balance = 0
     money_in = 0
@@ -142,7 +168,8 @@ def export():
             money_out += amount
 
         writer.writerow(
-            [
+            ([_csv_safe(f"{row['project_name']} ({row['project_code']})")] if combined else [])
+            + [
                 (row["occurred_at"] or "")[:10],
                 "Money in" if is_funding else "Money out",
                 _csv_safe(row["description"]),
@@ -159,10 +186,14 @@ def export():
 
     writer.writerow([])
     writer.writerow(
-        ["", "", "Totals", "", "", "", "", _csv_amount(money_in), _csv_amount(money_out), _csv_amount(balance), ""]
+        ([""] if combined else [])
+        + ["", "", "Totals", "", "", "", "", _csv_amount(money_in), _csv_amount(money_out), _csv_amount(balance), ""]
     )
 
-    slug = re.sub(r"[^a-z0-9]+", "-", project["name"].lower()).strip("-")[:40] or "project"
+    if project is None:
+        slug = "all-builds"
+    else:
+        slug = re.sub(r"[^a-z0-9]+", "-", project["name"].lower()).strip("-")[:40] or "project"
     filename = f"vaka-ledger-{slug}-{datetime.now():%Y-%m-%d}.csv"
 
     # The BOM keeps Excel from mangling accented supplier names.

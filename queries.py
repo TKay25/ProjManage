@@ -135,18 +135,109 @@ def monthly_cashflow(project_id: str, months: int = 6):
 
 
 def projects_with_summary(projects):
+    """Stages and money for every project in three queries, not three per row.
+
+    A manager with sixty builds used to issue 120 queries to draw one list.
+    """
+    if not projects:
+        return []
+
+    ids = [project["id"] for project in projects]
+    placeholders = ",".join("?" for _ in ids)
+
+    stage_rows_by_project = {}
+    for row in query(
+        f"""SELECT * FROM stages WHERE project_id IN ({placeholders})
+            ORDER BY position""",
+        ids,
+    ):
+        stage_rows_by_project.setdefault(row["project_id"], []).append(row)
+
+    totals_by_project = {
+        row["project_id"]: {"funded": int(row["funded"] or 0), "spent": int(row["spent"] or 0)}
+        for row in query(
+            f"""SELECT project_id,
+                     COALESCE(SUM(CASE WHEN type = 'FUNDING' THEN amount_cents END), 0) AS funded,
+                     COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount_cents END), 0) AS spent
+                FROM transactions WHERE project_id IN ({placeholders})
+                GROUP BY project_id""",
+            ids,
+        )
+    }
+
     summaries = []
     for project in projects:
-        stages = stage_rows(project["id"])
+        stages = stage_rows_by_project.get(project["id"], [])
+        totals = totals_by_project.get(project["id"], {"funded": 0, "spent": 0})
+        totals["balance"] = totals["funded"] - totals["spent"]
         summaries.append(
             {
                 **project,
-                "totals": money_totals(project["id"]),
+                "totals": totals,
                 "stages": stages,
                 "progress": project_progress(stages),
             }
         )
     return summaries
+
+
+def stage_variance(project_id: str):
+    """Budget against actual per stage, worst overrun first.
+
+    This is the question a client actually asks at handover: which parts of the
+    build went over, and by how much.
+    """
+    rows = query(
+        """SELECT s.key, s.name, s.position, s.status, s.budget_cents,
+                  COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount_cents END), 0) AS spent_cents
+           FROM stages s
+           LEFT JOIN transactions t
+                  ON t.project_id = s.project_id AND t.stage_key = s.key
+           WHERE s.project_id = ?
+           GROUP BY s.id, s.key, s.name, s.position, s.status, s.budget_cents
+           ORDER BY s.position""",
+        (project_id,),
+    )
+
+    for row in rows:
+        budget = int(row["budget_cents"] or 0)
+        spent = int(row["spent_cents"] or 0)
+        row["budget_cents"] = budget
+        row["spent_cents"] = spent
+        row["variance_cents"] = budget - spent
+        row["percent_used"] = round((spent / budget) * 100) if budget else None
+    return rows
+
+
+def burn_rate(project_id: str, days: int = 90) -> dict:
+    """Average daily spend over a window, and how long the balance lasts."""
+    row = query(
+        """SELECT COALESCE(SUM(amount_cents), 0) AS spent
+           FROM transactions
+           WHERE project_id = ? AND type = 'EXPENSE'
+             AND substr(occurred_at, 1, 10) >= ?""",
+        (project_id, _days_ago(days)),
+        one=True,
+    )
+    spent = int(row["spent"] or 0) if row else 0
+    totals = money_totals(project_id)
+    daily = spent / days if days else 0
+    runway_days = int(totals["balance"] / daily) if daily > 0 and totals["balance"] > 0 else None
+
+    return {
+        "spent": spent,
+        "window_days": days,
+        "daily": daily,
+        "monthly": daily * 30,
+        "runway_days": runway_days,
+        "balance": totals["balance"],
+    }
+
+
+def _days_ago(days: int) -> str:
+    from datetime import timedelta
+
+    return (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
 
 
 def missing_receipts(project_id: str):

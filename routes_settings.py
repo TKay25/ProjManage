@@ -19,13 +19,15 @@ from flask import (
     render_template,
     request,
     send_file,
+    session,
     url_for,
 )
 
 import auth
 import team
+import totp
 from auth import accessible_projects, admin_required, login_required
-from db import dump_sql, execute, is_postgres, query
+from db import dump_sql, execute, is_postgres, new_id, now_iso, query
 from whatsapp import display_phone, normalize_phone
 
 bp = Blueprint("settings", __name__)
@@ -201,6 +203,101 @@ def update_password():
             "UPDATE users SET password_hash = ? WHERE id = ?",
             (auth.hash_password(new_password), g.user["id"]),
         )
-        flash("Password changed.", "success")
+        # Every other device signed in with the old password is retired; this
+        # browser is re-seated on the new epoch by the helper.
+        auth.bump_session_epoch(g.user["id"])
+        auth.audit_auth("password.changed", user_id=g.user["id"])
+        flash("Password changed. Other devices have been signed out.", "success")
+
+    return redirect(url_for("settings.index"))
+
+
+@bp.post("/app/settings/sessions")
+@login_required
+def revoke_sessions():
+    auth.bump_session_epoch(g.user["id"])
+    auth.audit_auth("session.revoked_all", user_id=g.user["id"])
+    flash("Every other device has been signed out.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.get("/app/settings/2fa")
+@login_required
+def two_factor_setup():
+    if int(g.user["totp_enabled"] or 0):
+        return redirect(url_for("settings.index"))
+
+    secret = session.get("totp_setup_secret")
+    if not secret:
+        secret = totp.generate_secret()
+        session["totp_setup_secret"] = secret
+
+    return render_template(
+        "app/two_factor_setup.html",
+        title="Two-step verification",
+        active="settings",
+        projects=accessible_projects(g.user),
+        secret=secret,
+        grouped=" ".join(secret[i : i + 4] for i in range(0, len(secret), 4)),
+        provisioning_uri=totp.provisioning_uri(secret, g.user["email"]),
+    )
+
+
+@bp.post("/app/settings/2fa")
+@login_required
+def two_factor_enable():
+    secret = session.get("totp_setup_secret") or ""
+    code = (request.form.get("code") or "").strip()
+    password = request.form.get("password") or ""
+
+    user = query("SELECT * FROM users WHERE id = ?", (g.user["id"],), one=True)
+
+    if not auth.verify_password(password, user["password_hash"]):
+        flash("Your password is not correct.", "error")
+        return redirect(url_for("settings.two_factor_setup"))
+    if not secret or not totp.verify(secret, code):
+        flash("That code is not correct. Check the time on your phone and try again.", "error")
+        return redirect(url_for("settings.two_factor_setup"))
+
+    codes = totp.generate_recovery_codes()
+    execute(
+        "UPDATE users SET totp_secret = ?, totp_enabled = 1 WHERE id = ?",
+        (secret, g.user["id"]),
+    )
+    execute("DELETE FROM totp_recovery_codes WHERE user_id = ?", (g.user["id"],))
+    for code_value in codes:
+        execute(
+            """INSERT INTO totp_recovery_codes (id, user_id, code_hash, created_at)
+               VALUES (?, ?, ?, ?)""",
+            (new_id(), g.user["id"], totp.hash_code(code_value), now_iso()),
+        )
+    session.pop("totp_setup_secret", None)
+    auth.audit_auth("2fa.enabled", user_id=g.user["id"])
+
+    return render_template(
+        "app/two_factor_codes.html",
+        title="Recovery codes",
+        active="settings",
+        projects=accessible_projects(g.user),
+        codes=codes,
+    )
+
+
+@bp.post("/app/settings/2fa/disable")
+@login_required
+def two_factor_disable():
+    password = request.form.get("password") or ""
+    user = query("SELECT * FROM users WHERE id = ?", (g.user["id"],), one=True)
+
+    if not auth.verify_password(password, user["password_hash"]):
+        flash("Your password is not correct.", "error")
+    else:
+        execute(
+            "UPDATE users SET totp_secret = NULL, totp_enabled = 0 WHERE id = ?",
+            (g.user["id"],),
+        )
+        execute("DELETE FROM totp_recovery_codes WHERE user_id = ?", (g.user["id"],))
+        auth.audit_auth("2fa.disabled", user_id=g.user["id"])
+        flash("Two-step verification is off.", "success")
 
     return redirect(url_for("settings.index"))

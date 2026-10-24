@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>{{ project.name }} · project pack · YaVaKa</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}" />
+  <style>
+    @page { margin: 16mm; }
+    body { background: #fff; }
+    .print-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 24px; background: #F7F4EF; border-bottom: 1px solid #E2D9CA; }
+    .print-actions { display: flex; gap: 8px; }
+    .pack-section { margin-top: 26px; }
+    .pack-section h2 { font-size: 1rem; letter-spacing: 0.02em; text-transform: uppercase; color: #0F5D46; margin-bottom: 8px; }
+    .pack-group { margin-top: 14px; }
+    .pack-group h3 { font-size: 0.8rem; color: #6B6257; margin-bottom: 4px; }
+    .pack-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 22px; margin: 14px 0; }
+    .pack-facts dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8A8073; }
+    .pack-facts dd { margin: 0 0 4px; font-weight: 600; }
+    @media print {
+      .print-toolbar { display: none !important; }
+      .print-sheet { box-shadow: none !important; margin: 0 !important; max-width: none !important; }
+      .pack-section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body class="print-body">
+  <div class="print-toolbar">
+    <a class="brand" href="/app/reports">{{ logo_mark(30) }}<span class="brand-text"><span class="brand-name">YaVaKa</span><span class="brand-tag">Project pack</span></span></a>
+    <div class="print-actions">
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('projects.detail', project_id=project.id) }}">Back to project</a>
+      <button class="btn btn-primary btn-sm" type="button" data-print>Print / save PDF</button>
+    </div>
+  </div>
+
+  <article class="print-sheet">
+    <header class="print-head">
+      <div>
+        <p class="eyebrow">Project pack</p>
+        <h1>{{ project.name }}</h1>
+        <p class="muted">
+          {{ project.code }}
+          {% if project.suburb %} · {{ project.suburb }}{% endif %} · {{ project.city }}
+        </p>
+      </div>
+      <div class="print-status">{{ badge(project.status) }}</div>
+    </header>
+
+    <dl class="pack-facts">
+      <div><dt>Client</dt><dd>{{ owner.name if owner else '—' }}</dd></div>
+      <div><dt>Build manager</dt><dd>{{ manager.name if manager else 'Not assigned' }}</dd></div>
+      <div><dt>Progress</dt><dd>{{ progress }}% of {{ stages|length }} stages</dd></div>
+      <div><dt>Start</dt><dd>{{ project.start_date|date if project.start_date else '—' }}</dd></div>
+      <div><dt>Target handover</dt><dd>{{ project.target_date|date if project.target_date else '—' }}</dd></div>
+      <div><dt>Committed budget</dt><dd>{{ (variance|sum(attribute='budget_cents'))|money }}</dd></div>
+      <div><dt>Funded</dt><dd>{{ money(totals.funded) }}</dd></div>
+      <div><dt>Spent</dt><dd>{{ money(totals.spent) }}</dd></div>
+      <div><dt>Available</dt><dd>{{ money(totals.balance) }}</dd></div>
+      <div><dt>Generated</dt><dd>{{ generated_at|datetime }}</dd></div>
+    </dl>
+
+    <section class="pack-section">
+      <h2>Build stages</h2>
+      {% for group in grouped %}
+        <div class="pack-group">
+          <h3>{{ group.name }}</h3>
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Stage</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="align-right">Budget</th>
+                <th scope="col" class="align-right">Spent</th>
+                <th scope="col" class="align-right">Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for stage in group.rows %}
+                {% set money_row = (variance | selectattr('key', 'equalto', stage.key) | list | first) %}
+                <tr>
+                  <td>{{ stage.name }}</td>
+                  <td>{{ badge(stage.status) }}</td>
+                  <td class="align-right">{{ money(money_row.budget_cents if money_row else 0) }}</td>
+                  <td class="align-right">{{ money(money_row.spent_cents if money_row else 0) }}</td>
+                  <td class="align-right">
+                    {% if money_row and money_row.variance_cents < 0 %}
+                      <strong>{{ money(money_row.variance_cents) }}</strong>
+                    {% else %}
+                      {{ money(money_row.variance_cents if money_row else 0) }}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endfor %}
+    </section>
+
+    <section class="pack-section">
+      <h2>Money trail</h2>
+      {% if transactions %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Description</th>
+              <th scope="col">Type</th>
+              <th scope="col">Method / reference</th>
+              <th scope="col" class="align-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in transactions %}
+              <tr>
+                <td>{{ tx.occurred_at|date }}</td>
+                <td>{{ tx.description }}</td>
+                <td>{{ 'Received' if tx.type == 'FUNDING' else 'Spent' }}</td>
+                <td>{{ method_label(tx.method) }}{% if tx.reference %} · {{ tx.reference }}{% endif %}</td>
+                <td class="align-right">{{ money(tx.amount_cents) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><td colspan="4">Balance</td><td class="align-right">{{ money(totals.balance) }}</td></tr>
+          </tfoot>
+        </table>
+      {% else %}
+        <p class="muted">No ledger entries recorded yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="pack-section">
+      <h2>Documents on file</h2>
+      {% if documents %}
+        <ul class="pack-list">
+          {% for file in documents %}
+            <li>
+              {{ file.original_name }}
+              <span class="mini-meta">· {{ file.kind }} · {{ file.created_at|date }}{% if file.stage_key %} · {{ stage_name(file.stage_key) }}{% endif %}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">No documents uploaded yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="pack-section">
+      <h2>Agreements</h2>
+      {% if agreements %}
+        <ul class="pack-list">
+          {% for agreement in agreements %}
+            <li>
+              {{ agreement.title }}
+              <span class="mini-meta">
+                · {{ agreement.status|replace('_', ' ') }}
+                · {{ money(agreement.contract_value_cents) }}
+                {% if agreement.signed_at %} · signed {{ agreement.signed_at|date }}{% endif %}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">No agreement recorded yet.</p>
+      {% endif %}
+    </section>
+
+    <footer class="print-foot">
+      <p>
+        Generated by YaVaKa on {{ generated_at|datetime }} · This pack is a project record,
+        not a legal or financial opinion.
+      </p>
+    </footer>
+  </article>
+</body>
+</html>

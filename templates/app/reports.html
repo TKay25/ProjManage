@@ -1,0 +1,175 @@
+{% extends "app/base.html" %}
+{% block title %}Reports · YaVaKa{% endblock %}
+
+{% block page_title %}Reports{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ rows|length }} build{{ '' if rows|length == 1 else 's' }} rolled up
+    <span class="page-tagline">
+      {% if runs_build %}
+        What is committed, what is funded, and where the spend is running ahead.
+      {% else %}
+        What the builds have cost so far, and how far your money goes.
+      {% endif %}
+    </span>
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  {% if rows %}
+    <a class="btn btn-outline btn-sm" href="{{ url_for('money.export', scope='all') }}">
+      {{ icon('download', 15) }} Export every ledger (CSV)
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not rows %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('trending-up', 26) }}</span>
+      <h3>Nothing to report yet</h3>
+      <p>
+        {% if runs_build %}
+          Once a project has a budget and a few ledger entries, this page compares
+          commitment against actual spend.
+        {% else %}
+          Once your build has a budget and payments recorded, this page shows what
+          it has cost and how far your funding reaches.
+        {% endif %}
+      </p>
+      <a class="btn btn-primary" href="{{ url_for('projects.index') }}">{{ icon('building', 15) }} Open projects</a>
+    </div>
+  </div>
+{% else %}
+<div class="kpi-grid kpi-grid--4">
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Committed budget</span><span class="kpi-icon">{{ icon('layout', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.budget|money }}</p>
+    <p class="kpi-sub">Sum of stage budgets</p>
+  </div>
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Funded</span><span class="kpi-icon">{{ icon('wallet', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.funded|money }}</p>
+    <p class="kpi-sub">Deposits received</p>
+  </div>
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Spent</span><span class="kpi-icon">{{ icon('receipt', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.spent|money }}</p>
+    <p class="kpi-sub">{{ ((totals.spent / totals.budget) * 100)|round|int if totals.budget else 0 }}% of committed budget</p>
+  </div>
+  <div class="kpi">
+    <div class="kpi-top"><span class="kpi-label">Available</span><span class="kpi-icon">{{ icon('trending-up', 17) }}</span></div>
+    <p class="kpi-value">{{ totals.balance|money }}</p>
+    <p class="kpi-sub">Received less spent</p>
+  </div>
+</div>
+
+{% if overruns or short_runway %}
+  <div class="card">
+    <div class="card-head">
+      <h2>{{ 'Where to look first' if runs_build else 'Worth a conversation' }}</h2>
+    </div>
+    <ul class="alert-list alert-list--rows">
+      {% for row in overruns[:4] %}
+        <li class="alert-item alert-danger">
+          <span class="alert-icon">{{ icon('alert', 16) }}</span>
+          <div>
+            <p class="alert-title">{{ row.name }} is {{ (row.spent_cents - row.budget_cents)|money }} over its stage budget</p>
+            <p class="alert-body">{{ row.code }} · spent {{ row.spent_cents|money }} of {{ row.budget_cents|money }}</p>
+          </div>
+          <a class="alert-link" href="{{ url_for('projects.detail', project_id=row.id) }}" aria-label="Open {{ row.name }}">{{ icon('chevron-right', 16) }}</a>
+        </li>
+      {% endfor %}
+      {% for row in short_runway[:4] %}
+        <li class="alert-item alert-warn">
+          <span class="alert-icon">{{ icon('clock', 16) }}</span>
+          <div>
+            <p class="alert-title">{{ row.name }} has about {{ row.runway_days }} days of funding left</p>
+            <p class="alert-body">
+              {{ row.balance_cents|money }} available at {{ row.monthly_burn_cents|money }} a month
+            </p>
+          </div>
+          <a class="alert-link" href="{{ url_for('money.index', project=row.id) }}" aria-label="Open ledger">{{ icon('chevron-right', 16) }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2>Portfolio</h2>
+      <p class="card-sub">Overruns first. Runway uses spend over the last {{ burn_window }} days.</p>
+    </div>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th scope="col">Project</th>
+          <th scope="col">Progress</th>
+          <th scope="col" class="align-right">Budget</th>
+          <th scope="col" class="align-right">Funded</th>
+          <th scope="col" class="align-right">Spent</th>
+          <th scope="col" class="align-right">Balance</th>
+          <th scope="col" class="align-right">Variance</th>
+          <th scope="col" class="align-right">Runway</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>
+              <a class="link-quiet" href="{{ url_for('projects.detail', project_id=row.id) }}">{{ row.name }}</a>
+              <p class="mini-meta">{{ row.code }}{% if row.suburb %} · {{ row.suburb }}{% endif %}</p>
+            </td>
+            <td>
+              <div class="bar-track bar-track--slim"><span class="bar-fill" style="width:{{ row.progress }}%"></span></div>
+              <p class="mini-meta">{{ row.progress }}%</p>
+            </td>
+            <td class="align-right">{{ row.budget_cents|money }}</td>
+            <td class="align-right">{{ row.funded_cents|money }}</td>
+            <td class="align-right">{{ row.spent_cents|money }}</td>
+            <td class="align-right">{{ row.balance_cents|money }}</td>
+            <td class="align-right">
+              {% if row.variance_cents < 0 %}
+                <span class="badge badge-danger">{{ row.variance_cents|money }}</span>
+              {% else %}
+                <span class="badge badge-success">{{ row.variance_cents|money }}</span>
+              {% endif %}
+            </td>
+            <td class="align-right">
+              {% if row.runway_days is none %}
+                <span class="mini-meta">—</span>
+              {% else %}
+                {{ row.runway_days }}d
+              {% endif %}
+            </td>
+            <td class="align-right">
+              <a class="link-quiet" href="{{ url_for('reports.project_pack', project_id=row.id) }}"
+                 target="_blank" rel="noopener" title="Open the printable project pack">Pack {{ icon('external', 13) }}</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row">All builds</th>
+          <td></td>
+          <td class="align-right">{{ totals.budget|money }}</td>
+          <td class="align-right">{{ totals.funded|money }}</td>
+          <td class="align-right">{{ totals.spent|money }}</td>
+          <td class="align-right">{{ totals.balance|money }}</td>
+          <td class="align-right">{{ totals.variance|money }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

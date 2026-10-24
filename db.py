@@ -8,10 +8,11 @@ Postgres by this module, so callers do not need two dialects.
 
 import re
 import sqlite3
+import time
 import uuid
 from datetime import datetime, timezone
 
-from flask import current_app, g
+from flask import current_app, g, has_app_context
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -25,6 +26,10 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_color TEXT NOT NULL DEFAULT '#0F5D46',
   density TEXT NOT NULL DEFAULT 'comfortable',
   page_size INTEGER NOT NULL DEFAULT 25,
+  session_epoch INTEGER NOT NULL DEFAULT 0,
+  onboarded_at TEXT,
+  totp_secret TEXT,
+  totp_enabled INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
 
@@ -249,6 +254,30 @@ CREATE TABLE IF NOT EXISTS password_resets (
 );
 CREATE INDEX IF NOT EXISTS idx_password_resets_user
   ON password_resets(user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS totp_recovery_codes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL UNIQUE,
+  used_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_totp_codes_user ON totp_recovery_codes(user_id, used_at);
+
+-- Failed-attempt counters live in the database, not process memory, so every
+-- worker sees the same window and a restart cannot reset an attacker's budget.
+CREATE TABLE IF NOT EXISTS auth_throttle (
+  key TEXT PRIMARY KEY,
+  window_start TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_events(action, created_at);
+CREATE INDEX IF NOT EXISTS idx_tx_type_date ON transactions(project_id, type, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_stages_status ON stages(project_id, status);
+CREATE INDEX IF NOT EXISTS idx_projects_archived ON projects(archived_at);
+CREATE INDEX IF NOT EXISTS idx_wa_contact_project ON whatsapp_contacts(project_id);
 """
 
 # Columns added by the SQLite migrations below also need to exist on a Postgres
@@ -264,6 +293,16 @@ ALTER TABLE attachments ADD COLUMN IF NOT EXISTS stage_key TEXT;
 ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS claimed_at TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_at TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_by TEXT REFERENCES users(id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS session_epoch INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_events(action, created_at);
+CREATE INDEX IF NOT EXISTS idx_tx_type_date ON transactions(project_id, type, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_stages_status ON stages(project_id, status);
+CREATE INDEX IF NOT EXISTS idx_projects_archived ON projects(archived_at);
+CREATE INDEX IF NOT EXISTS idx_wa_contact_project ON whatsapp_contacts(project_id);
 """
 
 
@@ -644,6 +683,45 @@ def run_migrations(connection):
             )
         connection.execute("PRAGMA user_version = 13")
 
+    if version < 14:
+        # Security and onboarding columns: a session epoch so a password change
+        # can sign other devices out, per-user onboarding state, and TOTP.
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
+        for name, definition in (
+            ("session_epoch", "INTEGER NOT NULL DEFAULT 0"),
+            ("onboarded_at", "TEXT"),
+            ("totp_secret", "TEXT"),
+            ("totp_enabled", "INTEGER NOT NULL DEFAULT 0"),
+        ):
+            if name not in columns:
+                connection.execute(f"ALTER TABLE users ADD COLUMN {name} {definition}")
+        connection.execute("PRAGMA user_version = 14")
+
+    # Always run: indexes for the hot filters, and tables added after the
+    # original schema. Both are idempotent on every backend.
+    for statement in (
+        "CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_events(user_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_events(action, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_tx_type_date ON transactions(project_id, type, occurred_at)",
+        "CREATE INDEX IF NOT EXISTS idx_stages_status ON stages(project_id, status)",
+        "CREATE INDEX IF NOT EXISTS idx_projects_archived ON projects(archived_at)",
+        "CREATE INDEX IF NOT EXISTS idx_wa_contact_project ON whatsapp_contacts(project_id)",
+        """CREATE TABLE IF NOT EXISTS totp_recovery_codes (
+             id TEXT PRIMARY KEY,
+             user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+             code_hash TEXT NOT NULL UNIQUE,
+             used_at TEXT,
+             created_at TEXT NOT NULL
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_totp_codes_user ON totp_recovery_codes(user_id, used_at)",
+        """CREATE TABLE IF NOT EXISTS auth_throttle (
+             key TEXT PRIMARY KEY,
+             window_start TEXT NOT NULL,
+             count INTEGER NOT NULL DEFAULT 0
+           )""",
+    ):
+        connection.execute(statement)
+
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(
@@ -660,14 +738,37 @@ def init_app(app):
         init_db()
 
 
+def _note_query(sql: str, started: float):
+    """Counts queries per request and logs the ones that cross the threshold."""
+    if not has_app_context():
+        return
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    g.query_count = getattr(g, "query_count", 0) + 1
+    g.query_ms = getattr(g, "query_ms", 0.0) + elapsed_ms
+
+    threshold = current_app.config.get("SLOW_QUERY_MS", 150)
+    if not threshold or elapsed_ms < threshold:
+        return
+
+    compact = " ".join(sql.split())
+    current_app.logger.warning(
+        "slow query %.0fms: %s",
+        elapsed_ms,
+        compact[:300] + ("…" if len(compact) > 300 else ""),
+        extra={"slow_query_ms": round(elapsed_ms, 1)},
+    )
+
+
 def query(sql: str, args=(), one: bool = False):
     """Return rows as plain dicts so templates and JSON stay simple."""
     args = tuple(args or ())
     connection = get_db()
     prepared = _translate_sql(sql, args)
+    started = time.perf_counter()
     cursor = connection.execute(prepared, args) if args else connection.execute(prepared)
     rows = [dict(row) for row in cursor.fetchall()]
     cursor.close()
+    _note_query(sql, started)
     if one:
         return rows[0] if rows else None
     return rows
@@ -677,11 +778,13 @@ def execute(sql: str, args=()) -> int:
     args = tuple(args or ())
     connection = get_db()
     prepared = _translate_sql(sql, args)
+    started = time.perf_counter()
     cursor = connection.execute(prepared, args) if args else connection.execute(prepared)
     if not is_postgres():
         connection.commit()
     last_id = getattr(cursor, "lastrowid", None)
     cursor.close()
+    _note_query(sql, started)
     return last_id
 
 

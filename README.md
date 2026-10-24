@@ -27,7 +27,9 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 
 | Area | What works today |
 | --- | --- |
-| Authentication | Register, login, logout, hashed passwords, signed session cookies, per-request CSRF tokens, login throttling, and a single-use email password reset (one hour, requires SMTP) |
+| Authentication | Register, login, logout, hashed passwords, signed session cookies, per-request CSRF tokens, and a single-use email password reset (one hour, requires SMTP) |
+| **Account security** | Optional TOTP two-step verification with eight single-use recovery codes; changing a password or clicking "sign out everywhere" retires every other session via a per-user session epoch; failed-attempt counters live in the database so they are shared by every worker; sign-in, failure, 2FA, logout and password events land in the audit trail |
+| **Reports** | `/app/reports` — committed budget vs funded vs spent per build, stage variance with overruns first, and a 90-day burn rate with a runway estimate; `/app/projects/<id>/pack` prints a complete project pack (facts, stages and variance, ledger, documents, agreements) to PDF |
 | Roles & access | `client`, `manager`, `admin`; a project is visible to its owner, its build manager, a build manager linked to that client, or YaVaKa staff. Roles are labels — any account can be named as a build manager |
 | **Team & invitations** | A build manager can type the client's email and WhatsApp number when creating a project: if that email already belongs to a client account the build is filed under that client and the manager is linked, otherwise it waits in the manager's workspace until someone signs up with that address (the screen says so). Registered accounts are linked immediately; anyone else gets a single-use invitation with a copyable `/invite/<token>` link (emailed when SMTP is configured) that requires signing in as the invited address. Pending invites appear on the project and in Settings, and a new registration claims any invite or project filed for its email |
 | **Staff portal** | `/admin` — every workspace in one table, platform money totals, attention feed, people & role management, account creation, activity log, stage reference |
@@ -39,7 +41,8 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Suppliers | Directory of Zimbabwean material suppliers with links out to their own catalogues |
 | WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), conversation history (newest 200 per thread), human takeover (pause/resume the assistant per conversation, with an Updates notification when the client replies while paused), in-app simulator |
 | PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons; a project can be saved as an explicit read-only offline copy that survives a signal drop |
-| Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, attention feed (blocked stages, missing receipts, overdraw), latest updates across every build |
+| Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, funding runway, attention feed (blocked stages, missing receipts, overdraw), latest updates across every build |
+| **First run** | A checklist derived from real data (project, team, first payment, first document, agreement) that ticks itself off, is worded for the account type, and can be dismissed for good |
 | **Attention inbox** | `/app/attention` — one cross-project list of approvals due (regulatory gates and unsigned agreements), blocked stages and missing receipts, oldest first; the sidebar and topbar carry a live count of the same items |
 | **Updates inbox** | `/app/updates` — every stage move, upload, payment, receipt and agreement across your builds, newest first and grouped by day; filter by progress, money, documents or agreements, and see what is new since your last visit |
 | Live notifications | A build manager's change notifies each project stakeholder (owner and manager, never the actor) instantly: a badge on the Updates tab, a toast with a link to the record, and a card on the dashboard. Read state is per person; opening the inbox acknowledges it |
@@ -371,6 +374,27 @@ gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 8 --timeout 60 wsgi:app
 
 With SQLite, every worker is a separate process sharing one file, so keep the
 worker count low. With Postgres (`DATABASE_URL` set), workers scale normally.
+
+### Operating it
+
+Every response carries an `X-Request-ID` (an inbound one is honoured) and a
+`Server-Timing` header with the app duration and query count. Unhandled errors
+log one line keyed by that id, and the error page shows it so a user can quote
+it. Set `LOG_JSON=1` to emit those lines as JSON for a log drain.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LOG_JSON` | `0` | JSON log lines instead of the plain format |
+| `LOG_LEVEL` | `INFO` | Root log level |
+| `SLOW_QUERY_MS` | `150` | Queries slower than this are logged as warnings; `0` disables |
+| `ERROR_WEBHOOK_URL` | empty | Optional collector that receives unhandled exceptions as JSON |
+
+`/health` reports the database backend, a live upload-directory write probe and
+uptime, so a read-only disk fails the deploy instead of the first receipt.
+
+Portfolio lists fetch stages and money in two queries regardless of how many
+projects there are, and the hot filters (`audit_events` by person and action,
+transactions by type and date, stages by status) are indexed.
 
 ### Database backends
 

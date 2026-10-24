@@ -1,0 +1,76 @@
+{% extends "app/base.html" %}
+{% block title %}Two-step verification · YaVaKa{% endblock %}
+
+{% block page_title %}Two-step verification{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    A code from your phone, on top of your password
+    <span class="page-tagline">Money and documents deserve a second lock.</span>
+  </p>
+{% endblock %}
+
+{% block content %}
+<div class="split-grid">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Step 1 · Add YaVaKa to your authenticator</h2>
+          <p class="card-sub">Google Authenticator, Microsoft Authenticator, 1Password or Authy.</p>
+        </div>
+      </div>
+
+      <div class="pad">
+        <p class="muted small">Open the app, choose <strong>Add account → Enter a setup key</strong>, then type:</p>
+
+        <div class="secret-box">
+          <code>{{ grouped }}</code>
+        </div>
+
+        <dl class="fact-list">
+          <div><dt>Account</dt><dd>{{ user.email }}</dd></div>
+          <div><dt>Key type</dt><dd>Time based</dd></div>
+        </dl>
+
+        <p class="micro-note">
+          {{ icon('alert', 13) }} Prefer a link? Paste this into an app that accepts a setup URI:
+          <code class="break-all">{{ provisioning_uri }}</code>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <aside class="detail-side">
+    <div class="card">
+      <div class="card-head"><h2>Step 2 · Confirm</h2></div>
+      <form class="form" method="post" action="{{ url_for('settings.two_factor_enable') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <label class="field">
+          <span class="field-label">Code from your app</span>
+          <input class="input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code"
+                 pattern="[0-9 ]{6,8}" maxlength="8" required placeholder="123 456" autofocus />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Your password</span>
+          <input class="input" type="password" name="password" autocomplete="current-password" required />
+          <span class="field-hint">Confirms it is really you turning this on.</span>
+        </label>
+
+        <button class="btn btn-primary btn-block" type="submit">{{ icon('shield', 15) }} Turn on two-step verification</button>
+      </form>
+
+      <p class="micro-note pad-x">
+        You will get eight recovery codes. Each works once if you lose your phone.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Not now</h2></div>
+      <p class="muted small pad">Your password still protects the account. Add a second factor when you are ready.</p>
+      <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('settings.index') }}">Back to settings</a>
+    </div>
+  </aside>
+</div>
+{% endblock %}

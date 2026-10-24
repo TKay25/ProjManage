@@ -178,6 +178,8 @@
     if (pathname.startsWith("/app/projects/")) return SKELETONS.project;
     if (pathname.startsWith("/app/projects")) return SKELETONS.projects;
     if (pathname.startsWith("/app/documents")) return SKELETONS.documents;
+    if (pathname.startsWith("/app/reports")) return SKELETONS.money;
+    if (pathname.startsWith("/app/updates")) return SKELETONS.attention;
     if (pathname.startsWith("/app/agreements")) return SKELETONS.agreements;
     if (pathname.startsWith("/app/suppliers")) return SKELETONS.suppliers;
     if (pathname.startsWith("/app/whatsapp")) return SKELETONS.chat;

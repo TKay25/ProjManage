@@ -1,10 +1,16 @@
 """Public marketing pages, PWA assets and health check."""
 
+import tempfile
+import time
+from pathlib import Path
+
 from flask import Blueprint, current_app, jsonify, render_template, request, send_from_directory
 
 from suppliers import SUPPLIER_CATEGORIES, SUPPLIERS
 
 bp = Blueprint("public", __name__)
+
+STARTED_AT = time.time()
 
 
 @bp.get("/")
@@ -46,8 +52,12 @@ def offline():
 
 @bp.get("/health")
 def health():
-    """Readiness probe: confirms the database is reachable and writable."""
-    from db import execute, get_db, now_iso
+    """Readiness probe: database read *and* write, plus uploads writability.
+
+    A deploy that boots against a read-only disk would otherwise look healthy
+    and only fail when somebody uploads a receipt.
+    """
+    from db import execute, get_db, is_postgres, now_iso
 
     try:
         get_db().execute("SELECT 1").fetchone()
@@ -62,7 +72,24 @@ def health():
     except Exception as error:  # noqa: BLE001 - health checks must never raise
         return jsonify({"status": "error", "detail": str(error)}), 503
 
-    return jsonify({"status": "ok", "app": current_app.config["APP_NAME"]})
+    uploads = "ok"
+    try:
+        directory = Path(current_app.config["UPLOAD_FOLDER"])
+        directory.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=directory, prefix=".probe-"):
+            pass
+    except OSError:
+        uploads = "unavailable"
+
+    return jsonify(
+        {
+            "status": "ok",
+            "app": current_app.config["APP_NAME"],
+            "database": "postgres" if is_postgres() else "sqlite",
+            "uploads": uploads,
+            "uptime_s": round(time.time() - STARTED_AT),
+        }
+    )
 
 
 @bp.get("/sw.js")

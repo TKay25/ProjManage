@@ -54,6 +54,15 @@ class Config:
     TEMPLATES_AUTO_RELOAD = True
     SEND_FILE_MAX_AGE_DEFAULT = 0
 
+    # ---- Observability ----
+    # JSON lines suit a log drain; the plain format is friendlier locally.
+    LOG_JSON = os.environ.get("LOG_JSON", "0") == "1"
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+    # Queries slower than this are logged as warnings.
+    SLOW_QUERY_MS = int(os.environ.get("SLOW_QUERY_MS", "150"))
+    # Optional collector for unhandled exceptions (POSTed as JSON).
+    ERROR_WEBHOOK_URL = os.environ.get("ERROR_WEBHOOK_URL", "")
+
     WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
     WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
     # No default: webhook verification fails closed until the environment sets it.

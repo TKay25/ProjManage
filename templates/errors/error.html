@@ -16,6 +16,9 @@
       {% else %}Something went wrong{% endif %}
     </h1>
     <p class="muted">{{ message }}</p>
+    {% if reference %}
+      <p class="micro-note">Reference <code>{{ reference }}</code> — quote it if you contact support.</p>
+    {% endif %}
     <div class="error-actions">
       <a class="btn btn-primary" href="{{ url_for('dashboard.index') if user else '/' }}">{{ 'Back to dashboard' if user else 'Back home' }}</a>
       <button class="btn btn-ghost" type="button" data-back>Go back</button>
