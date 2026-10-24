@@ -43,10 +43,34 @@
       <span class="avatar avatar-sm" style="background:#0F5D46">{{ (selected.name if selected else 'YaVaKa')|initials }}</span>
       <div>
         <p class="wa-chat-name">{{ selected.name if selected else 'YaVaKa assistant' }}</p>
-        <p class="mini-meta">{{ display_phone(selected.phone) if selected else 'Test the assistant without Meta credentials' }}</p>
+        <p class="mini-meta">
+          {% if selected and selected.handoff_at %}
+            {{ selected.handoff_name or 'A teammate' }} is replying · assistant paused
+          {% else %}
+            {{ display_phone(selected.phone) if selected else 'Test the assistant without Meta credentials' }}
+          {% endif %}
+        </p>
       </div>
-      {% if selected and selected.project_name %}
-        <span class="badge badge-soft">{{ selected.project_name }}</span>
+      {% if selected %}
+        <div class="wa-chat-actions">
+          {% if selected.project_name %}
+            <span class="badge badge-soft">{{ selected.project_name }}</span>
+          {% endif %}
+          {% if selected.handoff_at %}
+            <span class="badge badge-warn">You're replying</span>
+            <form method="post" action="{{ url_for('whatsapp.resume') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="contact_id" value="{{ selected.id }}" />
+              <button class="btn btn-ghost btn-sm" type="submit">{{ icon('refresh', 15) }} Hand back to assistant</button>
+            </form>
+          {% else %}
+            <form method="post" action="{{ url_for('whatsapp.handoff') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="contact_id" value="{{ selected.id }}" />
+              <button class="btn btn-ghost btn-sm" type="submit">{{ icon('users', 15) }} Take over</button>
+            </form>
+          {% endif %}
+        </div>
       {% endif %}
     </div>
 
@@ -76,15 +100,28 @@
       {% endif %}
     </div>
 
-    <form class="wa-composer" id="wa-sim-form" data-contact-id="{{ selected.id if selected else '' }}" data-project-id="{{ selected.project_id if selected and selected.project_id else (projects[0].id if projects else '') }}" data-phone="{{ selected.phone if selected else (user.phone or '263771234567') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <input class="input" type="text" name="body" id="wa-input" autocomplete="off" placeholder="Message as the client (e.g. BALANCE)" required />
-      <button class="btn btn-primary" type="submit" id="wa-send">{{ icon('arrow-right', 16) }} Send</button>
-    </form>
-    <p class="micro-note pad-x">
-      {{ icon('alert', 13) }} Simulated messages are stored exactly like real
-      WhatsApp messages and can create ledger entries.
-    </p>
+    {% if selected and selected.handoff_at %}
+      <form class="wa-composer" method="post" action="{{ url_for('whatsapp.send') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="contact_id" value="{{ selected.id }}" />
+        <input class="input" type="text" name="body" autocomplete="off" placeholder="Reply to {{ selected.name }} as {{ user.name }}" required />
+        <button class="btn btn-primary" type="submit">{{ icon('arrow-right', 16) }} Send</button>
+      </form>
+      <p class="micro-note pad-x">
+        {{ icon('alert', 13) }} The assistant is paused for this conversation.
+        Hand it back when the client is ready to talk to the bot again.
+      </p>
+    {% else %}
+      <form class="wa-composer" id="wa-sim-form" data-contact-id="{{ selected.id if selected else '' }}" data-project-id="{{ selected.project_id if selected and selected.project_id else (projects[0].id if projects else '') }}" data-phone="{{ selected.phone if selected else (user.phone or '263771234567') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input class="input" type="text" name="body" id="wa-input" autocomplete="off" placeholder="Message as the client (e.g. BALANCE)" required />
+        <button class="btn btn-primary" type="submit" id="wa-send">{{ icon('arrow-right', 16) }} Send</button>
+      </form>
+      <p class="micro-note pad-x">
+        {{ icon('alert', 13) }} Simulated messages are stored exactly like real
+        WhatsApp messages and can create ledger entries.
+      </p>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

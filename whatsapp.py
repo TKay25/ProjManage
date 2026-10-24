@@ -240,6 +240,29 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
         (new_id(), contact["id"], str(body)[:2000], intent, now_iso()),
     )
 
+    if contact["handoff_at"]:
+        # A person is handling this conversation. The message is on record,
+        # but the assistant must not talk over them — and whoever took the
+        # conversation over needs to know a reply has landed.
+        if project:
+            import updates
+
+            updates.notify(
+                contact["handoff_by"] or project["manager_id"],
+                project["id"],
+                "whatsapp.reply",
+                f"{contact['name']}: {str(body).strip()[:160]}",
+                href=f"/app/whatsapp?contact={contact['id']}",
+            )
+        return {
+            "reply": "",
+            "intent": intent,
+            "contact_id": contact["id"],
+            "delivery": "handoff",
+            "quick_replies": [],
+            "handoff": True,
+        }
+
     if not project:
         reply = (
             "Karibu! I can't find a project linked to this number yet.\n\n"

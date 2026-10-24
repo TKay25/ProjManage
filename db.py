@@ -1,5 +1,12 @@
-"""SQLite access layer for YaVaKa (standard library only)."""
+"""Database access layer for YaVaKa (SQLite locally, Postgres in production).
 
+Set ``DATABASE_URL`` to a Postgres connection string to use Postgres; otherwise
+the app keeps using the SQLite file in ``DATABASE_FILE``. Queries are written in
+SQLite style (``?`` placeholders, case-insensitive ``LIKE``) and translated for
+Postgres by this module, so callers do not need two dialects.
+"""
+
+import re
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -16,6 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
   phone TEXT,
   country TEXT,
   avatar_color TEXT NOT NULL DEFAULT '#0F5D46',
+  density TEXT NOT NULL DEFAULT 'comfortable',
+  page_size INTEGER NOT NULL DEFAULT 25,
   created_at TEXT NOT NULL
 );
 
@@ -35,6 +44,8 @@ CREATE TABLE IF NOT EXISTS projects (
   budget_cents INTEGER NOT NULL DEFAULT 0,
   start_date TEXT,
   target_date TEXT,
+  archived_at TEXT,
+  workspace_id TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -84,6 +95,7 @@ CREATE TABLE IF NOT EXISTS attachments (
   original_name TEXT NOT NULL,
   mime_type TEXT NOT NULL,
   size INTEGER NOT NULL,
+  stage_key TEXT,
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_att_project ON attachments(project_id);
@@ -128,6 +140,8 @@ CREATE TABLE IF NOT EXISTS whatsapp_contacts (
   name TEXT NOT NULL,
   user_id TEXT REFERENCES users(id),
   project_id TEXT REFERENCES projects(id),
+  handoff_at TEXT,
+  handoff_by TEXT REFERENCES users(id),
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_wa_contact_user ON whatsapp_contacts(user_id);
@@ -171,19 +185,122 @@ CREATE TABLE IF NOT EXISTS notification_outbox (
 );
 CREATE INDEX IF NOT EXISTS idx_notification_pending
   ON notification_outbox(status, created_at);
+
+CREATE TABLE IF NOT EXISTS workspaces (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_owner ON workspaces(owner_id);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+  event_id TEXT,
+  actor_id TEXT REFERENCES users(id),
+  action TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  href TEXT,
+  created_at TEXT NOT NULL,
+  read_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user
+  ON notifications(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread
+  ON notifications(user_id, read_at);
+
+CREATE TABLE IF NOT EXISTS manager_links (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  manager_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  UNIQUE(client_id, manager_id)
+);
+CREATE INDEX IF NOT EXISTS idx_manager_links_client ON manager_links(client_id);
+CREATE INDEX IF NOT EXISTS idx_manager_links_manager ON manager_links(manager_id);
+
+CREATE TABLE IF NOT EXISTS invitations (
+  id TEXT PRIMARY KEY,
+  token TEXT NOT NULL UNIQUE,
+  inviter_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'manager',
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT NOT NULL,
+  accepted_at TEXT,
+  accepted_by TEXT REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email, status);
+CREATE INDEX IF NOT EXISTS idx_invitations_client ON invitations(client_id, status);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_password_resets_user
+  ON password_resets(user_id, created_at);
+"""
+
+# Columns added by the SQLite migrations below also need to exist on a Postgres
+# database that was created before they were folded into SCHEMA.
+POSTGRES_UPGRADES = """
+ALTER TABLE users ADD COLUMN IF NOT EXISTS density TEXT NOT NULL DEFAULT 'comfortable';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS page_size INTEGER NOT NULL DEFAULT 25;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_email TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_whatsapp TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS archived_at TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS workspace_id TEXT;
+ALTER TABLE attachments ADD COLUMN IF NOT EXISTS stage_key TEXT;
+ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS claimed_at TEXT;
+ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_at TEXT;
+ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_by TEXT REFERENCES users(id);
 """
 
 
-def get_db() -> sqlite3.Connection:
+def postgres_url() -> str:
+    """The configured Postgres DSN, normalised for psycopg."""
+    url = (current_app.config.get("DATABASE_URL") or "").strip()
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://") :]
+    return url if url.startswith("postgresql://") else ""
+
+
+def is_postgres() -> bool:
+    return bool(postgres_url())
+
+
+def get_db():
     if "db" not in g:
-        connection = sqlite3.connect(
-            current_app.config["DATABASE"],
-            timeout=15,
-            detect_types=sqlite3.PARSE_DECLTYPES,
-        )
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA journal_mode = WAL")
+        url = postgres_url()
+        if url:
+            import psycopg
+            from psycopg.rows import dict_row
+
+            connection = psycopg.connect(
+                url,
+                row_factory=dict_row,
+                autocommit=True,
+                connect_timeout=10,
+            )
+        else:
+            connection = sqlite3.connect(
+                current_app.config["DATABASE"],
+                timeout=15,
+                detect_types=sqlite3.PARSE_DECLTYPES,
+            )
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA journal_mode = WAL")
         g.db = connection
     return g.db
 
@@ -194,18 +311,89 @@ def close_db(_exception=None):
         connection.close()
 
 
+def _translate_sql(sql: str, args) -> str:
+    """SQLite-style SQL to Postgres SQL.
+
+    Converts ``?`` placeholders to ``%s``, doubles literal percent signs when
+    parameters are supplied (psycopg uses %-formatting), and maps ``LIKE`` to
+    ``ILIKE`` so the case-insensitive search behaviour is preserved.
+    """
+    if not is_postgres():
+        return sql
+
+    if args:
+        sql = sql.replace("%", "%%")
+
+    out = []
+    quote = None
+    for char in sql:
+        if quote:
+            out.append(char)
+            if char == quote:
+                quote = None
+        elif char in {"'", '"'}:
+            quote = char
+            out.append(char)
+        elif char == "?":
+            out.append("%s")
+        else:
+            out.append(char)
+
+    return re.sub(r"\bLIKE\b", "ILIKE", "".join(out), flags=re.IGNORECASE)
+
+
+def split_statements(script: str):
+    """Split a schema script on semicolons, ignoring quoted ones."""
+    statements = []
+    current = []
+    quote = None
+    for char in script:
+        if quote:
+            current.append(char)
+            if char == quote:
+                quote = None
+        elif char in {"'", '"'}:
+            quote = char
+            current.append(char)
+        elif char == ";":
+            statement = "".join(current).strip()
+            if statement:
+                statements.append(statement)
+            current = []
+        else:
+            current.append(char)
+
+    tail = "".join(current).strip()
+    if tail:
+        statements.append(tail)
+    return statements
+
+
+SCHEMA_LOCK_KEY = 842_317_501
+
+
 def init_db():
-    connection = get_db()
-    connection.executescript(SCHEMA)
-    connection.commit()
-    run_migrations(connection)
+    if is_postgres():
+        # Several gunicorn workers boot at once; serialise the DDL so two of
+        # them cannot race on CREATE TABLE / ALTER TABLE.
+        connection = get_db()
+        connection.execute("SELECT pg_advisory_lock(%s)", (SCHEMA_LOCK_KEY,))
+        try:
+            executescript(SCHEMA)
+            executescript(POSTGRES_UPGRADES)
+        finally:
+            connection.execute("SELECT pg_advisory_unlock(%s)", (SCHEMA_LOCK_KEY,))
+        return
+
+    executescript(SCHEMA)
+    run_migrations(get_db())
 
 
 def run_migrations(connection):
-    """Idempotent data migrations, tracked with PRAGMA user_version.
+    """Idempotent SQLite migrations, tracked with PRAGMA user_version.
 
-    Runs on every boot, so a deploy can move existing rows. Anything here must
-    be safe to run against a fresh database as well as a populated one.
+    Postgres databases are created from the complete ``SCHEMA`` instead, so
+    this only runs on the SQLite backend.
     """
     version = connection.execute("PRAGMA user_version").fetchone()[0]
 
@@ -441,6 +629,21 @@ def run_migrations(connection):
         )
         connection.execute("PRAGMA user_version = 12")
 
+    if version < 13:
+        # A build manager can take a conversation over from the assistant.
+        # While handoff_at is set, inbound messages are still stored but the
+        # bot stays quiet until the conversation is returned to it.
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(whatsapp_contacts)")
+        }
+        if "handoff_at" not in columns:
+            connection.execute("ALTER TABLE whatsapp_contacts ADD COLUMN handoff_at TEXT")
+        if "handoff_by" not in columns:
+            connection.execute(
+                "ALTER TABLE whatsapp_contacts ADD COLUMN handoff_by TEXT REFERENCES users(id)"
+            )
+        connection.execute("PRAGMA user_version = 13")
+
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(
@@ -459,7 +662,10 @@ def init_app(app):
 
 def query(sql: str, args=(), one: bool = False):
     """Return rows as plain dicts so templates and JSON stay simple."""
-    cursor = get_db().execute(sql, args)
+    args = tuple(args or ())
+    connection = get_db()
+    prepared = _translate_sql(sql, args)
+    cursor = connection.execute(prepared, args) if args else connection.execute(prepared)
     rows = [dict(row) for row in cursor.fetchall()]
     cursor.close()
     if one:
@@ -468,18 +674,96 @@ def query(sql: str, args=(), one: bool = False):
 
 
 def execute(sql: str, args=()) -> int:
+    args = tuple(args or ())
     connection = get_db()
-    cursor = connection.execute(sql, args)
-    connection.commit()
-    last_id = cursor.lastrowid
+    prepared = _translate_sql(sql, args)
+    cursor = connection.execute(prepared, args) if args else connection.execute(prepared)
+    if not is_postgres():
+        connection.commit()
+    last_id = getattr(cursor, "lastrowid", None)
     cursor.close()
     return last_id
 
 
 def executescript(script: str):
     connection = get_db()
+    if is_postgres():
+        for statement in split_statements(script):
+            connection.execute(statement)
+        return
     connection.executescript(script)
     connection.commit()
+
+
+DUMP_ORDER = [
+    "users",
+    "workspaces",
+    "projects",
+    "stages",
+    "transactions",
+    "attachments",
+    "agreements",
+    "suppliers",
+    "whatsapp_contacts",
+    "whatsapp_messages",
+    "audit_events",
+    "notification_outbox",
+    "notifications",
+    "manager_links",
+    "invitations",
+    "password_resets",
+]
+
+
+def _sql_literal(value) -> str:
+    if value is None:
+        return "NULL"
+    if isinstance(value, bool):
+        return "TRUE" if value else "FALSE"
+    if isinstance(value, (int, float)):
+        return str(value)
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def dump_sql() -> str:
+    """A logical Postgres dump, ordered so foreign keys survive a restore."""
+    if not is_postgres():
+        raise RuntimeError("dump_sql() is only available for the Postgres backend.")
+
+    connection = get_db()
+    present = [
+        row["table_name"]
+        for row in connection.execute(
+            """SELECT table_name FROM information_schema.tables
+               WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"""
+        ).fetchall()
+    ]
+    ordered = [name for name in DUMP_ORDER if name in present]
+    ordered += sorted(name for name in present if name not in DUMP_ORDER)
+
+    lines = [
+        "-- YaVaKa Postgres backup",
+        f"-- generated {now_iso()}",
+        "-- restore into an empty database",
+        "",
+        SCHEMA,
+        "",
+        "BEGIN;",
+    ]
+    for name in ordered:
+        if name == "_healthcheck":
+            continue
+        rows = connection.execute(f'SELECT * FROM "{name}"').fetchall()
+        if not rows:
+            continue
+        lines.append(f"-- {name}")
+        for row in rows:
+            columns = ", ".join(f'"{column}"' for column in row.keys())
+            values = ", ".join(_sql_literal(value) for value in row.values())
+            lines.append(f'INSERT INTO "{name}" ({columns}) VALUES ({values});')
+        lines.append("")
+    lines.append("COMMIT;")
+    return "\n".join(lines)
 
 
 def new_id() -> str:
@@ -487,7 +771,8 @@ def new_id() -> str:
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    # Microsecond precision keeps ordering stable when two rows share a second.
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def touch_project(project_id: str):

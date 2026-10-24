@@ -36,6 +36,7 @@ ACTIONS = {
     "team.linked": ("users", "Build manager added", "success"),
     "team.joined": ("users", "Build manager joined", "success"),
     "team.removed": ("users", "Build manager removed", "warn"),
+    "whatsapp.reply": ("message", "New WhatsApp reply", "warn"),
 }
 
 # Housekeeping that belongs in the audit log but is not news for a person.
@@ -52,6 +53,7 @@ KINDS = {
     "agreements": ("Agreements", ("agreement.",)),
     "project": ("Project", ("project.",)),
     "team": ("Team", ("team.",)),
+    "whatsapp": ("WhatsApp", ("whatsapp.",)),
 }
 
 
@@ -70,6 +72,8 @@ def _href(action: str, project_id: str) -> str:
         return f"/app/money?project={project_id}"
     if action.startswith("agreement."):
         return "/app/agreements"
+    if action.startswith("whatsapp."):
+        return "/app/whatsapp"
     return f"/app/projects/{project_id}"
 
 
@@ -81,6 +85,37 @@ def describe(action: str, detail: str = "") -> dict:
         if detail.endswith(tail):
             detail = detail[: -len(tail)]
     return {"icon": icon, "title": title, "tone": tone, "detail": detail or "", "kind": kind_for(action)}
+
+
+def notify(user_id, project_id, action, detail="", *, href=None, actor_id=None, event_id=None) -> int:
+    """Notify one named person instead of every project stakeholder.
+
+    Used when the recipient is already known — for example the manager who has
+    taken a WhatsApp conversation over and needs to see the client's reply.
+    """
+    if not user_id or not project_id:
+        return 0
+
+    described = describe(action, detail)
+    execute(
+        """INSERT INTO notifications
+             (id, user_id, project_id, event_id, actor_id, action, title, body,
+              href, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            new_id(),
+            user_id,
+            project_id,
+            event_id,
+            actor_id,
+            action,
+            described["title"],
+            described["detail"][:400] or None,
+            href or _href(action, project_id),
+            now_iso(),
+        ),
+    )
+    return 1
 
 
 def record(actor_id, project_id, action, detail="", event_id=None) -> int:
@@ -104,31 +139,9 @@ def record(actor_id, project_id, action, detail="", event_id=None) -> int:
     if not recipients:
         return 0
 
-    described = describe(action, detail)
-    href = _href(action, project_id)
-    timestamp = now_iso()
     created = 0
-
     for user_id in recipients:
-        execute(
-            """INSERT INTO notifications
-                 (id, user_id, project_id, event_id, actor_id, action, title, body,
-                  href, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                new_id(),
-                user_id,
-                project_id,
-                event_id,
-                actor_id,
-                action,
-                described["title"],
-                described["detail"][:400] or None,
-                href,
-                timestamp,
-            ),
-        )
-        created += 1
+        created += notify(user_id, project_id, action, detail, event_id=event_id)
 
     return created
 
@@ -153,7 +166,7 @@ def feed(user_id: str, kind: str = "all", limit: int = 25, offset_rows: int = 0)
             JOIN projects p ON p.id = n.project_id
             LEFT JOIN users u ON u.id = n.actor_id
             WHERE {clause}
-            ORDER BY n.created_at DESC, n.rowid DESC
+            ORDER BY n.created_at DESC, n.id DESC
             LIMIT ? OFFSET ?""",
         [*params, limit, offset_rows],
     )

@@ -274,7 +274,7 @@
     {% if user.role == 'admin' %}
       <div class="card">
         <div class="card-head"><h2>Back up your data</h2></div>
-        <p class="muted small">Download a zip of a consistent database snapshot and the uploaded files. Restore it by replacing <code>instance/vaka.db</code> and the <code>uploads/</code> folder.</p>
+        <p class="muted small">Download a zip of a consistent database snapshot and the uploaded files. Restore it by importing the snapshot into your database provider and copying the <code>uploads/</code> folder back.</p>
         <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('settings.backup') }}">{{ icon('download', 15) }} Download backup</a>
         <p class="micro-note"><a class="link-quiet" href="{{ url_for('settings.backup', uploads=0) }}">Database only (smaller)</a></p>
       </div>

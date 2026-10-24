@@ -47,18 +47,18 @@ def offline():
 @bp.get("/health")
 def health():
     """Readiness probe: confirms the database is reachable and writable."""
-    from db import get_db
+    from db import execute, get_db, now_iso
 
     try:
-        connection = get_db()
-        connection.execute("SELECT 1").fetchone()
-        connection.execute(
+        get_db().execute("SELECT 1").fetchone()
+        execute(
             "CREATE TABLE IF NOT EXISTS _healthcheck (id INTEGER PRIMARY KEY, at TEXT)"
         )
-        connection.execute(
-            "INSERT OR REPLACE INTO _healthcheck (id, at) VALUES (1, datetime('now'))"
+        execute(
+            """INSERT INTO _healthcheck (id, at) VALUES (1, ?)
+               ON CONFLICT (id) DO UPDATE SET at = EXCLUDED.at""",
+            (now_iso(),),
         )
-        connection.commit()
     except Exception as error:  # noqa: BLE001 - health checks must never raise
         return jsonify({"status": "error", "detail": str(error)}), 503
 

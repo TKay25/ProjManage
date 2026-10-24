@@ -127,7 +127,15 @@
           return;
         }
 
-        bubble(data.reply, "OUT", data.quick_replies || []);
+        if (data.handoff) {
+          const note = document.createElement("p");
+          note.className = "wa-note";
+          note.textContent = "The assistant is paused for this conversation — no automatic reply.";
+          messages.appendChild(note);
+          scroll();
+        } else {
+          bubble(data.reply, "OUT", data.quick_replies || []);
+        }
 
         if (!form.dataset.contactId && data.contact_id) {
           // Remember the conversation in place. Reloading the page here used to

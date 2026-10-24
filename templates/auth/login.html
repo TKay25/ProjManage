@@ -55,6 +55,10 @@
           <input class="input" type="password" name="password" autocomplete="current-password" required placeholder="Your password" />
         </label>
 
+        <p class="micro-note">
+          <a class="link-quiet" href="{{ url_for('auth.forgot_password') }}">Forgot your password?</a>
+        </p>
+
         <button class="btn btn-primary btn-block btn-lg" type="submit">Sign in {{ icon('arrow-right', 17) }}</button>
       </form>
 

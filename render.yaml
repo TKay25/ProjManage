@@ -1,8 +1,8 @@
 # Render blueprint for YaVaKa.
 #
 # Deploy with: Render Dashboard → New → Blueprint → pick this repo.
-# The disk is what keeps the SQLite database and uploaded receipts alive;
-# without it every deploy starts from an empty workspace.
+# Postgres holds the relational data; the disk keeps uploaded receipts alive.
+# A Free web service cannot mount a disk, so both are paid resources here.
 
 services:
   - type: web
@@ -23,8 +23,10 @@ services:
         value: "1"
       - key: SEED_DEMO
         value: "false"
-      - key: DATABASE_FILE
-        value: /var/data/vaka.db
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vaka-db
+          property: connectionString
       - key: UPLOAD_DIR
         value: /var/data/uploads
       - key: WHATSAPP_TOKEN
@@ -61,3 +63,9 @@ services:
       name: vaka-data
       mountPath: /var/data
       sizeGB: 1
+
+databases:
+  - name: vaka-db
+    plan: basic-256mb
+    databaseName: vaka
+    user: vaka

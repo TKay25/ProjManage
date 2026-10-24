@@ -29,6 +29,9 @@ def _secret_key() -> str:
 class Config:
     SECRET_KEY = _secret_key()
 
+    # Postgres wins when DATABASE_URL is set (recommended for hosted deploys);
+    # otherwise the app uses a local SQLite file.
+    DATABASE_URL = os.environ.get("DATABASE_URL", "")
     DATABASE = os.environ.get("DATABASE_FILE", str(INSTANCE_DIR / "vaka.db"))
     UPLOAD_FOLDER = os.environ.get("UPLOAD_DIR", str(BASE_DIR / "uploads"))
     MAX_CONTENT_LENGTH = 8 * 1024 * 1024

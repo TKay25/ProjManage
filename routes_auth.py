@@ -1,5 +1,7 @@
-"""Registration, login and logout."""
+"""Registration, login, logout and password reset."""
 
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, flash, g, redirect, render_template, request, url_for
@@ -17,6 +19,34 @@ ATTEMPTS = {}
 MAX_ATTEMPTS = 8
 WINDOW = timedelta(minutes=15)
 MAX_TRACKED_KEYS = 5000
+RESET_TTL = timedelta(hours=1)
+
+
+def _reset_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _load_reset(token: str):
+    """A reset row that is still usable, or None."""
+    if not token:
+        return None
+    row = query(
+        """SELECT r.*, u.email, u.name
+           FROM password_resets r
+           JOIN users u ON u.id = r.user_id
+           WHERE r.token_hash = ?""",
+        (_reset_hash(token),),
+        one=True,
+    )
+    if not row or row["used_at"]:
+        return None
+    try:
+        expires = datetime.fromisoformat(row["expires_at"])
+    except (TypeError, ValueError):
+        return None
+    if expires <= datetime.now(timezone.utc):
+        return None
+    return row
 
 
 def _prune_attempts(now: datetime):
@@ -113,6 +143,131 @@ def login_post():
 
     flash(message, "success")
     return redirect(next_url)
+
+
+@bp.get("/forgot-password")
+def forgot_password():
+    if g.user:
+        return redirect(url_for("dashboard.index"))
+    return render_template(
+        "auth/forgot_password.html",
+        title="Reset your password",
+        email="",
+    )
+
+
+@bp.post("/forgot-password")
+def forgot_password_post():
+    email = (request.form.get("email") or "").strip().lower()
+    throttle_key = f"reset:{request.remote_addr}:{email}"
+
+    if _is_blocked(throttle_key):
+        flash("Too many attempts. Wait 15 minutes and try again.", "error")
+        return redirect(url_for("auth.forgot_password"))
+
+    from notifications import email_configured, send_email_async
+
+    if not email_configured():
+        flash(
+            "Email delivery is not configured on this deployment, so the reset "
+            "link cannot be sent. Ask your build manager to reset the password.",
+            "error",
+        )
+        return redirect(url_for("auth.forgot_password"))
+
+    # Count every request, valid address or not, so the endpoint cannot be used
+    # to mail-bomb an inbox.
+    _register_failure(throttle_key)
+    user = query("SELECT * FROM users WHERE email = ?", (email,), one=True)
+
+    if user:
+        token = secrets.token_urlsafe(32)
+        expires = (datetime.now(timezone.utc) + RESET_TTL).isoformat(timespec="microseconds")
+        execute(
+            "DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL",
+            (user["id"],),
+        )
+        execute(
+            """INSERT INTO password_resets (id, user_id, token_hash, expires_at, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            (new_id(), user["id"], _reset_hash(token), expires, now_iso()),
+        )
+        link = url_for("auth.reset_password", token=token, _external=True)
+        send_email_async(
+            user["email"],
+            "Reset your YaVaKa password",
+            "\n".join(
+                [
+                    f"Hello {user['name']},",
+                    "",
+                    "Use this link to choose a new password. It expires in one hour:",
+                    "",
+                    link,
+                    "",
+                    "If you did not ask for this, you can ignore this email.",
+                ]
+            ),
+        )
+
+    flash(
+        "If that address is registered, a reset link is on its way. "
+        "Check your inbox and spam folder.",
+        "success",
+    )
+    return redirect(url_for("auth.login"))
+
+
+@bp.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    if g.user:
+        return redirect(url_for("dashboard.index"))
+
+    row = _load_reset(token)
+    if not row:
+        return (
+            render_template(
+                "auth/reset_password.html",
+                title="Reset password",
+                token="",
+                valid=False,
+                error=None,
+                email="",
+            ),
+            400,
+        )
+
+    error = None
+    if request.method == "POST":
+        password = request.form.get("password") or ""
+        confirm = request.form.get("confirm_password") or ""
+        if len(password) < 8:
+            error = "Password must be at least 8 characters."
+        elif password != confirm:
+            error = "The passwords do not match."
+        else:
+            execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (auth.hash_password(password), row["user_id"]),
+            )
+            execute(
+                "UPDATE password_resets SET used_at = ? WHERE id = ?",
+                (now_iso(), row["id"]),
+            )
+            execute(
+                "DELETE FROM password_resets WHERE user_id = ? AND id <> ?",
+                (row["user_id"], row["id"]),
+            )
+            flash("Password changed. Sign in with your new password.", "success")
+            return redirect(url_for("auth.login"))
+
+    return render_template(
+        "auth/reset_password.html",
+        title="Choose a new password",
+        token=token,
+        valid=True,
+        error=error,
+        email=row["email"],
+    )
 
 
 @bp.get("/register")

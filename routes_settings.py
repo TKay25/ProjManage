@@ -25,7 +25,7 @@ from flask import (
 import auth
 import team
 from auth import accessible_projects, admin_required, login_required
-from db import execute, query
+from db import dump_sql, execute, is_postgres, query
 from whatsapp import display_phone, normalize_phone
 
 bp = Blueprint("settings", __name__)
@@ -132,7 +132,6 @@ def backup():
     folder does not sit in memory.
     """
     include_uploads = request.args.get("uploads") != "0"
-    database = Path(current_app.config["DATABASE"])
     uploads = Path(current_app.config["UPLOAD_FOLDER"])
 
     # send_file keeps the archive open while it streams, so cleanup cannot
@@ -151,18 +150,23 @@ def backup():
 
     workdir = Path(tempfile.mkdtemp(prefix="vaka-backup-"))
     archive_path = workdir / "backup.zip"
-    snapshot_path = workdir / "vaka.db"
+    snapshot_name = "vaka.sql" if is_postgres() else "vaka.db"
+    snapshot_path = workdir / snapshot_name
 
-    source = sqlite3.connect(str(database))
-    target = sqlite3.connect(str(snapshot_path))
-    try:
-        source.backup(target)
-    finally:
-        target.close()
-        source.close()
+    if is_postgres():
+        snapshot_path.write_text(dump_sql(), encoding="utf-8")
+    else:
+        database = Path(current_app.config["DATABASE"])
+        source = sqlite3.connect(str(database))
+        target = sqlite3.connect(str(snapshot_path))
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+            source.close()
 
     with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.write(snapshot_path, "vaka.db")
+        archive.write(snapshot_path, snapshot_name)
         if include_uploads and uploads.is_dir():
             for path in sorted(uploads.rglob("*")):
                 if path.is_file():

@@ -27,6 +27,9 @@ def isolated_config(**overrides):
 
     class Isolated(Config):
         TESTING = True
+        # These tests build throwaway SQLite files; never inherit a Postgres
+        # connection from the environment.
+        DATABASE_URL = ""
 
     for key, value in overrides.items():
         setattr(Isolated, key, value)
@@ -113,6 +116,145 @@ class Authentication(VakaTestCase):
         token = self.csrf()
         self.client.post("/logout", data={"csrf_token": token})
         self.assertEqual(self.client.get("/app").status_code, 302)
+
+
+class PasswordReset(VakaTestCase):
+    EMAIL = "client@yavaka.co.zw"
+
+    def setUp(self):
+        super().setUp()
+        from db import execute, query
+        import routes_auth
+
+        routes_auth.ATTEMPTS.clear()
+        with self.app.app_context():
+            self.user = query("SELECT * FROM users WHERE email = ?", (self.EMAIL,), one=True)
+            execute("DELETE FROM password_resets WHERE user_id = ?", (self.user["id"],))
+        self.original_config = {
+            "SMTP_HOST": self.app.config.get("SMTP_HOST"),
+            "SMTP_FROM_EMAIL": self.app.config.get("SMTP_FROM_EMAIL"),
+        }
+        self.app.config["SMTP_HOST"] = "smtp.test"
+        self.app.config["SMTP_FROM_EMAIL"] = "no-reply@test"
+
+    def tearDown(self):
+        from db import execute
+
+        with self.app.app_context():
+            execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (self.user["password_hash"], self.user["id"]),
+            )
+            execute("DELETE FROM password_resets WHERE user_id = ?", (self.user["id"],))
+        for key, value in self.original_config.items():
+            self.app.config[key] = value
+
+    def request_link(self, email=None):
+        from unittest.mock import patch
+
+        with patch("notifications.send_email_async") as send:
+            send.return_value = True
+            response = self.client.post(
+                "/forgot-password",
+                data={"email": email or self.EMAIL, "csrf_token": self.csrf()},
+                follow_redirects=True,
+            )
+        body = send.call_args.args[2] if send.called else ""
+        match = re.search(r"/reset-password/([A-Za-z0-9_\-]+)", body)
+        return response, (match.group(1) if match else None)
+
+    def reset(self, token, password="FreshStart123", confirm=None):
+        return self.client.post(
+            f"/reset-password/{token}",
+            data={
+                "password": password,
+                "confirm_password": confirm if confirm is not None else password,
+                "csrf_token": self.csrf(),
+            },
+            follow_redirects=True,
+        )
+
+    def test_login_page_links_to_password_help(self):
+        page = self.client.get("/login").get_data(as_text=True)
+        self.assertIn("/forgot-password", page)
+
+        page = self.client.get("/forgot-password").get_data(as_text=True)
+        self.assertIn("Reset your password", page)
+
+    def test_reset_link_changes_the_password_once(self):
+        response, token = self.request_link()
+        self.assertIn(b"reset link is on its way", response.data)
+        self.assertTrue(token)
+
+        page = self.client.get(f"/reset-password/{token}")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"Choose a new password", page.data)
+
+        response = self.reset(token)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Password changed", response.data)
+
+        logged_in = self.login(self.EMAIL, "FreshStart123")
+        self.assertEqual(logged_in.status_code, 200)
+        self.assertIn(b"Greendale Family Home", logged_in.data)
+
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        reused = self.client.get(f"/reset-password/{token}")
+        self.assertEqual(reused.status_code, 400)
+        self.assertIn(b"That link has expired", reused.data)
+
+    def test_reset_rejects_a_mismatched_confirmation_and_keeps_the_link(self):
+        _, token = self.request_link()
+        response = self.reset(token, "FreshStart123", confirm="Different123")
+        self.assertIn(b"passwords do not match", response.data)
+
+        response = self.reset(token)
+        self.assertIn(b"Password changed", response.data)
+
+    def test_expired_reset_link_is_rejected(self):
+        from db import execute
+
+        _, token = self.request_link()
+        with self.app.app_context():
+            execute(
+                "UPDATE password_resets SET expires_at = ? WHERE user_id = ?",
+                ("2000-01-01T00:00:00+00:00", self.user["id"]),
+            )
+        response = self.client.get(f"/reset-password/{token}")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"That link has expired", response.data)
+
+    def test_unknown_address_gets_the_same_answer_and_no_token(self):
+        from db import query
+
+        response, token = self.request_link("nobody@example.test")
+        self.assertIn(b"reset link is on its way", response.data)
+        self.assertIsNone(token)
+        with self.app.app_context():
+            row = query(
+                "SELECT COUNT(*) AS total FROM password_resets WHERE user_id = ?",
+                (self.user["id"],),
+                one=True,
+            )
+        self.assertEqual(row["total"], 0)
+
+    def test_without_smtp_the_flow_is_closed(self):
+        from db import query
+
+        self.app.config["SMTP_HOST"] = ""
+        response = self.client.post(
+            "/forgot-password",
+            data={"email": self.EMAIL, "csrf_token": self.csrf()},
+            follow_redirects=True,
+        )
+        self.assertIn(b"not configured", response.data)
+        with self.app.app_context():
+            row = query(
+                "SELECT COUNT(*) AS total FROM password_resets WHERE user_id = ?",
+                (self.user["id"],),
+                one=True,
+            )
+        self.assertEqual(row["total"], 0)
 
 
 class ProjectAccess(VakaTestCase):
@@ -476,6 +618,214 @@ class WhatsAppAssistant(VakaTestCase):
         self.assertNotIn("BALANCE", balance["quick_replies"])
         self.assertIn("BALANCE", status["quick_replies"])
         self.assertNotIn("STATUS", status["quick_replies"])
+
+
+class WhatsAppHandoff(VakaTestCase):
+    PHONE = "263779900111"
+
+    def setUp(self):
+        super().setUp()
+        from db import execute, new_id, now_iso, query
+
+        with self.app.app_context():
+            project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)
+            execute("DELETE FROM whatsapp_contacts WHERE phone = ?", (self.PHONE,))
+            self.contact_id = new_id()
+            execute(
+                """INSERT INTO whatsapp_contacts (id, phone, name, user_id, project_id, created_at)
+                   VALUES (?, ?, 'Handoff Client', NULL, ?, ?)""",
+                (self.contact_id, self.PHONE, project["id"], now_iso()),
+            )
+
+    def tearDown(self):
+        from db import execute
+
+        with self.app.app_context():
+            execute(
+                "DELETE FROM notifications WHERE href = ?",
+                (f"/app/whatsapp?contact={self.contact_id}",),
+            )
+            execute("DELETE FROM whatsapp_contacts WHERE phone = ?", (self.PHONE,))
+
+    def take_over(self):
+        return self.client.post(
+            "/app/whatsapp/handoff",
+            data={"contact_id": self.contact_id, "csrf_token": self.csrf()},
+            follow_redirects=True,
+        )
+
+    def test_taking_over_pauses_the_bot_and_resuming_restores_it(self):
+        from db import query
+        from whatsapp import handle_inbound
+
+        self.login("manager@yavaka.co.zw")
+        response = self.take_over()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"assistant will stay quiet", response.data)
+
+        with self.app.app_context():
+            result = handle_inbound(self.PHONE, "BALANCE")
+            contact = query(
+                "SELECT * FROM whatsapp_contacts WHERE id = ?", (self.contact_id,), one=True
+            )
+            outbound = query(
+                """SELECT COUNT(*) AS count FROM whatsapp_messages
+                   WHERE contact_id = ? AND direction = 'OUT'""",
+                (self.contact_id,),
+                one=True,
+            )
+            inbound = query(
+                """SELECT * FROM whatsapp_messages
+                   WHERE contact_id = ? AND direction = 'IN' ORDER BY created_at DESC LIMIT 1""",
+                (self.contact_id,),
+                one=True,
+            )
+            manager = query(
+                "SELECT id FROM users WHERE email = 'manager@yavaka.co.zw'", one=True
+            )
+            alerts = query(
+                "SELECT * FROM notifications WHERE href = ?",
+                (f"/app/whatsapp?contact={self.contact_id}",),
+            )
+
+        self.assertTrue(result["handoff"])
+        self.assertEqual(result["reply"], "")
+        self.assertTrue(contact["handoff_at"])
+        self.assertEqual(outbound["count"], 0)
+        self.assertEqual(inbound["body"], "BALANCE")
+        self.assertEqual(inbound["intent"], "balance")
+        self.assertEqual(len(alerts), 1)
+        self.assertEqual(alerts[0]["user_id"], manager["id"])
+        self.assertEqual(alerts[0]["action"], "whatsapp.reply")
+        self.assertIn("BALANCE", alerts[0]["body"])
+
+        token = self.csrf()
+        response = self.client.post(
+            "/app/whatsapp/resume",
+            data={"contact_id": self.contact_id, "csrf_token": token},
+            follow_redirects=True,
+        )
+        self.assertIn(b"assistant is answering", response.data)
+
+        with self.app.app_context():
+            result = handle_inbound(self.PHONE, "BALANCE")
+
+        self.assertFalse(result.get("handoff", False))
+        self.assertIn("Available", result["reply"])
+
+    def test_transcript_keeps_the_newest_messages(self):
+        from datetime import datetime, timedelta, timezone
+
+        from db import execute, new_id
+
+        base = datetime.now(timezone.utc) - timedelta(minutes=205)
+        with self.app.app_context():
+            for index in range(1, 206):
+                execute(
+                    """INSERT INTO whatsapp_messages
+                         (id, contact_id, direction, body, intent, status, created_at)
+                       VALUES (?, ?, ?, ?, 'unknown', 'received', ?)""",
+                    (
+                        new_id(),
+                        self.contact_id,
+                        "IN" if index % 2 else "OUT",
+                        f"MESSAGE-{index:04d}",
+                        (base + timedelta(minutes=index)).isoformat(timespec="seconds"),
+                    ),
+                )
+
+        self.login("manager@yavaka.co.zw")
+        page = self.client.get(
+            f"/app/whatsapp?contact={self.contact_id}"
+        ).get_data(as_text=True)
+
+        self.assertNotIn("MESSAGE-0005", page)
+        self.assertIn("MESSAGE-0006", page)
+        self.assertIn("MESSAGE-0205", page)
+        self.assertLess(page.index("MESSAGE-0006"), page.index("MESSAGE-0205"))
+
+    def test_manager_can_reply_while_the_assistant_is_paused(self):
+        from db import query
+
+        self.login("manager@yavaka.co.zw")
+        self.take_over()
+
+        response = self.client.post(
+            "/app/whatsapp/send",
+            data={
+                "contact_id": self.contact_id,
+                "body": "I'll call you in ten minutes.",
+                "csrf_token": self.csrf(),
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Message sent to Handoff Client.", response.data)
+
+        with self.app.app_context():
+            message = query(
+                """SELECT * FROM whatsapp_messages
+                   WHERE contact_id = ? ORDER BY created_at DESC, id DESC LIMIT 1""",
+                (self.contact_id,),
+                one=True,
+            )
+
+        self.assertEqual(message["direction"], "OUT")
+        self.assertEqual(message["intent"], "manual")
+        self.assertEqual(message["body"], "I'll call you in ten minutes.")
+
+    def test_takeover_controls_follow_the_conversation_state(self):
+        self.login("manager@yavaka.co.zw")
+        page = self.client.get(f"/app/whatsapp?contact={self.contact_id}").get_data(as_text=True)
+        self.assertIn("Take over", page)
+        self.assertIn("Message as the client", page)
+
+        self.take_over()
+        page = self.client.get(f"/app/whatsapp?contact={self.contact_id}").get_data(as_text=True)
+        self.assertIn("Hand back to assistant", page)
+        self.assertIn("You're replying", page)
+        self.assertNotIn("Message as the client", page)
+        self.assertIn("Reply to Handoff Client as Tendai Moyo", page)
+
+    def test_manager_cannot_take_over_another_managers_conversation(self):
+        from db import execute, new_id, now_iso
+
+        other_phone = "263779900222"
+        with self.app.app_context():
+            owner_id = new_id()
+            project_id = new_id()
+            contact_id = new_id()
+            execute(
+                """INSERT INTO users (id, name, email, password_hash, role, created_at)
+                   VALUES (?, 'Other Client', 'other-client@example.test', 'x', 'client', ?)""",
+                (owner_id, now_iso()),
+            )
+            execute(
+                """INSERT INTO projects (id, code, name, owner_id, created_at, updated_at)
+                   VALUES (?, 'YVK-9001', 'Other Build', ?, ?, ?)""",
+                (project_id, owner_id, now_iso(), now_iso()),
+            )
+            execute(
+                """INSERT INTO whatsapp_contacts (id, phone, name, user_id, project_id, created_at)
+                   VALUES (?, ?, 'Other Client', ?, ?, ?)""",
+                (contact_id, other_phone, owner_id, project_id, now_iso()),
+            )
+        self.addCleanup(self.cleanup_other, contact_id, project_id, owner_id)
+
+        self.login("manager@yavaka.co.zw")
+        response = self.client.post(
+            "/app/whatsapp/handoff",
+            data={"contact_id": contact_id, "csrf_token": self.csrf()},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def cleanup_other(self, contact_id, project_id, owner_id):
+        from db import execute
+
+        with self.app.app_context():
+            execute("DELETE FROM whatsapp_contacts WHERE id = ?", (contact_id,))
+            execute("DELETE FROM projects WHERE id = ?", (project_id,))
+            execute("DELETE FROM users WHERE id = ?", (owner_id,))
 
 
 class StageProgress(VakaTestCase):

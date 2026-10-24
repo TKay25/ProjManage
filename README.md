@@ -27,7 +27,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 
 | Area | What works today |
 | --- | --- |
-| Authentication | Register, login, logout, hashed passwords, signed session cookies, per-request CSRF tokens, login throttling |
+| Authentication | Register, login, logout, hashed passwords, signed session cookies, per-request CSRF tokens, login throttling, and a single-use email password reset (one hour, requires SMTP) |
 | Roles & access | `client`, `manager`, `admin`; a project is visible to its owner, its build manager, a build manager linked to that client, or YaVaKa staff. Roles are labels — any account can be named as a build manager |
 | **Team & invitations** | A build manager can type the client's email and WhatsApp number when creating a project: if that email already belongs to a client account the build is filed under that client and the manager is linked, otherwise it waits in the manager's workspace until someone signs up with that address (the screen says so). Registered accounts are linked immediately; anyone else gets a single-use invitation with a copyable `/invite/<token>` link (emailed when SMTP is configured) that requires signing in as the invited address. Pending invites appear on the project and in Settings, and a new registration claims any invite or project filed for its email |
 | **Staff portal** | `/admin` — every workspace in one table, platform money totals, attention feed, people & role management, account creation, activity log, stage reference |
@@ -37,7 +37,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Documents | Receipts, statutory documents and site photos, image thumbnails, download, delete, access-checked file serving |
 | Agreements | Scope, terms, milestone payment schedule, on-screen signature capture, print/PDF view, void |
 | Suppliers | Directory of Zimbabwean material suppliers with links out to their own catalogues |
-| WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), stored conversation history, in-app simulator |
+| WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), conversation history (newest 200 per thread), human takeover (pause/resume the assistant per conversation, with an Updates notification when the client replies while paused), in-app simulator |
 | PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons; a project can be saved as an explicit read-only offline copy that survives a signal drop |
 | Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, attention feed (blocked stages, missing receipts, overdraw), latest updates across every build |
 | **Attention inbox** | `/app/attention` — one cross-project list of approvals due (regulatory gates and unsigned agreements), blocked stages and missing receipts, oldest first; the sidebar and topbar carry a live count of the same items |
@@ -264,6 +264,15 @@ Without credentials the app runs in **simulator mode**: `/app/whatsapp` lets you
 send messages as the client and see exactly what the assistant would reply, and
 messages are stored in the same tables as real traffic.
 
+Any project member can **take over** a conversation from the assistant. While it
+is taken over, incoming messages are still recorded in the inbox but the bot
+sends no reply; the manager answers from the same chat and hands the
+conversation back to the assistant when done. A client reply during takeover
+raises an in-app notification for the person who took the conversation over,
+linked straight to that thread.
+
+Each thread renders the newest 200 messages in reading order.
+
 A client's number is linked to their account by matching `users.phone` (stored
 normalised, e.g. `263771234567`).
 
@@ -313,17 +322,25 @@ WSGI can host it.
 `render.yaml` is a ready blueprint:
 
 1. Render Dashboard -> **New -> Blueprint** -> pick this repo.
-2. Render creates the web service, generates `SECRET_KEY`, and mounts a **1 GB disk
-   at `/var/data`**. The disk is not optional: without it the SQLite file and every
-   uploaded receipt are wiped on each deploy.
+2. Render creates the web service and a **Postgres database**, generates
+   `SECRET_KEY`, binds `DATABASE_URL` from the database, and mounts a **1 GB
+   disk at `/var/data`** for uploaded receipts.
 3. Set the secrets flagged `sync: false` in the dashboard before going live:
    `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`,
    `WHATSAPP_APP_SECRET`, `WHATSAPP_UPDATE_TEMPLATE`, `SMTP_HOST`,
-   `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, and
-   `NOTIFICATIONS_TOKEN` when enabling automatic updates.
+   `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` (also enables password
+   reset emails), and `NOTIFICATIONS_TOKEN` when enabling automatic updates.
 4. Health checks hit `/health`, which probes the database for read **and** write
-   access, so a read-only or missing disk fails the deploy instead of silently
-   breaking sign-ups.
+   access, so a missing or read-only database fails the deploy instead of
+   silently breaking sign-ups.
+
+> **Free instances have no persistent disk and no persistent SQLite file.** A
+> Render service created manually on the free plan loses local files whenever
+> it sleeps (after 15 minutes idle), wakes, or redeploys. An account created
+> "yesterday" then returns *That email and password do not match* because the
+> row no longer exists. Postgres keeps the relational data (the blueprint binds
+> `DATABASE_URL` for you); uploaded receipts still need the disk, or another
+> object store.
 
 The blueprint already sets the values that matter for safety:
 
@@ -332,8 +349,8 @@ The blueprint already sets the values that matter for safety:
 | `SEED_DEMO` | `false` | No demo accounts are created, and the login page stops advertising credentials |
 | `COOKIE_SECURE` | `1` | Session cookie is `Secure`; HSTS is sent on HTTPS requests |
 | `SECRET_KEY` | generated | Sessions cannot be forged across deploys |
-| `DATABASE_FILE` | `/var/data/vaka.db` | Lives on the persistent disk |
-| `UPLOAD_DIR` | `/var/data/uploads` | Receipts survive redeploys |
+| `DATABASE_URL` | bound from Postgres | The relational data lives in a managed database, not the ephemeral disk |
+| `UPLOAD_DIR` | `/var/data/uploads` | Receipts survive redeploys on the mounted disk |
 
 `TRUST_PROXY` is on by default so `ProxyFix` honours Render's
 `X-Forwarded-Proto`; that is what lets the app detect HTTPS and send HSTS.
@@ -352,15 +369,39 @@ waitress there. On Linux:
 gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 8 --timeout 60 wsgi:app
 ```
 
-Keep the worker count low. Every worker is a separate process sharing one SQLite
-file; threads handle concurrency better than extra processes here.
+With SQLite, every worker is a separate process sharing one file, so keep the
+worker count low. With Postgres (`DATABASE_URL` set), workers scale normally.
+
+### Database backends
+
+No configuration means SQLite at `DATABASE_FILE` — ideal for local development
+and the test suite (standard library only). Setting `DATABASE_URL` switches the
+whole app to Postgres; the schema is created on boot, guarded by an advisory
+lock so concurrent workers cannot race the DDL.
+
+To move an existing local SQLite database into Postgres:
+
+```bash
+python tools/migrate_to_postgres.py \
+  --sqlite instance/vaka.db \
+  --postgres postgresql://vaka:secret@host:5432/vaka
+```
+
+The tool creates the schema, copies tables in foreign-key order, and is safe to
+re-run (`ON CONFLICT DO NOTHING`).
+
+Uploaded files are separate from the database. On Render they live on the
+`/var/data` disk; a deployment without a disk can keep the database but will
+still lose receipts on restart.
 
 ### Checklist before pointing real clients at it
 
 - `SEED_DEMO` is `false`, and no demo account can log in.
 - `SECRET_KEY` is set to a long random value and is not in the repo.
 - `COOKIE_SECURE=1`, and the site is served over HTTPS.
-- `DATABASE_FILE` and `UPLOAD_DIR` sit on a persistent volume, with backups.
+- `DATABASE_URL` points at a managed Postgres database (or `DATABASE_FILE` sits
+  on a persistent volume), with backups.
+- `UPLOAD_DIR` sits on a persistent volume, or files use an external store.
 - `WHATSAPP_VERIFY_TOKEN` is set — the webhook returns `403` until it is.
 - `/health` returns `200`.
 

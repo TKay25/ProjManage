@@ -10,7 +10,7 @@ from email.message import EmailMessage
 
 from flask import current_app
 
-from db import execute, get_db, log_event, new_id, now_iso, query
+from db import execute, get_db, is_postgres, log_event, new_id, now_iso, query
 from money import format_money
 from queries import money_totals, stage_rows
 from stages import project_progress
@@ -64,6 +64,26 @@ def _smtp_authenticate(server):
 
 def _claim_next_delivery():
     connection = get_db()
+    if is_postgres():
+        # One statement claims the row, so concurrent workers cannot pick the
+        # same delivery even without an explicit transaction.
+        row = connection.execute(
+            """WITH next AS (
+                   SELECT id FROM notification_outbox
+                   WHERE status = 'pending'
+                   ORDER BY created_at, id
+                   LIMIT 1
+                   FOR UPDATE SKIP LOCKED
+               )
+               UPDATE notification_outbox o
+               SET status = 'sending', attempts = o.attempts + 1, claimed_at = %s
+               FROM next
+               WHERE o.id = next.id AND o.status = 'pending'
+               RETURNING o.*""",
+            (now_iso(),),
+        ).fetchone()
+        return dict(row) if row else None
+
     connection.execute("BEGIN IMMEDIATE")
     try:
         stale_before = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()

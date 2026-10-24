@@ -5,13 +5,18 @@ import hmac
 
 from flask import (
     Blueprint,
+    abort,
     current_app,
+    flash,
     g,
     jsonify,
+    redirect,
     render_template,
     request,
+    url_for,
 )
 
+import web
 from auth import accessible_projects, login_required
 from db import execute, new_id, now_iso, query
 from whatsapp import (
@@ -25,6 +30,20 @@ from whatsapp import (
 bp = Blueprint("whatsapp", __name__)
 
 
+def contact_for_user(contact_id):
+    """Loads a conversation the current user is allowed to read or answer."""
+    contact = query(
+        "SELECT * FROM whatsapp_contacts WHERE id = ?", (contact_id or "",), one=True
+    )
+    if not contact:
+        abort(404)
+
+    project_ids = [project["id"] for project in accessible_projects(g.user)]
+    if contact["project_id"] not in project_ids and contact["user_id"] != g.user["id"]:
+        abort(403)
+    return contact
+
+
 @bp.get("/app/whatsapp")
 @login_required
 def index():
@@ -36,10 +55,12 @@ def index():
         placeholders = ",".join("?" for _ in project_ids)
         contacts = query(
             f"""SELECT c.*, p.name AS project_name, u.name AS user_name,
+                   h.name AS handoff_name,
                    (SELECT COUNT(*) FROM whatsapp_messages m WHERE m.contact_id = c.id) AS message_count
                 FROM whatsapp_contacts c
                 LEFT JOIN projects p ON p.id = c.project_id
                 LEFT JOIN users u ON u.id = c.user_id
+                LEFT JOIN users h ON h.id = c.handoff_by
                 WHERE c.project_id IN ({placeholders}) OR c.user_id = ?
                 ORDER BY c.created_at DESC""",
             [*project_ids, g.user["id"]],
@@ -53,8 +74,15 @@ def index():
 
     messages = []
     if selected:
+        # The newest 200, then flipped back into reading order.
         messages = query(
-            "SELECT * FROM whatsapp_messages WHERE contact_id = ? ORDER BY created_at ASC LIMIT 200",
+            """SELECT * FROM (
+                   SELECT * FROM whatsapp_messages
+                   WHERE contact_id = ?
+                   ORDER BY created_at DESC, id DESC
+                   LIMIT 200
+               ) recent
+               ORDER BY created_at ASC, id ASC""",
             (selected["id"],),
         )
 
@@ -106,24 +134,42 @@ def simulate():
     return jsonify(result)
 
 
+@bp.post("/app/whatsapp/handoff")
+@login_required
+def handoff():
+    contact = contact_for_user(request.form.get("contact_id"))
+    execute(
+        "UPDATE whatsapp_contacts SET handoff_at = ?, handoff_by = ? WHERE id = ?",
+        (now_iso(), g.user["id"], contact["id"]),
+    )
+    flash(
+        f"You're replying to {contact['name']}. The assistant will stay quiet until you hand it back.",
+        "success",
+    )
+    return redirect(url_for("whatsapp.index", contact=contact["id"]))
+
+
+@bp.post("/app/whatsapp/resume")
+@login_required
+def resume():
+    contact = contact_for_user(request.form.get("contact_id"))
+    execute(
+        "UPDATE whatsapp_contacts SET handoff_at = NULL, handoff_by = NULL WHERE id = ?",
+        (contact["id"],),
+    )
+    flash(f"The assistant is answering {contact['name']} again.", "success")
+    return redirect(url_for("whatsapp.index", contact=contact["id"]))
+
+
 @bp.post("/app/whatsapp/send")
 @login_required
 def send():
-    contact = query(
-        "SELECT * FROM whatsapp_contacts WHERE id = ?",
-        (request.form.get("contact_id") or "",),
-        one=True,
-    )
-    body = (request.form.get("body") or "").strip()
+    payload = request.get_json(silent=True) or request.form
+    contact = contact_for_user(payload.get("contact_id"))
+    body = (payload.get("body") or "").strip()
 
-    if not contact:
-        return jsonify({"error": "Contact not found."}), 404
     if not body:
         return jsonify({"error": "Type a message first."}), 400
-
-    projects = accessible_projects(g.user)
-    if contact["project_id"] not in [project["id"] for project in projects]:
-        return jsonify({"error": "You do not have access to that conversation."}), 403
 
     execute(
         """INSERT INTO whatsapp_messages (id, contact_id, direction, body, intent, status, created_at)
@@ -131,6 +177,10 @@ def send():
         (new_id(), contact["id"], body[:2000], now_iso()),
     )
     delivery = send_whatsapp_text(contact["phone"], body)
+
+    if not web.wants_json():
+        flash(f"Message sent to {contact['name']}.", "success")
+        return redirect(url_for("whatsapp.index", contact=contact["id"]))
 
     return jsonify({"status": delivery["status"], "simulated": delivery.get("simulated", False)})
 

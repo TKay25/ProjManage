@@ -54,9 +54,10 @@ def _seed_suppliers():
             char for char in supplier["name"].lower() if char.isalnum()
         )[:18]
         execute(
-            """INSERT OR IGNORE INTO suppliers
+            """INSERT INTO suppliers
                  (id, name, category, city, website, phone, address, description, tags, verified, position)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT (id) DO NOTHING""",
             (
                 supplier_id,
                 supplier["name"],

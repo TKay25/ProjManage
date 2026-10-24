@@ -2481,6 +2481,19 @@ body.app {
   font-weight: 600;
 }
 
+.wa-chat-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wa-chat-actions .badge {
+  margin-left: 0;
+}
+
 .wa-messages {
   flex: 1;
   min-height: 380px;
@@ -2554,6 +2567,13 @@ body.app {
 
 .wa-turn-out {
   align-items: flex-end;
+}
+
+.wa-note {
+  align-self: center;
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--ink-faint);
 }
 
 .wa-actions {
