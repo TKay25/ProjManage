@@ -487,8 +487,22 @@
 
       const contentType = response.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
-        // Server answered with HTML (for example a session timeout page).
-        window.location.href = response.url || "/app";
+        // An HTML answer means the request left the JSON path: a session
+        // timeout, an expired form token, or a server error. Navigating to it
+        // would perform a GET on the form's POST url - which for the sign-in
+        // form lands on the standalone login page and looks like the dialog
+        // threw the person out. Only a successful HTML page (a 2FA handoff)
+        // is worth following; anything else stays in the dialog.
+        if (response.ok) {
+          window.location.href = response.url || "/app";
+          return;
+        }
+        showError(
+          form,
+          response.status === 400 || response.status === 403
+            ? "Your session expired while this form was open. Reload the page and try again."
+            : "The server could not save that. Reload the page and try again.",
+        );
         return;
       }
 

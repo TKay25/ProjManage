@@ -31,6 +31,8 @@ MANAGER_SUGGESTIONS = (
 
 
 def suggestions_for(user) -> tuple:
+    if not user:
+        return PUBLIC_SUGGESTIONS
     return MANAGER_SUGGESTIONS if runs_build(user) else SUGGESTIONS
 
 
@@ -267,6 +269,142 @@ def _fallback(user) -> dict:
         "your build manager.",
         [("Open the dashboard", "/app")],
         suggestions_for(user),
+    )
+
+
+
+# ----------------------------------------------------------------------
+# Visitors who have not signed in
+# ----------------------------------------------------------------------
+
+# What the site itself can answer. These are product facts - no project data,
+# nothing that depends on an account - so a stranger can get a real answer
+# instead of being told to sign up.
+PUBLIC_SUGGESTIONS = (
+    "What is YaVaKa?",
+    "How does it work?",
+    "What are the 19 stages?",
+    "How do I start?",
+)
+
+PUBLIC_TOPICS = (
+    (
+        ("what is yavaka", "what's yavaka", "who are you", "about yavaka"),
+        "YaVaKa is build management for Zimbabweans building at home from "
+        "abroad. You get the stages, the money and the proof in one record, so "
+        "you are not relying on phone calls and photographs.",
+        [("How it works", "/#how")],
+    ),
+    (
+        ("how does", "how it works", "how do you", "process", "work"),
+        "Three things happen in order. A project is set up with a stand, budget "
+        "and target date across the 19-stage Zimbabwe sequence. Money moves "
+        "against approved stages, with a receipt against each payment. Progress "
+        "and balance updates reach you by email and WhatsApp.",
+        [("See the stages", "/#stages"), ("Money controls", "/#money")],
+    ),
+    (
+        ("stage", "stages", "sequence", "nineteen", "19"),
+        "The build follows nineteen stages, from land and title due diligence "
+        "through council plans, footings, superstructure, roofing and finishes "
+        "to snag list and handover. Each stage has an owner, a budget and a "
+        "decision, and the statutory gates are called early rather than "
+        "discovered late.",
+        [("Build stages", "/#stages")],
+    ),
+    (
+        ("cost", "price", "pricing", "how much", "fee", "charge"),
+        "Pricing depends on what you are building and who runs it on the ground. "
+        "Create a free account to set up a project record and see where you "
+        "stand, then talk to us about managing the build itself.",
+        [("Create an account", "/register"), ("Sign in", "/login")],
+    ),
+    (
+        ("whatsapp", "chat", "message", "bot"),
+        "There is a WhatsApp assistant on the same project record. Clients and "
+        "managers get different menus, it answers in English, Shona or Ndebele, "
+        "and a build manager can take a conversation over from it at any point.",
+        [("WhatsApp updates", "/#whatsapp")],
+    ),
+    (
+        ("receipt", "proof", "document", "upload", "download", "invoice"),
+        "Receipts, plans, agreements, photos, voice notes and video all file "
+        "against the build rather than a phone. Every one can be opened or "
+        "downloaded again later, including from a WhatsApp notification.",
+        [("Money controls", "/#money")],
+    ),
+    (
+        ("manager", "contractor", "builder", "supplier", "vet", "vetted"),
+        "Build managers and contractors are referenced before work is awarded, "
+        "and work is priced against measured quantities rather than a round "
+        "number. There is a supplier directory covering Zimbabwe building "
+        "suppliers.",
+        [("Supplier directory", "/suppliers")],
+    ),
+    (
+        ("sign up", "signup", "register", "create", "account", "start", "begin"),
+        "Create an account, then set up your first project with its stand, "
+        "budget and target date. If someone else runs the build, you invite them "
+        "or hand it to a manager; either way the record is yours.",
+        [("Create an account", "/register")],
+    ),
+    (
+        ("sign in", "log in", "login", "password", "forgot"),
+        "Sign in from the button at the top of the page. If you cannot get in, "
+        "use Forgot your password on the sign-in form and a reset link is "
+        "emailed to you.",
+        [("Sign in", "/login"), ("Reset a password", "/forgot-password")],
+    ),
+    (
+        ("contact", "talk", "human", "person", "call", "email", "support"),
+        "Email hello@yavaka.co.zw and a person will pick it up. Once you have an "
+        "account, the WhatsApp tab puts you in a conversation with whoever runs "
+        "your build.",
+        [("Email us", "mailto:hello@yavaka.co.zw")],
+    ),
+    (
+        ("safe", "secure", "security", "privacy", "data"),
+        "Your record is private to you and the people you put on the build. "
+        "Documents are stored with the project rather than on a phone, and links "
+        "sent over WhatsApp expire.",
+        [("Read the site", "/")],
+    ),
+)
+
+
+def _looks_personal(text: str) -> bool:
+    """True when the question is about the asker's own build.
+
+    Without this, "what is my balance" matches a "what is" keyword and gets a
+    product blurb, which is worse than saying plainly that it needs a sign-in.
+    """
+    owns = any(word in text.split() for word in ("my", "our", "me", "mine"))
+    project_words = (
+        "balance", "project", "stage", "receipt", "document", "payment",
+        "budget", "money", "account", "build", "invoice", "agreement",
+    )
+    return owns and any(word in text for word in project_words)
+
+
+def answer_public(question: str) -> dict:
+    """Answer from published product facts. Never touches project data."""
+    text = str(question or "").strip().lower()
+
+    if not _looks_personal(text):
+        best = None
+        for keywords, reply, links in PUBLIC_TOPICS:
+            hits = sum(1 for word in keywords if word in text)
+            if hits and (best is None or hits > best[0]):
+                best = (hits, reply, links)
+        if best:
+            return _reply(best[1], best[2], PUBLIC_SUGGESTIONS)
+
+    return _reply(
+        "I can explain how YaVaKa works, the nineteen stages, money controls, "
+        "WhatsApp updates and how to start. Questions about your own build need "
+        "a signed-in account, because I read those figures from your record.",
+        [("Create an account", "/register"), ("Sign in", "/login")],
+        PUBLIC_SUGGESTIONS,
     )
 
 

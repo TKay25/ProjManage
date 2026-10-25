@@ -2306,15 +2306,16 @@ h3 {
 .supplier-preview,
 .supplier-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
 }
 
 .supplier-grid {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .supplier-card {
+  min-width: 0;
   padding: 22px;
   background: #fff;
   border: 1px solid var(--line);
@@ -2834,7 +2835,7 @@ h3 {
   }
 
   .supplier-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hero-inner {
@@ -3546,7 +3547,9 @@ html:not([data-theme="dark"]) .feature-icon {
   color: rgba(255, 255, 255, 0.82);
 }
 
-.about-card--vision h3 {
+/* Scoped past .about-card h3, which is declared later and would otherwise win
+   at equal specificity - that is what left this heading dark on a dark card. */
+.about-card.about-card--vision h3 {
   color: #fff;
 }
 

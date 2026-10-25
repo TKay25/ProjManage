@@ -2575,14 +2575,17 @@ class AssistantWindow(VakaTestCase):
                 page = self.client.get(path).get_data(as_text=True)
                 self.assertNotIn("data-aide", page)
 
-    def test_asking_needs_a_session_and_a_csrf_token(self):
-        # CSRF is verified before the session, so a bare post is refused outright.
+    def test_asking_needs_a_csrf_token_but_not_a_session(self):
+        # CSRF is verified before anything else, so a bare post is refused.
         self.assertEqual(
             self.client.post("/api/assistant/ask", json={"question": "balance"}).status_code,
             400,
         )
-        # With a valid token but no session it falls through to the login redirect.
-        self.assertEqual(self._ask("balance").status_code, 302)
+        # A visitor with a token gets a public answer rather than a redirect:
+        # the landing page carries the same assistant.
+        public = self._ask("What is YaVaKa?")
+        self.assertEqual(public.status_code, 200)
+        self.assertIn("build management", public.get_json()["reply"].lower())
 
         self.login()
         self.assertEqual(
@@ -2664,6 +2667,107 @@ class AssistantWindow(VakaTestCase):
                 headers={"X-CSRF-Token": self.csrf()},
             ).status_code,
             400,
+        )
+
+
+class PublicAssistant(VakaTestCase):
+    """The landing-page assistant answers strangers without touching project data."""
+
+    def _ask(self, question, client=None):
+        client = client or self.client
+        return client.post(
+            "/api/assistant/ask",
+            json={"question": question},
+            headers={"X-CSRF-Token": self.csrf()},
+        )
+
+    def test_a_visitor_gets_an_answer_without_signing_in(self):
+        for question, must_say in (
+            ("What is YaVaKa?", "build management"),
+            ("What are the 19 stages?", "nineteen"),
+            ("How do I start?", "Create an account"),
+            ("Do you have WhatsApp?", "Shona"),
+        ):
+            with self.subTest(question=question):
+                response = self._ask(question)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(must_say.lower(), response.get_json()["reply"].lower())
+
+    def test_a_visitor_never_sees_project_figures(self):
+        payload = self._ask("what is my balance").get_json()
+        self.assertNotIn("$", payload["reply"])
+        self.assertIn("/register", [href for _label, href in payload["links"]])
+        # Every suggestion is a public topic, not an account one.
+        self.assertIn("What is YaVaKa?", payload["suggestions"])
+
+    def test_the_landing_widget_is_live_for_a_visitor(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn("data-aide", page)
+        self.assertIn("What are the 19 stages?", page)
+        # The composer must not be shipped disabled, or a visitor cannot ask.
+        self.assertNotIn('aria-label="Your question" disabled', page)
+
+    def test_an_empty_question_is_still_refused(self):
+        self.assertEqual(self._ask("   ").status_code, 400)
+
+
+class SignInNeverBouncesBackToAForm(VakaTestCase):
+    """Signing in must not land a person back on a sign-in page."""
+
+    def test_safe_next_refuses_every_auth_path(self):
+        import auth
+
+        for target in (
+            "/login",
+            "/login?next=/app",
+            "/login/",
+            "/register",
+            "/logout",
+            "/forgot-password",
+            "/reset-password/abc",
+            "/two-factor",
+        ):
+            with self.subTest(target=target):
+                self.assertEqual(auth.safe_next(target), "/app")
+
+    def test_a_real_destination_still_survives(self):
+        import auth
+
+        self.assertEqual(auth.safe_next("/app/money"), "/app/money")
+        self.assertEqual(
+            auth.safe_next("/app/projects/abc?tab=stages"), "/app/projects/abc?tab=stages"
+        )
+        # Off-site and protocol-relative targets stay refused.
+        self.assertEqual(auth.safe_next("//evil.example"), "/app")
+        self.assertEqual(auth.safe_next("https://evil.example"), "/app")
+
+    def test_signing_in_with_next_login_lands_on_the_dashboard(self):
+        self.login()
+        token = self.csrf()
+        self.client.post("/logout", data={"csrf_token": token})
+        token = self.csrf()
+        response = self.client.post(
+            "/login",
+            data={
+                "email": "client@yavaka.co.zw",
+                "password": "YaVaKa2026!",
+                "next": "/login",
+                "csrf_token": token,
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/app"))
+
+    def test_an_html_error_never_navigates_the_dialog(self):
+        """A non-JSON error used to send the browser to the form's POST url."""
+        js = Path("static/js/modal.js").read_text(encoding="utf-8")
+        self.assertIn("if (response.ok)", js)
+        self.assertIn("Your session expired", js)
+        # The old unconditional navigation must be gone.
+        self.assertNotIn(
+            'if (!contentType.includes("application/json")) {\n        // Server answered with HTML',
+            js,
         )
 
 
@@ -5839,6 +5943,83 @@ class PosterBrand(VakaTestCase):
                     self.assertGreaterEqual(len(poster["gates"]), 4)
                     self.assertLess(poster["current"], len(poster["gates"]))
 
+
+
+class MobileLayout(VakaTestCase):
+    """A phone must never be able to scroll sideways."""
+
+    PAGES = (
+        "/app",
+        "/app/projects",
+        "/app/money",
+        "/app/documents",
+        "/app/updates",
+        "/app/attention",
+        "/app/settings",
+        "/app/whatsapp",
+        "/app/reports",
+        "/app/agreements",
+        "/app/suppliers",
+        "/app/search",
+    )
+
+    def test_no_grid_track_is_wider_than_a_phone(self):
+        """minmax(300px, 1fr) forces a 300px track into a 289px column.
+
+        That turns the whole page into a horizontal scroll strip, which is what
+        truncated the cards, text and topbar on a phone. The floor has to be
+        clamped to the container.
+        """
+        import re
+
+        for name in ("portal.css", "app.css"):
+            css = Path("static/css") / name
+            text = css.read_text(encoding="utf-8")
+            for match in re.finditer(r"minmax\(\s*(\d+)px\s*,\s*1fr\s*\)", text):
+                with self.subTest(file=name, floor=match.group(0)):
+                    self.fail(
+                        f"{name}: {match.group(0)} can exceed a narrow column; "
+                        f"use minmax(min({match.group(1)}px, 100%), 1fr)"
+                    )
+
+    def test_app_grids_cannot_be_widened_by_their_content(self):
+        """A bare `1fr` is `minmax(auto, 1fr)`.
+
+        That lets one wide child push its column past the container and take
+        the whole page sideways with it — which is what the supplier cards did
+        on a phone. App grids must clamp the floor to zero.
+        """
+        import re
+
+        text = Path("static/css/app.css").read_text(encoding="utf-8")
+        for selector in (".supplier-grid",):
+            block = text.split(selector)[1][:160]
+            for match in re.finditer(r"repeat\((\d+), 1fr\)", block):
+                with self.subTest(selector=selector, track=match.group(0)):
+                    self.fail(
+                        f"{selector} uses {match.group(0)}; "
+                        f"use repeat({match.group(1)}, minmax(0, 1fr))"
+                    )
+        self.assertIn(".supplier-card {\n  min-width: 0;", text)
+
+    def test_the_vision_heading_is_white_on_its_dark_card(self):
+        css = Path("static/css/app.css").read_text(encoding="utf-8")
+        # .about-card h3 is declared later with the same specificity, so the
+        # override has to be scoped deeper than one class or it loses.
+        self.assertIn(".about-card.about-card--vision h3", css)
+        self.assertIn("color: #fff", css.split(".about-card.about-card--vision h3")[1][:80])
+
+    def test_the_app_shell_stays_inside_the_viewport(self):
+        self.login()
+        for path in ("/app", "/app/agreements", "/app/suppliers", "/app/documents"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+
+    def test_a_narrow_viewport_meta_is_declared(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('name="viewport"', page)
+        self.assertIn("width=device-width", page)
 
 
 class DesignSystemPolish(VakaTestCase):

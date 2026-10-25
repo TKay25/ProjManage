@@ -17,7 +17,7 @@
     </header>
 
     <div class="aide-log" data-aide-log aria-live="polite">
-      <p class="aide-said aide-said--bot">{% if user %}Hello {{ user.name.split(' ')[0] }}. Ask me about a balance, a stage, your documents, or anything flagged.{% else %}Hello. I am the YaVaKa assistant. Sign in and I can answer from your own builds ? until then the site has the full picture.{% endif %}</p>
+      <p class="aide-said aide-said--bot">{% if user %}Hello {{ user.name.split(' ')[0] }}. Ask me about a balance, a stage, your documents, or anything flagged.{% else %}Hello. I can explain how YaVaKa works, the build stages, money controls and how to start. Sign in and I will read your own figures.{% endif %}</p>
     </div>
 
     {% if aide_suggestions %}
@@ -28,9 +28,8 @@
 
     <form class="aide-compose" data-aide-form>
       <input class="aide-input" type="text" name="question" autocomplete="off" maxlength="300"
-             placeholder="{{ 'Ask a question?' if user else 'Sign in to ask about your build' }}"
-             aria-label="Your question" {% if not user %}disabled{% endif %} />
-      <button class="aide-send" type="submit" aria-label="Send" {% if not user %}disabled{% endif %}>{{ icon('arrow-right', 17) }}</button>
+             placeholder="Ask a question?" aria-label="Your question" />
+      <button class="aide-send" type="submit" aria-label="Send">{{ icon('arrow-right', 17) }}</button>
     </form>
   </div>
 </details>

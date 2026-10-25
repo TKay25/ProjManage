@@ -370,7 +370,7 @@ def create_app(config_object=Config):
             "unread_updates": unread_updates,
             "recent_updates": recent_updates,
             # Chips under the assistant composer, phrased for the role.
-            "aide_suggestions": assistant.suggestions_for(user) if user else (),
+            "aide_suggestions": assistant.suggestions_for(user),
             # The upload modal advertises exactly what the server will accept,
             # so the picker and the error message cannot disagree.
             "upload_accept": storage.upload_accept(),

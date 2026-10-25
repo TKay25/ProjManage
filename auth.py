@@ -19,6 +19,17 @@ CSRF_EXEMPT_ENDPOINTS = {
     "public.health",
 }
 
+# Paths a post-login redirect must never target: landing back on one of these
+# looks like the sign-in itself failed.
+AUTH_PATHS = (
+    "/login",
+    "/logout",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/two-factor",
+)
+
 
 def init_app(app):
     app.before_request(load_user)
@@ -322,7 +333,18 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def safe_next(value, fallback="/app"):
+    """Where to send someone after signing in.
+
+    Auth endpoints are refused: a `next` of /login would sign a person in and
+    then bounce them straight back to the sign-in page, which reads as the
+    login having failed.
+    """
     target = value if isinstance(value, str) else ""
-    if target.startswith("/") and not target.startswith("//"):
-        return target
-    return fallback
+    if not target.startswith("/") or target.startswith("//"):
+        return fallback
+
+    path = target.split("?", 1)[0].split("#", 1)[0].rstrip("/").lower()
+    for blocked in AUTH_PATHS:
+        if path == blocked or path.startswith(blocked + "/"):
+            return fallback
+    return target
