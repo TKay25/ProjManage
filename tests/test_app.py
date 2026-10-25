@@ -5519,6 +5519,8 @@ class PaletteSystem(VakaTestCase):
         self.assertIn(row["palette"], ("forest", "laterite", "granite", "msasa"))
 
     def test_printed_documents_follow_the_palette(self):
+        import re
+
         for path in (
             "templates/app/project_pack.html",
             "templates/app/agreement_print.html",
@@ -5527,9 +5529,22 @@ class PaletteSystem(VakaTestCase):
                 source = Path(path).read_text(encoding="utf-8")
                 self.assertIn('data-palette="{{ palette }}"', source)
                 self.assertIn("palettes.css", source)
-                # Brand colours must come from tokens, not hardcoded hex.
-                for hexcode in ("#0F5D46", "#F7F4EF", "#E2D9CA"):
-                    self.assertNotIn(hexcode, source)
+                # Any brand hex that remains must be a var() fallback, never a
+                # hardcoded colour that ignores the chosen palette.
+                for match in re.finditer(r"#[0-9A-Fa-f]{6}", source):
+                    before = source[max(0, match.start() - 40) : match.start()]
+                    self.assertIn(
+                        "var(",
+                        before,
+                        f"{path} hardcodes {match.group(0)} outside a token fallback",
+                    )
+
+    def test_logo_mark_recolours_with_the_palette(self):
+        import ui
+
+        markup = str(ui.logo_mark(40))
+        self.assertIn("var(--forest-700", markup)
+        self.assertIn("var(--brass-500", markup)
 
     def test_app_shell_exposes_the_palette_attribute(self):
         source = Path("templates/base.html").read_text(encoding="utf-8")

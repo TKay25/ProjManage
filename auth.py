@@ -34,7 +34,7 @@ def load_user():
     user = query(
         """SELECT id, name, email, role, phone, country, avatar_color,
                   density, page_size, session_epoch, onboarded_at,
-                  totp_enabled, created_at
+                  totp_enabled, palette, created_at
            FROM users WHERE id = ?""",
         (user_id,),
         one=True,
