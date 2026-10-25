@@ -6801,13 +6801,18 @@ td.align-right,
   overflow: hidden;
 }
 
+/* The bar scales rather than resizes: a progress bar that animates width
+   forces a layout pass on every frame, which is exactly what a slow phone
+   cannot afford while a file is still uploading. */
 .transfer-bar {
   display: block;
-  width: 0;
+  width: 100%;
   height: 100%;
   border-radius: 999px;
+  transform: scaleX(0);
+  transform-origin: left center;
   background: linear-gradient(90deg, var(--forest-600, #147054), var(--brass-500, #c8963e));
-  transition: width 180ms linear;
+  transition: transform 180ms linear;
 }
 
 .transfer-track[data-state="done"] .transfer-bar {

@@ -26,7 +26,7 @@
     const bar = root.querySelector("[data-transfer-bar]");
     const text = root.querySelector("[data-transfer-label]");
     const track = root.querySelector("[data-transfer-track]");
-    if (bar) bar.style.width = Math.max(0, Math.min(100, percent)) + "%";
+    if (bar) bar.style.transform = "scaleX(" + Math.max(0, Math.min(100, percent)) / 100 + ")";
     if (text && label) text.textContent = label;
     if (track) track.dataset.state = percent >= 100 ? "done" : "active";
     if (track) track.setAttribute("aria-valuenow", String(Math.round(percent)));
