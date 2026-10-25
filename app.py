@@ -176,6 +176,45 @@ def _warn_if_placeholder_secrets(app) -> None:
             )
 
 
+def _warn_if_whatsapp_incomplete(app) -> None:
+    """A half-configured WhatsApp channel looks live and quietly does nothing.
+
+    Without both a token and a phone number id, outbound replies are stored as
+    "simulated" and never leave the server, while the inbox still fills up.
+    """
+    token = app.config.get("WHATSAPP_TOKEN")
+    phone_id = app.config.get("WHATSAPP_PHONE_NUMBER_ID")
+    verify_token = app.config.get("WHATSAPP_VERIFY_TOKEN")
+    app_secret = app.config.get("WHATSAPP_APP_SECRET")
+
+    if not any((token, phone_id, verify_token, app_secret)):
+        return  # WhatsApp simply not in use
+
+    if bool(token) != bool(phone_id):
+        missing = "WHATSAPP_PHONE_NUMBER_ID" if token else "WHATSAPP_TOKEN"
+        app.logger.warning(
+            "WHATSAPP IS IN SIMULATOR MODE: %s is missing, so replies are stored "
+            "and never sent. Both WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID are "
+            "required; /health reports \"whatsapp\": \"partial\" until then.",
+            missing,
+        )
+
+    if not verify_token:
+        app.logger.warning(
+            "WHATSAPP WEBHOOK VERIFICATION WILL FAIL: WHATSAPP_VERIFY_TOKEN is "
+            "empty, so Meta's 'Verify and save' is refused. Set it to a random "
+            "string, then paste the same value into the Meta webhook dialog."
+        )
+
+    if token and phone_id and not app_secret:
+        app.logger.warning(
+            "WHATSAPP WEBHOOK IS UNAUTHENTICATED: WHATSAPP_APP_SECRET is empty, so "
+            "incoming POSTs are not signature-checked and anyone who learns the "
+            "webhook URL can inject messages. Copy the App Secret from Meta -> "
+            "App settings -> Basic."
+        )
+
+
 def create_app(config_object=Config):
     app = Flask(__name__)
     app.config.from_object(config_object)
@@ -190,6 +229,7 @@ def create_app(config_object=Config):
     _warn_if_ephemeral_database(app)
     _warn_if_smtp_will_be_blocked(app)
     _warn_if_placeholder_secrets(app)
+    _warn_if_whatsapp_incomplete(app)
     # Tracing starts first, so even a rejected CSRF token or an auth failure is
     # logged with a request id.
     observability.init_app(app)

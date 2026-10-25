@@ -100,10 +100,20 @@ def health():
             # losing accounts is how people end up unable to sign in.
             "durable": is_postgres() or not _ephemeral_host(),
             "email": _email_channel(),
+            "whatsapp": _whatsapp_channel(),
             "uploads": uploads,
             "uptime_s": round(time.time() - STARTED_AT),
         }
     )
+
+
+def _whatsapp_channel() -> str:
+    """live = messages really send; partial = half configured; simulator = off."""
+    token = current_app.config.get("WHATSAPP_TOKEN")
+    phone_id = current_app.config.get("WHATSAPP_PHONE_NUMBER_ID")
+    if token and phone_id:
+        return "live"
+    return "partial" if (token or phone_id) else "simulator"
 
 
 def _email_channel() -> str:

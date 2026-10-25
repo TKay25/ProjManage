@@ -4593,3 +4593,72 @@ class PlaceholderCredentialGuard(unittest.TestCase):
         )
 
 
+
+
+
+class WhatsAppChannelReporting(unittest.TestCase):
+    """A half-configured WhatsApp channel must not look live."""
+
+    def _app(self, **overrides):
+        base = dict(
+            DATABASE=str(Path(_TEMP_DIR) / f"wa-{id(overrides)}.db"),
+            UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "wa-uploads"),
+            SEED_DEMO=False,
+            DEMO_MODE=False,
+        )
+        base.update(overrides)
+        return create_app(isolated_config(**base))
+
+    def _health(self, **overrides):
+        return self._app(**overrides).test_client().get("/health").get_json()
+    def test_phone_id_without_token_is_flagged_as_partial(self):
+        # Setting only the phone number id is the easiest half-configuration to
+        # make, because Meta shows it next to the token.
+        body = self._health(
+            WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="",
+            WHATSAPP_VERIFY_TOKEN="", WHATSAPP_APP_SECRET="",
+        )
+        self.assertEqual(body["whatsapp"], "partial")
+
+    def test_full_credentials_report_live(self):
+        body = self._health(
+            WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="token",
+            WHATSAPP_VERIFY_TOKEN="verify", WHATSAPP_APP_SECRET="secret",
+        )
+        self.assertEqual(body["whatsapp"], "live")
+
+    def test_no_whatsapp_configuration_reports_simulator(self):
+        body = self._health(
+            WHATSAPP_PHONE_NUMBER_ID="", WHATSAPP_TOKEN="",
+            WHATSAPP_VERIFY_TOKEN="", WHATSAPP_APP_SECRET="",
+        )
+        self.assertEqual(body["whatsapp"], "simulator")
+
+    def test_missing_token_warning_names_the_variable(self):
+        with self.assertLogs("app", level="WARNING") as logs:
+            self._app(
+                WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="",
+                WHATSAPP_VERIFY_TOKEN="v", WHATSAPP_APP_SECRET="",
+            )
+        combined = " ".join(logs.output)
+        self.assertIn("WHATSAPP IS IN SIMULATOR MODE", combined)
+        self.assertIn("WHATSAPP_TOKEN", combined)
+
+    def test_unauthenticated_webhook_is_flagged(self):
+        with self.assertLogs("app", level="WARNING") as logs:
+            self._app(
+                WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="t",
+                WHATSAPP_VERIFY_TOKEN="v", WHATSAPP_APP_SECRET="",
+            )
+        combined = " ".join(logs.output)
+        self.assertIn("UNAUTHENTICATED", combined)
+        self.assertIn("WHATSAPP_APP_SECRET", combined)
+
+    def test_missing_verify_token_is_flagged(self):
+        with self.assertLogs("app", level="WARNING") as logs:
+            self._app(
+                WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="t",
+                WHATSAPP_VERIFY_TOKEN="", WHATSAPP_APP_SECRET="s",
+            )
+        self.assertIn("VERIFICATION WILL FAIL", " ".join(logs.output))
+
