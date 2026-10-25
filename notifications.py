@@ -1,9 +1,13 @@
 """Lightweight asynchronous email and WhatsApp project-update delivery."""
 
+import json
 import logging
+import re
 import smtplib
 import ssl
 import time
+import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
@@ -19,12 +23,125 @@ from whatsapp import normalize_phone, send_whatsapp_project_update
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="yavaka-notifications")
 logger = logging.getLogger("yavaka.notifications")
 
+# HTTPS email APIs, in detection order. Render's Free plan (and many corporate
+# networks) block outbound SMTP on ports 25/465/587, so a key here is the only
+# way to send mail from those environments.
+API_PROVIDERS = {
+    "resend": ("RESEND_API_KEY", "https://api.resend.com/emails"),
+    "brevo": ("BREVO_API_KEY", "https://api.brevo.com/v3/smtp/email"),
+    "sendgrid": ("SENDGRID_API_KEY", "https://api.sendgrid.com/v3/mail/send"),
+}
+
+
+def api_provider() -> str:
+    """Which HTTPS provider is configured, or "" for none/SMTP."""
+    configured = {
+        name: current_app.config.get(key)
+        for name, (key, _) in API_PROVIDERS.items()
+    }
+    explicit = (current_app.config.get("EMAIL_API_PROVIDER") or "").strip().lower()
+    if explicit in API_PROVIDERS:
+        return explicit if configured[explicit] else ""
+    for name in API_PROVIDERS:
+        if configured[name]:
+            return name
+    return ""
+
 
 def email_configured() -> bool:
+    if api_provider():
+        return bool(current_app.config.get("SMTP_FROM_EMAIL"))
     return bool(current_app.config.get("SMTP_HOST") and current_app.config.get("SMTP_FROM_EMAIL"))
 
 
+def _from_parts() -> tuple[str, str]:
+    """Split `Name <addr@host>` into a display name and a bare address."""
+    raw = (current_app.config.get("SMTP_FROM_EMAIL") or "").strip()
+    match = re.match(r"^(.*?)\s*<([^>]+)>\s*$", raw)
+    if match:
+        return match.group(1).strip().strip('"'), match.group(2).strip()
+    return "", raw
+
+
+def _api_request(provider: str, recipient: str, subject: str, body: str):
+    """Build the URL and payload for a provider. Separated out so it is testable."""
+    key_setting, url = API_PROVIDERS[provider]
+    name, address = _from_parts()
+    key = current_app.config.get(key_setting)
+
+    if provider == "resend":
+        headers = {"Authorization": f"Bearer {key}"}
+        payload = {
+            "from": f"{name} <{address}>" if name else address,
+            "to": [recipient],
+            "subject": subject,
+            "text": body,
+        }
+    elif provider == "brevo":
+        # Brevo puts the key in a header and needs sender split into parts.
+        headers = {"api-key": key}
+        sender = {"email": address}
+        if name:
+            sender["name"] = name
+        payload = {
+            "sender": sender,
+            "to": [{"email": recipient}],
+            "subject": subject,
+            "textContent": body,
+        }
+    else:  # sendgrid
+        headers = {"Authorization": f"Bearer {key}"}
+        sender = {"email": address}
+        if name:
+            sender["name"] = name
+        payload = {
+            "personalizations": [{"to": [{"email": recipient}]}],
+            "from": sender,
+            "subject": subject,
+            "content": [{"type": "text/plain", "value": body}],
+        }
+
+    return url, headers, payload
+
+
+def _send_via_api(provider: str, recipient: str, subject: str, body: str) -> dict:
+    url, headers, payload = _api_request(provider, recipient, subject, body)
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            # Resend sits behind Cloudflare, which rejects urllib's default
+            # "Python-urllib/3.x" agent with a 403 (error code 1010).
+            "User-Agent": "YaVaKa/1.0 (+https://yavaka.onrender.com)",
+            "Accept": "application/json",
+            **headers,
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            response.read()
+    except urllib.error.HTTPError as error:
+        detail = ""
+        try:
+            detail = error.read().decode("utf-8", "replace")[:400]
+        except OSError:
+            pass
+        finally:
+            error.close()
+        # The numeric code is what the operator can act on, so keep it first.
+        return {"status": "failed", "error": f"{error.code} {detail}".strip()}
+    except (urllib.error.URLError, OSError) as error:
+        return {"status": "failed", "error": str(error)}
+    return {"status": "sent"}
+
+
 def _send_email(recipient: str, subject: str, body: str) -> dict:
+    provider = api_provider()
+    if provider:
+        return _send_via_api(provider, recipient, subject, body)
+
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = current_app.config["SMTP_FROM_EMAIL"]
@@ -260,7 +377,10 @@ def queue_manager_update(project_id, manager_id, manager_name, headline, detail)
     if email_ready and project["client_email"]:
         channels.append(("email", project["client_email"]))
     elif not email_ready:
-        current_app.logger.warning("Manager update email notification skipped: SMTP is not configured.")
+        current_app.logger.warning(
+            "Manager update email notification skipped: no email provider is configured "
+            "(set an API key such as BREVO_API_KEY, or SMTP_HOST + EMAIL_FROM)."
+        )
 
     if whatsapp_ready and phone:
         channels.append(("whatsapp", phone))

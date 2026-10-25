@@ -1,13 +1,15 @@
-﻿"""Send a test email so an SMTP setup can be proven before it is relied on.
+"""Send a test email so an email setup can be proven before it is relied on.
 
     python -m tools.check_email you@gmail.com
+    python -m tools.check_email you@gmail.com --dry-run
 
 Run it from the repo root with the app's virtualenv. It reads the same
-environment (or .env) as the app, prints the resolved settings with the
-password masked, sends one real message and explains common failures.
+environment (or .env) as the app, prints the resolved settings with secrets
+masked, sends one real message and translates common failures into a next step.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -25,8 +27,8 @@ def _mask(value: str) -> str:
     return f"{value[:2]}{'*' * (len(value) - 4)}{value[-2:]}"
 
 
-# Gmail and most providers answer a bad login with 535; a blocked port times
-# out instead. Mapping these to plain English saves a lot of guessing.
+# A wrong login answers 535 (SMTP) or 401 (HTTPS API); a blocked port closes
+# the socket instead. Naming the cause saves a lot of guessing.
 HINTS = {
     "535": (
         "The provider rejected the username/password. For Gmail this almost "
@@ -34,22 +36,23 @@ HINTS = {
         "at https://myaccount.google.com/apppasswords (2-Step Verification "
         "must be on) and paste all 16 characters with no spaces."
     ),
-    "534": "The provider wants a stronger login method â€” use an App Password.",
+    "534": "The provider wants a stronger login method - use an App Password.",
     "530": "Authentication is required before sending. Check SMTP_USERNAME.",
     "550": (
-        "The From address was refused. SMTP_FROM_EMAIL must be the same "
-        "address as SMTP_USERNAME, or an alias verified under 'Send mail as'."
+        "The From address was refused. The sender must be the address you "
+        "authenticated as, or an alias verified with the provider."
     ),
     "timed out": (
-        "The connection timed out. Port 587 often blocked on office and hotel "
-        "networks; try SMTP_PORT=465 with SMTP_USE_SSL=1 and SMTP_USE_TLS=0."
+        "The connection timed out. Port 587 is blocked on many hosts and "
+        "office networks. Either use SMTP_PORT=465 with SMTP_USE_SSL=1 and "
+        "SMTP_USE_TLS=0, or switch to an HTTPS email API (see README)."
     ),
-    "certificate": "TLS handshake failed â€” check the system clock and any proxy.",
+    "certificate": "TLS handshake failed - check the system clock and any proxy.",
     "connection unexpectedly closed": (
-        "The server accepted the connection then hung up, usually a blocked "
-        "outbound SMTP port or a provider that wants 465/SSL instead of 587. "
-        "Many hosts (Render, Heroku, some ISPs) block port 25 and 587 â€” try "
-        "SMTP_PORT=465, SMTP_USE_SSL=1, SMTP_USE_TLS=0."
+        "The server accepted the connection then hung up, which is what a "
+        "blocked outbound SMTP port looks like. Render Free blocks 25, 465 "
+        "and 587 entirely: use an HTTPS API key (BREVO_API_KEY, RESEND_API_KEY "
+        "or SENDGRID_API_KEY) instead of SMTP."
     ),
     "connection refused": (
         "Nothing is listening on that host/port. Check SMTP_PORT and whether "
@@ -57,17 +60,36 @@ HINTS = {
     ),
 }
 
+API_HINTS = {
+    "401": (
+        "The API key was rejected. Copy it again from the provider dashboard "
+        "and make sure it has send permission."
+    ),
+    "403": (
+        "The key is valid but this sender is not allowed. Verify the address "
+        "(or the whole domain) in the provider dashboard - Brevo and SendGrid "
+        "call this 'sender verification', Resend requires a verified domain."
+    ),
+    "422": "The request was rejected - check EMAIL_FROM is a real address.",
+    "429": "Daily quota or rate limit reached. Try tomorrow or upgrade.",
+    "400": "The provider rejected the payload; check the from address.",
+}
+
 HINTS["smtpauthenticationerror"] = HINTS["535"]
 
 
 def explain(error: str) -> str:
     lowered = error.lower()
+    for needle, hint in API_HINTS.items():
+        # API errors are reported as "<code> <body>", so match the leading code.
+        if lowered.startswith(needle + " "):
+            return hint
     for needle, hint in HINTS.items():
         if needle in lowered:
             return hint
     if "name or service not known" in lowered or "getaddrinfo" in lowered:
-        return "SMTP_HOST could not be resolved â€” check the spelling."
-    return "Check SMTP_HOST, SMTP_PORT and the TLS/SSL flags."
+        return "SMTP_HOST could not be resolved - check the spelling."
+    return "Check the provider settings above."
 
 
 def main(argv=None) -> int:
@@ -75,7 +97,7 @@ def main(argv=None) -> int:
     parser.add_argument(
         "recipient",
         nargs="?",
-        help="Where to send the test. Defaults to SMTP_FROM_EMAIL.",
+        help="Where to send the test. Defaults to EMAIL_FROM.",
     )
     parser.add_argument(
         "--dry-run",
@@ -88,33 +110,59 @@ def main(argv=None) -> int:
     config = app.config
     recipient = args.recipient or config.get("SMTP_FROM_EMAIL")
 
-    print("SMTP settings")
-    print(f"  host      {config.get('SMTP_HOST') or '(not set)'}")
-    print(f"  port      {config.get('SMTP_PORT')}")
-    print(f"  starttls  {bool(config.get('SMTP_USE_TLS'))}")
-    print(f"  ssl       {bool(config.get('SMTP_USE_SSL'))}")
-    print(f"  username  {config.get('SMTP_USERNAME') or '(not set)'}")
-    print(f"  password  {_mask(config.get('SMTP_PASSWORD') or '')}")
+    from notifications import (
+        API_PROVIDERS,
+        _api_request,
+        _send_email,
+        api_provider,
+        email_configured,
+    )
+
+    with app.app_context():
+        provider = api_provider()
+        configured = email_configured()
+
+    if provider:
+        key_setting, url = API_PROVIDERS[provider]
+        print(f"Email provider: {provider} (HTTPS API)")
+        print(f"  endpoint  {url}")
+        print(f"  api key   {_mask(config.get(key_setting) or '')}")
+    else:
+        print("Email provider: SMTP")
+        print(f"  host      {config.get('SMTP_HOST') or '(not set)'}")
+        print(f"  port      {config.get('SMTP_PORT')}")
+        print(f"  starttls  {bool(config.get('SMTP_USE_TLS'))}")
+        print(f"  ssl       {bool(config.get('SMTP_USE_SSL'))}")
+        print(f"  username  {config.get('SMTP_USERNAME') or '(not set)'}")
+        print(f"  password  {_mask(config.get('SMTP_PASSWORD') or '')}")
+
     print(f"  from      {config.get('SMTP_FROM_EMAIL') or '(not set)'}")
     print(f"  to        {recipient or '(none)'}")
 
-    from notifications import _send_email, email_configured
-
-    with app.app_context():
-        configured = email_configured()
-
     if not configured:
         print(
-            "\nEmail is NOT configured: SMTP_HOST and SMTP_FROM_EMAIL must both "
-            "be set. See .env.example for a Gmail template."
+            "\nEmail is NOT configured. Set either an HTTPS API key "
+            "(BREVO_API_KEY, RESEND_API_KEY or SENDGRID_API_KEY) or "
+            "SMTP_HOST, plus a sender address. See .env.example."
         )
         return 1
 
     if not recipient:
-        print("\nNo recipient. Pass an address or set SMTP_FROM_EMAIL.")
+        print("\nNo recipient. Pass an address or set EMAIL_FROM.")
         return 1
 
     if args.dry_run:
+        if provider:
+            with app.app_context():
+                _, headers, payload = _api_request(
+                    provider, recipient, "YaVaKa test email", "..."
+                )
+            redacted = {
+                key: ("***" if "authorization" in key.lower() or "api-key" in key.lower() else value)
+                for key, value in headers.items()
+            }
+            print("\nHeaders:", json.dumps(redacted, indent=2, sort_keys=True))
+            print("Payload:", json.dumps(payload, indent=2, sort_keys=True))
         print("\nDry run: nothing sent.")
         return 0
 
@@ -139,4 +187,3 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

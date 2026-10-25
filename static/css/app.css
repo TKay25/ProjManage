@@ -3159,29 +3159,7 @@ h3 {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 14px 34px -26px rgba(7, 40, 30, 0.55);
 }
 
-/* A lit hairline that only shows once the page moves. */
-.site-header::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(200, 150, 62, 0.5) 26%,
-    rgba(15, 93, 70, 0.22) 68%,
-    transparent
-  );
-  opacity: 0;
-  transition: opacity 220ms ease;
-  pointer-events: none;
-}
-
-.site-header.is-scrolled::after {
-  opacity: 1;
-}
+/* The progress hairline is drawn further down; nothing to do here. */
 
 /* ---------- Buttons ---------- */
 
@@ -3252,5 +3230,172 @@ html:not([data-theme="dark"]) .feature-icon {
   .footer-links a:hover,
   .feature-card:hover .feature-icon {
     transform: none;
+  }
+}
+
+/* ============================================================
+   Public header: life before hover.
+   Everything below animates only transform/opacity (plus one CSS
+   variable for the progress bar), so it costs no layout and no
+   extra requests. reduced-motion turns it all off.
+   ============================================================ */
+
+/* ---------- Entrance: the bar settles, the links stagger in ---------- */
+
+@keyframes header-drop {
+  from {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes nav-rise {
+  from {
+    transform: translateY(5px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.site-header {
+  animation: header-drop 420ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.site-nav-link {
+  animation: nav-rise 360ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.site-nav-link:nth-child(1) { animation-delay: 90ms; }
+.site-nav-link:nth-child(2) { animation-delay: 130ms; }
+.site-nav-link:nth-child(3) { animation-delay: 170ms; }
+.site-nav-link:nth-child(4) { animation-delay: 210ms; }
+.site-nav-link:nth-child(5) { animation-delay: 250ms; }
+
+/* ---------- Scroll progress hairline ---------- */
+
+.site-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  transform: scaleX(var(--scroll-progress, 0));
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--forest-600), var(--brass-500));
+  opacity: 0.9;
+  transition: transform 90ms linear;
+  pointer-events: none;
+}
+
+@keyframes nav-breathe {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+}
+
+.site-nav-link.is-active::before {
+  content: "";
+  position: absolute;
+  inset: 2px 4px;
+  border-radius: 9px;
+  background: radial-gradient(
+    120% 120% at 50% 120%,
+    rgba(200, 150, 62, 0.55),
+    rgba(200, 150, 62, 0) 70%
+  );
+  animation: nav-breathe 4.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.site-nav-link {
+  isolation: isolate;
+}
+
+/* A brass inner edge marks the current section before anything is hovered. */
+.site-nav-link.is-active {
+  box-shadow: inset 0 0 0 1px rgba(200, 150, 62, 0.22);
+}
+
+/* ---------- Underline: grows from the centre, sheen travels when current ---------- */
+
+.site-nav-link::after {
+  left: 50%;
+  right: auto;
+  width: calc(100% - 26px);
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: center;
+  transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.site-nav-link:hover::after,
+.site-nav-link:focus-visible::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.site-nav-link.is-active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+@keyframes underline-sheen {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.site-nav-link.is-active::after {
+  animation: underline-sheen 3.4s ease-in-out infinite;
+}
+
+/* ---------- Hover and focus lift ---------- */
+
+.site-nav-link {
+  transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.site-nav-link:hover,
+.site-nav-link:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(15, 93, 70, 0.06);
+}
+
+.site-nav-link:active {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header,
+  .site-nav-link,
+  .site-nav-link.is-active::before,
+  .site-nav-link.is-active::after {
+    animation: none;
+  }
+
+  .site-nav-link:hover,
+  .site-nav-link:focus-visible,
+  .site-nav-link:active {
+    transform: none;
+  }
+
+  .site-header::after {
+    transition: none;
   }
 }

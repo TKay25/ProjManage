@@ -3951,14 +3951,413 @@ class EmailDiagnostics(unittest.TestCase):
         from tools.check_email import explain
 
         hint = explain("(550, b'5.7.1 From address not owned')")
-        self.assertIn("SMTP_FROM_EMAIL", hint)
+        self.assertIn("verified", hint)
 
     def test_closed_connection_suggests_port_465(self):
         from tools.check_email import explain
 
         self.assertIn("465", explain("Connection unexpectedly closed"))
 
-    def test_unknown_error_falls_back_to_the_settings_list(self):
+    def test_unknown_error_falls_back_to_a_settings_pointer(self):
         from tools.check_email import explain
 
-        self.assertIn("SMTP_HOST", explain("something entirely novel"))
+        self.assertIn("settings", explain("something entirely novel"))
+
+    def test_api_error_codes_map_to_provider_causes(self):
+        from tools.check_email import explain
+
+        self.assertIn("API key was rejected", explain("401 Key not found"))
+        self.assertIn("sender", explain("403 domain not verified").lower())
+        self.assertIn("quota", explain("429 too many requests").lower())
+
+
+class EmailApiProviders(unittest.TestCase):
+    """Email must also work where outbound SMTP is blocked (Render Free)."""
+
+    def _app(self, **overrides):
+        return create_app(isolated_config(**overrides))
+
+    def test_api_key_alone_configures_email_without_smtp(self):
+        app = self._app(
+            SMTP_HOST="",
+            SMTP_FROM_EMAIL="YaVaKa <hello@yavaka.co.zw>",
+            BREVO_API_KEY="xkeysib-test",
+        )
+        with app.app_context():
+            import notifications
+
+            self.assertEqual(notifications.api_provider(), "brevo")
+            self.assertTrue(notifications.email_configured())
+
+    def test_no_provider_and_no_smtp_is_unconfigured(self):
+        app = self._app(
+            SMTP_HOST="",
+            SMTP_FROM_EMAIL="hello@yavaka.co.zw",
+            BREVO_API_KEY="",
+            RESEND_API_KEY="",
+            SENDGRID_API_KEY="",
+        )
+        with app.app_context():
+            import notifications
+
+            self.assertEqual(notifications.api_provider(), "")
+            self.assertFalse(notifications.email_configured())
+
+    def test_explicit_provider_overrides_detection_order(self):
+        app = self._app(
+            SMTP_FROM_EMAIL="hello@yavaka.co.zw",
+            BREVO_API_KEY="brevo-key",
+            SENDGRID_API_KEY="sendgrid-key",
+            EMAIL_API_PROVIDER="sendgrid",
+        )
+        with app.app_context():
+            import notifications
+
+            self.assertEqual(notifications.api_provider(), "sendgrid")
+
+    def test_explicit_provider_without_its_key_does_not_claim_it(self):
+        app = self._app(
+            SMTP_FROM_EMAIL="hello@yavaka.co.zw",
+            BREVO_API_KEY="",
+            EMAIL_API_PROVIDER="resend",
+        )
+        with app.app_context():
+            import notifications
+
+            self.assertEqual(notifications.api_provider(), "")
+
+    def test_a_key_without_a_sender_address_is_still_unconfigured(self):
+        # Sending would fail at the provider, so the app should say so first.
+        app = self._app(SMTP_FROM_EMAIL="", BREVO_API_KEY="xkeysib-test")
+        with app.app_context():
+            import notifications
+
+            self.assertFalse(notifications.email_configured())
+
+    def test_from_address_is_split_into_name_and_address(self):
+        app = self._app(SMTP_FROM_EMAIL='YaVaKa Builds <hello@yavaka.co.zw>')
+        with app.app_context():
+            import notifications
+
+            self.assertEqual(
+                notifications._from_parts(), ("YaVaKa Builds", "hello@yavaka.co.zw")
+            )
+
+    def test_bare_from_address_has_no_display_name(self):
+        app = self._app(SMTP_FROM_EMAIL="hello@yavaka.co.zw")
+        with app.app_context():
+            import notifications
+
+            self.assertEqual(notifications._from_parts(), ("", "hello@yavaka.co.zw"))
+
+    def test_each_provider_builds_its_own_payload_shape(self):
+        app = self._app(SMTP_FROM_EMAIL="YaVaKa <hello@yavaka.co.zw>")
+        with app.app_context():
+            import notifications
+
+            url, headers, payload = notifications._api_request(
+                "resend", "client@example.com", "Subject", "Body"
+            )
+            self.assertEqual(url, "https://api.resend.com/emails")
+            self.assertEqual(headers["Authorization"], "Bearer ")
+            self.assertEqual(payload["to"], ["client@example.com"])
+            self.assertEqual(payload["from"], "YaVaKa <hello@yavaka.co.zw>")
+            self.assertEqual(payload["text"], "Body")
+
+            url, headers, payload = notifications._api_request(
+                "brevo", "client@example.com", "Subject", "Body"
+            )
+            self.assertIn("api-key", headers)
+            self.assertEqual(payload["sender"]["name"], "YaVaKa")
+            self.assertEqual(payload["to"], [{"email": "client@example.com"}])
+            self.assertEqual(payload["textContent"], "Body")
+
+            url, headers, payload = notifications._api_request(
+                "sendgrid", "client@example.com", "Subject", "Body"
+            )
+            self.assertEqual(
+                payload["personalizations"], [{"to": [{"email": "client@example.com"}]}]
+            )
+            self.assertEqual(payload["content"][0]["value"], "Body")
+
+    def test_send_via_api_posts_json_with_a_user_agent(self):
+        # Resend sits behind Cloudflare and rejects urllib's default agent with
+        # a 403 (error code 1010), so the header is not optional.
+        import io
+        import json as jsonlib
+        from unittest import mock
+
+        app = self._app(
+            SMTP_FROM_EMAIL="hello@yavaka.co.zw",
+            RESEND_API_KEY="re_test_key",
+            EMAIL_API_PROVIDER="resend",
+        )
+
+        captured = {}
+
+        class FakeResponse(io.BytesIO):
+            status = 200
+
+            def read(self, *args):
+                return b'{"id": "abc"}'
+
+        def fake_urlopen(request, timeout=None):
+            captured["url"] = request.full_url
+            captured["headers"] = dict(request.header_items())
+            captured["body"] = jsonlib.loads(request.data.decode("utf-8"))
+            return FakeResponse()
+
+        with app.app_context():
+            import notifications
+
+            with mock.patch.object(notifications.urllib.request, "urlopen", fake_urlopen):
+                result = notifications._send_via_api(
+                    "resend", "client@example.com", "Subject", "Body"
+                )
+
+        self.assertEqual(result["status"], "sent")
+        self.assertEqual(captured["url"], "https://api.resend.com/emails")
+        lower = {key.lower(): value for key, value in captured["headers"].items()}
+        self.assertIn("user-agent", lower)
+        self.assertNotIn("python-urllib", lower["user-agent"].lower())
+        self.assertEqual(lower["content-type"], "application/json")
+        self.assertEqual(captured["body"]["to"], ["client@example.com"])
+
+    def test_http_error_keeps_the_status_code_first(self):
+        import urllib.error
+        from unittest import mock
+
+        app = self._app(
+            SMTP_FROM_EMAIL="hello@yavaka.co.zw",
+            BREVO_API_KEY="bad-key",
+            EMAIL_API_PROVIDER="brevo",
+        )
+
+        def raise_401(request, timeout=None):
+            raise urllib.error.HTTPError(
+                request.full_url, 401, "Unauthorized", {},
+                io_stub(b'{"message":"Key not found"}'),
+            )
+
+        with app.app_context():
+            import notifications
+
+            with mock.patch.object(notifications.urllib.request, "urlopen", raise_401):
+                result = notifications._send_via_api(
+                    "brevo", "client@example.com", "Subject", "Body"
+                )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["error"].startswith("401"))
+        self.assertIn("Key not found", result["error"])
+        from tools.check_email import explain
+
+        self.assertIn("API key was rejected", explain(result["error"]))
+
+    def test_network_failure_does_not_raise(self):
+        import urllib.error
+        from unittest import mock
+
+        app = self._app(
+            SMTP_FROM_EMAIL="hello@yavaka.co.zw",
+            SENDGRID_API_KEY="k",
+            EMAIL_API_PROVIDER="sendgrid",
+        )
+
+        def refuse(request, timeout=None):
+            raise urllib.error.URLError("getaddrinfo failed")
+
+        with app.app_context():
+            import notifications
+
+            with mock.patch.object(notifications.urllib.request, "urlopen", refuse):
+                result = notifications._send_via_api(
+                    "sendgrid", "client@example.com", "Subject", "Body"
+                )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("getaddrinfo", result["error"])
+
+
+def io_stub(payload):
+    import io
+
+    return io.BytesIO(payload)
+
+
+class SchemaScripts(unittest.TestCase):
+    """Schema scripts must split into real statements, never prose.
+
+    A `--` comment containing a semicolon used to be cut in half, which turned
+    the remainder of the comment into SQL and crashed Postgres initialisation
+    with `syntax error at or near "collapse"`.
+    """
+
+    def test_line_comment_with_a_semicolon_is_not_split(self):
+        from db import split_statements
+
+        statements = split_statements(
+            "-- seeded twice; collapse duplicates\nCREATE TABLE a (id TEXT);\n"
+        )
+        self.assertEqual(len(statements), 1)
+        self.assertTrue(statements[0].startswith("CREATE TABLE a"))
+
+    def test_block_comment_with_a_semicolon_is_not_split(self):
+        from db import split_statements
+
+        statements = split_statements(
+            "/* first; second */\nCREATE TABLE b (id TEXT);\n"
+        )
+        self.assertEqual(len(statements), 1)
+        self.assertTrue(statements[0].startswith("CREATE TABLE b"))
+
+    def test_semicolon_inside_a_string_literal_is_preserved(self):
+        from db import split_statements
+
+        statements = split_statements("INSERT INTO t VALUES ('a;b');")
+        self.assertEqual(statements, ["INSERT INTO t VALUES ('a;b')"])
+
+    def test_doubled_quote_is_an_escape_not_a_terminator(self):
+        from db import split_statements
+
+        statements = split_statements("SELECT 'it''s; fine';")
+        self.assertEqual(statements, ["SELECT 'it''s; fine'"])
+
+    def test_every_schema_statement_starts_with_sql(self):
+        from db import POSTGRES_UPGRADES, SCHEMA, split_statements
+
+        allowed = (
+            "CREATE", "ALTER", "INSERT", "UPDATE", "DELETE", "DROP", "COMMENT",
+            "GRANT", "SELECT", "DO", "WITH", "SET", "PRAGMA", "BEGIN", "COMMIT",
+        )
+        for name, script in (("SCHEMA", SCHEMA), ("POSTGRES_UPGRADES", POSTGRES_UPGRADES)):
+            statements = split_statements(script)
+            self.assertTrue(statements, f"{name} produced no statements")
+            for statement in statements:
+                with self.subTest(script=name, statement=statement[:60]):
+                    first = statement.split(None, 1)[0].upper().lstrip("(")
+                    self.assertIn(
+                        first, allowed,
+                        f"{name} contains a fragment that is not SQL: {statement[:80]!r}",
+                    )
+
+
+class HeaderMotion(unittest.TestCase):
+    """The public header should feel alive before anything is hovered."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.js = Path("static/js/site-nav.js").read_text(encoding="utf-8")
+        cls.css = Path("static/css/app.css").read_text(encoding="utf-8")
+
+    def test_scroll_progress_variable_is_written_and_consumed(self):
+        self.assertIn("--scroll-progress", self.js)
+        self.assertIn("scaleX(var(--scroll-progress", self.css)
+
+    def test_progress_is_clamped_between_zero_and_one(self):
+        # A short page (no scroll range) must not divide by zero, and an
+        # overscroll must not push the bar past full width.
+        self.assertIn("Math.min", self.js)
+        self.assertIn("scrollable > 0", self.js)
+
+    def test_links_stagger_in_rather_than_all_at_once(self):
+        self.assertIn("nav-rise", self.css)
+        self.assertIn("animation-delay", self.css)
+
+    def test_current_section_has_an_idle_cue(self):
+        # A breathing glow plus an inset edge, not hover-only styling.
+        self.assertIn("@keyframes nav-breathe", self.css)
+        self.assertIn(".site-nav-link.is-active::before", self.css)
+
+    def test_header_motion_is_disabled_for_reduced_motion(self):
+        block = self.css[self.css.index("Public header: life before hover"):]
+        tail = block[block.index("prefers-reduced-motion"):]
+        # The animated elements must all be neutralised, not just the header.
+        for selector in (".site-header", ".site-nav-link", "::before", "animation: none"):
+            with self.subTest(selector=selector):
+                self.assertIn(selector, tail)
+
+    def test_no_layout_thrashing_properties_are_animated(self):
+        block = self.css[self.css.index("Public header: life before hover"):]
+        animated = set(re.findall(r"transition:\s*([^;]+);", block))
+        for rule in animated:
+            lowered = rule.lower()
+            self.assertNotIn("width ", lowered)
+            self.assertNotIn("height ", lowered)
+            self.assertNotIn("left ", lowered)
+            self.assertNotIn("margin", lowered)
+
+
+class EphemeralDataWarning(unittest.TestCase):
+    """Losing the whole database must never be silent again."""
+
+    def test_health_reports_durability(self):
+        body = APP.test_client().get("/health").get_json()
+        self.assertIn("durable", body)
+        # Local SQLite is durable because it is not on an ephemeral platform.
+        self.assertTrue(body["durable"])
+
+    def test_render_without_postgres_is_flagged(self):
+        from unittest import mock
+
+        import app as app_module
+
+        class Local(Config):
+            TESTING = True
+            DATABASE_URL = ""
+            SEED_DEMO = False
+            DEMO_MODE = False
+            DATABASE = str(Path(_TEMP_DIR) / "ephemeral.db")
+            UPLOAD_FOLDER = str(Path(_TEMP_DIR) / "ephemeral-uploads")
+
+        with mock.patch.dict(os.environ, {"RENDER": "true"}, clear=False):
+            instance = app_module.create_app(Local)
+            body = instance.test_client().get("/health").get_json()
+
+        self.assertFalse(
+            body["durable"],
+            "SQLite on Render is wiped on deploy, so health must say so",
+        )
+
+    def test_render_warning_is_logged_at_startup(self):
+        from unittest import mock
+
+        import app as app_module
+
+        class Local(Config):
+            TESTING = True
+            DATABASE_URL = ""
+            SEED_DEMO = False
+            DEMO_MODE = False
+            DATABASE = str(Path(_TEMP_DIR) / "ephemeral2.db")
+            UPLOAD_FOLDER = str(Path(_TEMP_DIR) / "ephemeral2-uploads")
+
+        with mock.patch.dict(os.environ, {"RENDER": "true"}, clear=False):
+            with self.assertLogs("app", level="WARNING") as logs:
+                app_module.create_app(Local)
+
+        self.assertTrue(
+            any("DATA LOSS RISK" in line for line in logs.output),
+            logs.output,
+        )
+
+    def test_local_sqlite_does_not_warn(self):
+        from unittest import mock
+
+        from routes_public import _ephemeral_host
+
+        with mock.patch.dict(os.environ, {}, clear=False):
+            for key in ("RENDER", "DYNO", "FLY_APP_NAME", "VERCEL", "RAILWAY_ENVIRONMENT"):
+                os.environ.pop(key, None)
+            self.assertFalse(_ephemeral_host())
+
+    def test_ephemeral_host_detects_each_platform(self):
+        from unittest import mock
+
+        from routes_public import _ephemeral_host
+
+        for key in ("RENDER", "DYNO", "FLY_APP_NAME", "RAILWAY_ENVIRONMENT"):
+            with self.subTest(key=key):
+                with mock.patch.dict(os.environ, {key: "1"}, clear=False):
+                    self.assertTrue(_ephemeral_host())

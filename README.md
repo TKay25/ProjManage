@@ -305,12 +305,17 @@ records funding/an expense, YaVaKa queues a progress-and-balance update for the
 project owner. Each channel is enabled independently and only runs when its
 credentials are configured.
 
-For email, configure `SMTP_HOST`, `SMTP_PORT`, and `SMTP_FROM_EMAIL`; configure
-`SMTP_USERNAME` and `SMTP_PASSWORD` if the relay requires authentication.
-`SMTP_USE_TLS=1` uses STARTTLS (the default); set `SMTP_USE_TLS=0` and
-`SMTP_USE_SSL=1` for implicit TLS. Do not enable both TLS modes.
+For email there are two routes, and the app picks one automatically:
 
-See [Sending email with Gmail](#sending-email-with-gmail) for a worked setup.
+- **HTTPS email API (recommended).** Set one of `BREVO_API_KEY`,
+  `RESEND_API_KEY` or `SENDGRID_API_KEY`. No SMTP port is involved, so it works
+  on Render's Free plan and on locked-down networks.
+- **SMTP.** Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME` and
+  `SMTP_PASSWORD`; `SMTP_USE_TLS=1` uses STARTTLS (the default), or set
+  `SMTP_USE_TLS=0` with `SMTP_USE_SSL=1` for implicit TLS. Do not enable both.
+
+Both routes need a sender address in `EMAIL_FROM` (`SMTP_FROM_EMAIL` still works
+as an alias). See [Choosing how to send email](#choosing-how-to-send-email).
 
 For WhatsApp, configure `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID`, then
 create and approve a Meta message template for proactive updates. Set
@@ -332,16 +337,83 @@ curl -X POST https://your-domain/api/notifications/dispatch \
 Only an assigned manager's changes trigger client notifications. Project
 owners, other managers and staff updates are not sent through this event flow.
 
+### Choosing how to send email
+
+There is no way to send mail without *some* credential — a hosted app cannot
+deliver to Gmail directly, and Google stopped accepting plain account passwords
+for SMTP in May 2022. The choice is only about which credential is least painful
+and whether the host allows the connection.
+
+| Route | Credential | Free tier | Works on Render Free |
+| --- | --- | --- | --- |
+| Brevo API key | `BREVO_API_KEY` | ~300/day | Yes |
+| Resend API key | `RESEND_API_KEY` | ~100/day, needs a verified domain | Yes |
+| SendGrid API key | `SENDGRID_API_KEY` | ~100/day | Yes |
+| Gmail SMTP + App Password | `SMTP_PASSWORD` | ~500/day | **No** |
+| Any SMTP relay | host/port/user/pass | varies | **No** |
+
+Render Free blocks outbound traffic on ports `25`, `465` and `587` for *all*
+free web services, so **no SMTP setup can work there** — a send attempt is
+answered with "Connection unexpectedly closed". An HTTPS API is the only option
+on the free plan; SMTP starts working once the service moves to a paid instance.
+
+An app password is also strictly harder: it needs 2-Step Verification, sixteen
+characters pasted without spaces, and the `From` address must match the mailbox
+you authenticated as.
+
+**Recommended:** Brevo, because it verifies a single sender address rather than
+requiring a whole domain, and 300 messages a day covers a healthy portfolio.
+Nothing in the code cares which provider you pick, and switching later is an
+environment-variable change.
+
+```bash
+# Route A - HTTPS API (works everywhere)
+BREVO_API_KEY=xkeysib-...
+EMAIL_FROM="YaVaKa <hello@yavaka.co.zw>"
+```
+
+```bash
+# Route B - SMTP (paid hosting or a mail-allowing network)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USE_TLS=1
+SMTP_USERNAME=you@gmail.com
+SMTP_PASSWORD=abcdefghijklmnop
+EMAIL_FROM="YaVaKa <you@gmail.com>"
+```
+
+Prove either route before trusting it:
+
+```powershell
+python -m tools.check_email you@example.com
+python -m tools.check_email you@example.com --dry-run   # print settings, send nothing
+```
+
+The tool masks the secret, sends one real message and names the cause on
+failure: `401` means the key is wrong, `403` means the sender or domain is not
+verified, and "connection unexpectedly closed" means the SMTP port is blocked.
+
+Notes that save an hour of debugging:
+
+- Set `EMAIL_FROM` to an address you have verified with the provider, otherwise
+  you get a `403`.
+- `EMAIL_API_PROVIDER=brevo|resend|sendgrid` forces one provider; without it the
+  first configured key wins in that order.
+- On Render, set these in the service's **Environment** tab rather than
+  committing a `.env`.
+- When email is not configured the app stays usable; it says so on screen
+  instead of silently dropping messages.
+
 ### Sending email with Gmail
 
-Email backs password resets, team invites and manager-to-client project
-updates. Google will not accept your normal account password over SMTP, so an
-**App Password** is required.
+Only relevant on a paid Render instance or a network that allows outbound SMTP.
+Google will not accept your normal account password over SMTP, so an **App
+Password** is required.
 
 1. Turn on 2-Step Verification: <https://myaccount.google.com/security>.
 2. Create an App Password: <https://myaccount.google.com/apppasswords>. Name it
    `YaVaKa`. Google shows 16 characters — copy them.
-3. Put the settings in `.env` in the repo root (git-ignored, and now loaded
+3. Put the settings in `.env` in the repo root (git-ignored, and loaded
    automatically; real environment variables still take precedence):
 
    ```bash
@@ -351,7 +423,7 @@ updates. Google will not accept your normal account password over SMTP, so an
    SMTP_USE_SSL=0
    SMTP_USERNAME=you@gmail.com
    SMTP_PASSWORD=abcdefghijklmnop
-   SMTP_FROM_EMAIL=YaVaKa <you@gmail.com>
+   EMAIL_FROM="YaVaKa <you@gmail.com>"
    ```
 
 4. Prove it before trusting it:
@@ -365,22 +437,16 @@ updates. Google will not accept your normal account password over SMTP, so an
    a closed connection points at port 465/SSL, and a refused `From` explains
    the alias rule.
 
-Notes that save an hour of debugging:
+Notes specific to Gmail:
 
 - Paste all 16 characters with **no spaces**. Spaces are rejected.
-- `SMTP_FROM_EMAIL` must be the mailbox you authenticated as, otherwise Gmail
+- `EMAIL_FROM` must be the mailbox you authenticated as, otherwise Gmail
   rewrites it. To send as another address, add it under *Send mail as* first.
 - Port 587 (STARTTLS) is blocked on some networks and on plenty of hosts. If
   the connection closes immediately, use `SMTP_PORT=465`, `SMTP_USE_SSL=1`,
   `SMTP_USE_TLS=0`.
 - A free Gmail account allows roughly 500 recipients a day, which is ample for
-  a pilot but not for a portfolio of hundreds of clients. Move to a transactional
-  provider (Resend, Postmark, SES) when you outgrow it — only the `SMTP_*`
-  values change.
-- On Render, set the same variables in the service's **Environment** tab rather
-  than committing a `.env`.
-- When email is not configured the app stays usable; it says so on screen
-  instead of silently dropping messages.
+  a pilot but not for a portfolio of hundreds of clients.
 
 ---
 

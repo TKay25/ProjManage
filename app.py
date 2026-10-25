@@ -63,6 +63,34 @@ NAV_ITEMS = [
 ]
 
 
+def _warn_if_ephemeral_database(app) -> None:
+    """Shout when accounts are about to live on a disk that gets wiped.
+
+    SQLite on Render/Fly/Heroku sits on an ephemeral filesystem, so every
+    deploy and idle spin-down deletes the database. The symptom is people
+    reporting "it says my email and password do not match" the next day, which
+    looks like a login bug and is really data loss.
+    """
+    hosts = {
+        "RENDER": "Render",
+        "DYNO": "Heroku",
+        "FLY_APP_NAME": "Fly.io",
+        "RAILWAY_ENVIRONMENT": "Railway",
+    }
+    platform = next((label for key, label in hosts.items() if os.environ.get(key)), None)
+    if not platform or app.config.get("DATABASE_URL"):
+        return
+
+    app.logger.warning(
+        "DATA LOSS RISK: running on %s with SQLite (%s). The filesystem is "
+        "discarded on every deploy, restart and idle spin-down, which deletes "
+        "all accounts and projects. Set DATABASE_URL to a Postgres instance to "
+        "keep data. /health reports \"durable\": false until you do.",
+        platform,
+        app.config.get("DATABASE"),
+    )
+
+
 def create_app(config_object=Config):
     app = Flask(__name__)
     app.config.from_object(config_object)
@@ -74,6 +102,7 @@ def create_app(config_object=Config):
     Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
+    _warn_if_ephemeral_database(app)
     # Tracing starts first, so even a rejected CSRF token or an auth failure is
     # logged with a request id.
     observability.init_app(app)

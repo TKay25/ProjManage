@@ -391,25 +391,68 @@ def _translate_sql(sql: str, args) -> str:
 
 
 def split_statements(script: str):
-    """Split a schema script on semicolons, ignoring quoted ones."""
+    """Split a schema script on semicolons, ignoring quoted and commented ones.
+
+    Comment awareness is not optional: `-- ...; ...` used to be cut in half at
+    the semicolon inside the comment, which turned prose into SQL and made the
+    Postgres schema fail to initialise.
+    """
     statements = []
     current = []
     quote = None
-    for char in script:
+    in_block_comment = False
+    index = 0
+    length = len(script)
+
+    while index < length:
+        char = script[index]
+        nxt = script[index + 1] if index + 1 < length else ""
+
+        if in_block_comment:
+            if char == "*" and nxt == "/":
+                in_block_comment = False
+                index += 2
+            else:
+                index += 1
+            continue
+
         if quote:
             current.append(char)
             if char == quote:
+                if nxt == quote:  # '' or "" is an escaped quote, not the end
+                    current.append(nxt)
+                    index += 2
+                    continue
                 quote = None
-        elif char in {"'", '"'}:
+            index += 1
+            continue
+
+        if char == "-" and nxt == "-":
+            while index < length and script[index] not in "\r\n":
+                index += 1
+            continue
+
+        if char == "/" and nxt == "*":
+            in_block_comment = True
+            index += 2
+            continue
+
+        if char in {"'", '"'}:
             quote = char
             current.append(char)
-        elif char == ";":
+            index += 1
+            continue
+
+        if char == ";":
             statement = "".join(current).strip()
             if statement:
                 statements.append(statement)
             current = []
-        else:
-            current.append(char)
+            index += 1
+            continue
+
+        current.append(char)
+        index += 1
 
     tail = "".join(current).strip()
     if tail:

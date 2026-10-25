@@ -118,9 +118,18 @@ class Config:
     SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
     SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
     SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-    SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", "")
+    # EMAIL_FROM is the provider-neutral name; SMTP_FROM_EMAIL still works.
+    SMTP_FROM_EMAIL = os.environ.get("EMAIL_FROM") or os.environ.get("SMTP_FROM_EMAIL", "")
     SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "1") == "1"
     SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "0") == "1"
+
+    # HTTPS email APIs. These work where outbound SMTP is blocked (Render Free
+    # blocks ports 25, 465 and 587), because they are plain HTTPS on 443.
+    # Setting any one key switches the app off SMTP.
+    EMAIL_API_PROVIDER = os.environ.get("EMAIL_API_PROVIDER", "").strip().lower()
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+    BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+    SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
 
     # Shared token for the notification outbox scheduler. No default; the
     # endpoint remains closed until a deployment configures a secret.

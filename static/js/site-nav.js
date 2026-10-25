@@ -16,6 +16,15 @@
 
   const syncScrollState = () => {
     header.classList.toggle("is-scrolled", window.scrollY > 8);
+
+    // Drive the header progress hairline. A CSS variable keeps this to one
+    // style write per frame; the bar itself is scaled with transform, so the
+    // browser never re-lays-out the header.
+    const scrollable =
+      document.documentElement.scrollHeight - window.innerHeight;
+    const progress = scrollable > 0 ? Math.min(window.scrollY / scrollable, 1) : 0;
+    header.style.setProperty("--scroll-progress", progress.toFixed(4));
+
     ticking = false;
   };
 

@@ -1,5 +1,6 @@
 """Public marketing pages, PWA assets and health check."""
 
+import os
 import tempfile
 import time
 from pathlib import Path
@@ -94,9 +95,21 @@ def health():
             "status": "ok",
             "app": current_app.config["APP_NAME"],
             "database": "postgres" if is_postgres() else "sqlite",
+            # SQLite on a hosted platform with no persistent disk is wiped on
+            # every deploy, restart and spin-down. Say so out loud: silently
+            # losing accounts is how people end up unable to sign in.
+            "durable": is_postgres() or not _ephemeral_host(),
             "uploads": uploads,
             "uptime_s": round(time.time() - STARTED_AT),
         }
+    )
+
+
+def _ephemeral_host() -> bool:
+    """True on a platform whose filesystem is discarded between deploys."""
+    return any(
+        os.environ.get(name)
+        for name in ("RENDER", "DYNO", "FLY_APP_NAME", "VERCEL", "RAILWAY_ENVIRONMENT")
     )
 
 
