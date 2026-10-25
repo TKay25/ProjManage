@@ -1,5 +1,6 @@
 """Lightweight asynchronous email and WhatsApp project-update delivery."""
 
+import base64
 import json
 import logging
 import re
@@ -27,23 +28,36 @@ logger = logging.getLogger("yavaka.notifications")
 # networks) block outbound SMTP on ports 25/465/587, so a key here is the only
 # way to send mail from those environments.
 API_PROVIDERS = {
-    "resend": ("RESEND_API_KEY", "https://api.resend.com/emails"),
-    "brevo": ("BREVO_API_KEY", "https://api.brevo.com/v3/smtp/email"),
-    "sendgrid": ("SENDGRID_API_KEY", "https://api.sendgrid.com/v3/mail/send"),
+    "resend": {
+        "url": "https://api.resend.com/emails",
+        "keys": ("RESEND_API_KEY",),
+    },
+    "brevo": {
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "keys": ("BREVO_API_KEY",),
+    },
+    "sendgrid": {
+        "url": "https://api.sendgrid.com/v3/mail/send",
+        "keys": ("SENDGRID_API_KEY",),
+    },
+    # Mailjet needs a key *and* a secret, used as HTTP Basic auth.
+    "mailjet": {
+        "url": "https://api.mailjet.com/v3.1/send",
+        "keys": ("MAILJET_API_KEY", "MAILJET_API_SECRET"),
+    },
 }
 
 
 def api_provider() -> str:
     """Which HTTPS provider is configured, or "" for none/SMTP."""
-    configured = {
-        name: current_app.config.get(key)
-        for name, (key, _) in API_PROVIDERS.items()
-    }
+    def ready(name: str) -> bool:
+        return all(current_app.config.get(key) for key in API_PROVIDERS[name]["keys"])
+
     explicit = (current_app.config.get("EMAIL_API_PROVIDER") or "").strip().lower()
     if explicit in API_PROVIDERS:
-        return explicit if configured[explicit] else ""
+        return explicit if ready(explicit) else ""
     for name in API_PROVIDERS:
-        if configured[name]:
+        if ready(name):
             return name
     return ""
 
@@ -65,9 +79,32 @@ def _from_parts() -> tuple[str, str]:
 
 def _api_request(provider: str, recipient: str, subject: str, body: str):
     """Build the URL and payload for a provider. Separated out so it is testable."""
-    key_setting, url = API_PROVIDERS[provider]
+    url = API_PROVIDERS[provider]["url"]
     name, address = _from_parts()
-    key = current_app.config.get(key_setting)
+
+    if provider == "mailjet":
+        credentials = (
+            f"{current_app.config.get('MAILJET_API_KEY')}:"
+            f"{current_app.config.get('MAILJET_API_SECRET')}"
+        )
+        token = base64.b64encode(credentials.encode("utf-8")).decode("ascii")
+        headers = {"Authorization": f"Basic {token}"}
+        sender = {"Email": address}
+        if name:
+            sender["Name"] = name
+        payload = {
+            "Messages": [
+                {
+                    "From": sender,
+                    "To": [{"Email": recipient}],
+                    "Subject": subject,
+                    "TextPart": body,
+                }
+            ]
+        }
+        return url, headers, payload
+
+    key = current_app.config.get(API_PROVIDERS[provider]["keys"][0])
 
     if provider == "resend":
         headers = {"Authorization": f"Bearer {key}"}

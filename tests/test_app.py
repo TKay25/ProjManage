@@ -4179,6 +4179,43 @@ class EmailApiProviders(unittest.TestCase):
         self.assertIn("getaddrinfo", result["error"])
 
 
+    def test_mailjet_needs_both_key_and_secret(self):
+        # A half-configured Mailjet is worse than none: it would look ready and
+        # then fail every send at the provider.
+        app = self._app(
+            SMTP_FROM_EMAIL="hello@yavaka.co.zw",
+            MAILJET_API_KEY="only-the-key",
+            MAILJET_API_SECRET="",
+        )
+        with app.app_context():
+            import notifications
+
+            self.assertEqual(notifications.api_provider(), "")
+            self.assertFalse(notifications.email_configured())
+
+    def test_mailjet_builds_basic_auth_and_a_messages_array(self):
+        import base64
+
+        app = self._app(
+            SMTP_FROM_EMAIL="YaVaKa <hello@yavaka.co.zw>",
+            MAILJET_API_KEY="key123",
+            MAILJET_API_SECRET="secret456",
+        )
+        with app.app_context():
+            import notifications
+
+            url, headers, payload = notifications._api_request(
+                "mailjet", "client@example.com", "Subject", "Body"
+            )
+
+        self.assertEqual(url, "https://api.mailjet.com/v3.1/send")
+        token = headers["Authorization"].split(" ", 1)[1]
+        self.assertEqual(base64.b64decode(token).decode(), "key123:secret456")
+        message = payload["Messages"][0]
+        self.assertEqual(message["From"], {"Email": "hello@yavaka.co.zw", "Name": "YaVaKa"})
+        self.assertEqual(message["To"], [{"Email": "client@example.com"}])
+        self.assertEqual(message["TextPart"], "Body")
+
 def io_stub(payload):
     import io
 
@@ -4361,3 +4398,4 @@ class EphemeralDataWarning(unittest.TestCase):
             with self.subTest(key=key):
                 with mock.patch.dict(os.environ, {key: "1"}, clear=False):
                     self.assertTrue(_ephemeral_host())
+

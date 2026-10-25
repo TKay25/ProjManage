@@ -130,6 +130,8 @@ class Config:
     RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
     BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
     SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+    MAILJET_API_KEY = os.environ.get("MAILJET_API_KEY", "")
+    MAILJET_API_SECRET = os.environ.get("MAILJET_API_SECRET", "")
 
     # Shared token for the notification outbox scheduler. No default; the
     # endpoint remains closed until a deployment configures a secret.

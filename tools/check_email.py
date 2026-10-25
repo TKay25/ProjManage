@@ -123,10 +123,11 @@ def main(argv=None) -> int:
         configured = email_configured()
 
     if provider:
-        key_setting, url = API_PROVIDERS[provider]
+        info = API_PROVIDERS[provider]
         print(f"Email provider: {provider} (HTTPS API)")
-        print(f"  endpoint  {url}")
-        print(f"  api key   {_mask(config.get(key_setting) or '')}")
+        print(f"  endpoint  {info['url']}")
+        for key_name in info["keys"]:
+            print(f"  {key_name.lower():<9} {_mask(config.get(key_name) or '')}")
     else:
         print("Email provider: SMTP")
         print(f"  host      {config.get('SMTP_HOST') or '(not set)'}")
@@ -142,8 +143,9 @@ def main(argv=None) -> int:
     if not configured:
         print(
             "\nEmail is NOT configured. Set either an HTTPS API key "
-            "(BREVO_API_KEY, RESEND_API_KEY or SENDGRID_API_KEY) or "
-            "SMTP_HOST, plus a sender address. See .env.example."
+            "(BREVO_API_KEY, MAILJET_API_KEY + MAILJET_API_SECRET, "
+            "RESEND_API_KEY or SENDGRID_API_KEY) or SMTP_HOST, plus a sender "
+            "address. See .env.example."
         )
         return 1
 

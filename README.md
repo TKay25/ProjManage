@@ -341,16 +341,18 @@ owners, other managers and staff updates are not sent through this event flow.
 
 There is no way to send mail without *some* credential — a hosted app cannot
 deliver to Gmail directly, and Google stopped accepting plain account passwords
-for SMTP in May 2022. The choice is only about which credential is least painful
-and whether the host allows the connection.
+for SMTP in May 2022. The choice is only about which credential is least painful,
+how big the free allowance is, and whether the host allows the connection.
 
-| Route | Credential | Free tier | Works on Render Free |
-| --- | --- | --- | --- |
-| Brevo API key | `BREVO_API_KEY` | ~300/day | Yes |
-| Resend API key | `RESEND_API_KEY` | ~100/day, needs a verified domain | Yes |
-| SendGrid API key | `SENDGRID_API_KEY` | ~100/day | Yes |
-| Gmail SMTP + App Password | `SMTP_PASSWORD` | ~500/day | **No** |
-| Any SMTP relay | host/port/user/pass | varies | **No** |
+| Route | Credential | Free allowance | Sender verification | Works on Render Free |
+| --- | --- | --- | --- | --- |
+| Brevo API | `BREVO_API_KEY` | 9,000/mo, 300/day | single address | Yes |
+| Mailjet API | `MAILJET_API_KEY` + `_SECRET` | 6,000/mo, 200/day | single address | Yes |
+| SendGrid API | `SENDGRID_API_KEY` | 3,000/mo, 100/day | single address | Yes |
+| Resend API | `RESEND_API_KEY` | 3,000/mo, 100/day | **whole domain** | Yes |
+| Amazon SES API | AWS credentials | none; $0.16 per 1,000 | **whole domain** | Yes (needs boto3) |
+| Gmail SMTP + App Password | `SMTP_PASSWORD` | ~500/day | same mailbox only | **No** |
+| Any SMTP relay | host/port/user/pass | varies | varies | **No** |
 
 Render Free blocks outbound traffic on ports `25`, `465` and `587` for *all*
 free web services, so **no SMTP setup can work there** — a send attempt is
@@ -361,6 +363,23 @@ An app password is also strictly harder: it needs 2-Step Verification, sixteen
 characters pasted without spaces, and the `From` address must match the mailbox
 you authenticated as.
 
+**All four API options above are $0 and need no payment card.** Which is
+"cheapest" depends on volume:
+
+- **Under ~3,000 emails a month** (most likely for YaVaKa — 300/day is roughly
+  30 times what a few dozen projects generate) every free tier is enough, so
+  pick on ergonomics: **Brevo or Mailjet**, because they verify a single sender
+  address and a domain is optional.
+- **Resend** is the nicest API but insists on a verified domain before it will
+  mail anyone but yourself.
+- **Amazon SES is cheapest at real volume** — 10,000 emails is about $1.60 a
+  month with no monthly fee — but it needs a verified domain, a sandbox exit
+  request, and AWS SigV4 signing. Worth it past ~50,000 a month, not before.
+  It is the one provider here that is not built in.
+- Before paying anyone, remember **email is the fallback channel here**: WhatsApp
+  and in-app notifications are already wired, so only password resets and
+  invites strictly need email. Fewer emails is cheaper than a cheaper provider.
+
 **Recommended:** Brevo, because it verifies a single sender address rather than
 requiring a whole domain, and 300 messages a day covers a healthy portfolio.
 Nothing in the code cares which provider you pick, and switching later is an
@@ -369,6 +388,13 @@ environment-variable change.
 ```bash
 # Route A - HTTPS API (works everywhere)
 BREVO_API_KEY=xkeysib-...
+EMAIL_FROM="YaVaKa <hello@yavaka.co.zw>"
+```
+
+```bash
+# Route A, Mailjet instead: needs both halves of the API key pair
+MAILJET_API_KEY=...
+MAILJET_API_SECRET=...
 EMAIL_FROM="YaVaKa <hello@yavaka.co.zw>"
 ```
 
@@ -397,8 +423,8 @@ Notes that save an hour of debugging:
 
 - Set `EMAIL_FROM` to an address you have verified with the provider, otherwise
   you get a `403`.
-- `EMAIL_API_PROVIDER=brevo|resend|sendgrid` forces one provider; without it the
-  first configured key wins in that order.
+- `EMAIL_API_PROVIDER=brevo|mailjet|resend|sendgrid` forces one provider; without
+  it the first configured key wins in that order.
 - On Render, set these in the service's **Environment** tab rather than
   committing a `.env`.
 - When email is not configured the app stays usable; it says so on screen
