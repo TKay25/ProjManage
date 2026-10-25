@@ -25,7 +25,9 @@ from whatsapp import normalize_phone
 
 bp = Blueprint("auth", __name__)
 
-AVATAR_COLORS = ["#0F5D46", "#C8963E", "#2A7A5E", "#A9573C", "#3E6B8A", "#6B5B95"]
+# Avatar initials are white on these, so every one must clear 4.5:1. Brass was
+# #C8963E (2.7:1); #8F6524 keeps the same hue at 5.2:1.
+AVATAR_COLORS = ["#0F5D46", "#8F6524", "#2A7A5E", "#A9573C", "#3E6B8A", "#6B5B95"]
 MAX_ATTEMPTS = 8
 RESET_TTL = timedelta(hours=1)
 # How long a correct password may wait for its second factor.

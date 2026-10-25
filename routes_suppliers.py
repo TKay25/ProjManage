@@ -31,6 +31,15 @@ def index():
         params,
     )
 
+    # Counts come from the whole directory, not the filtered slice, so the
+    # dropdown shows how much sits behind each option.
+    category_counts = {
+        row["category"]: int(row["total"])
+        for row in query(
+            "SELECT category, COUNT(*) AS total FROM suppliers GROUP BY category"
+        )
+    }
+
     return render_template(
         "app/suppliers.html",
         title="Suppliers",
@@ -38,6 +47,7 @@ def index():
         projects=accessible_projects(g.user),
         suppliers=suppliers,
         categories=SUPPLIER_CATEGORIES,
+        category_counts=category_counts,
         category=category,
         search=search,
     )

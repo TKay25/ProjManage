@@ -34,6 +34,8 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | **Team & invitations** | A build manager can type the client's email and WhatsApp number when creating a project: if that email already belongs to a client account the build is filed under that client and the manager is linked, otherwise it waits in the manager's workspace until someone signs up with that address (the screen says so). Registered accounts are linked immediately; anyone else gets a single-use invitation with a copyable `/invite/<token>` link (emailed when SMTP is configured) that requires signing in as the invited address. Pending invites appear on the project and in Settings, and a new registration claims any invite or project filed for its email |
 | **Staff portal** | `/admin` — every workspace in one table, platform money totals, attention feed, people & role management, account creation, activity log, stage reference |
 | Projects | Create with stand/suburb/budget; the 19-stage Zimbabwe plan and budget split are generated automatically |
+| **Project kinds** | A project is not always a house from scratch: full house build, renovation, extension, kitchen & cabinets, bathroom, interior design & finishes, roofing, solar & backup power, borehole & water, and walls/gates/landscaping. The kind sets the default stage plan (a kitchen fit-out no longer starts with land due diligence), labels the project page, and is shown on every card |
+| **Red / green signals** | One vocabulary for "is this healthy?": red for over budget, spending beyond funding, past the handover date or a blocked stage; amber for a near deadline or missing proof; green when inside both. Shown on project cards (with a red left edge), stored with each notification so a red signal stays red in the inbox, and raised once per threshold — re-saving an already-over-budget project does not repeat the alarm |
 | Stages | 5 groups, 19 stages, 5 regulatory gates, notes, status transitions, weighted progress %, budget-vs-actual per stage |
 | Money | Funding and expense ledger in integer US cents, stage tagging, category/method/reference, live balance preview, receipts, and manager-recorded payment tracking |
 | Documents | Receipts, statutory documents and site photos, image thumbnails, download, delete, access-checked file serving |
@@ -82,6 +84,10 @@ The database, session key and uploads are created on first run:
 - `instance/vaka.db` — SQLite database
 - `instance/secret.key` — generated session signing key (or set `SECRET_KEY`)
 - `uploads/` — receipts and documents
+
+Settings can also go in a `.env` file at the repo root (copy `.env.example`).
+It is read at startup and is git-ignored. Real environment variables always win,
+so a hosting dashboard still controls a deployed instance.
 
 ### Demo accounts
 
@@ -172,7 +178,16 @@ routes_agreements.py    Agreements, signing, print view
 routes_suppliers.py     In-app supplier directory
 routes_whatsapp.py      WhatsApp inbox, simulator, webhook
 routes_notifications.py Protected notification outbox dispatcher
+routes_reports.py       Portfolio report and printable project pack
 routes_settings.py      Profile, password, display preferences, backups
+notifications.py        Email + WhatsApp outbox, retries and delivery claims
+observability.py        Request ids, Server-Timing, slow-query and error logging
+onboarding.py           First-run checklist derived from real activity
+project_kinds.py        Project kinds (full build, kitchen, solar …) and stage plans
+health.py               Red / amber / green signal vocabulary
+totp.py                 Two-factor secrets and recovery codes
+tools/check_email.py    Send a test email and explain SMTP failures
+tools/migrate_to_postgres.py  Copy SQLite into Postgres
 
 templates/              Jinja templates
   base.html             Public shell
@@ -295,6 +310,8 @@ For email, configure `SMTP_HOST`, `SMTP_PORT`, and `SMTP_FROM_EMAIL`; configure
 `SMTP_USE_TLS=1` uses STARTTLS (the default); set `SMTP_USE_TLS=0` and
 `SMTP_USE_SSL=1` for implicit TLS. Do not enable both TLS modes.
 
+See [Sending email with Gmail](#sending-email-with-gmail) for a worked setup.
+
 For WhatsApp, configure `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID`, then
 create and approve a Meta message template for proactive updates. Set
 `WHATSAPP_UPDATE_TEMPLATE` to its name and `WHATSAPP_UPDATE_LANGUAGE` to the
@@ -314,6 +331,56 @@ curl -X POST https://your-domain/api/notifications/dispatch \
 
 Only an assigned manager's changes trigger client notifications. Project
 owners, other managers and staff updates are not sent through this event flow.
+
+### Sending email with Gmail
+
+Email backs password resets, team invites and manager-to-client project
+updates. Google will not accept your normal account password over SMTP, so an
+**App Password** is required.
+
+1. Turn on 2-Step Verification: <https://myaccount.google.com/security>.
+2. Create an App Password: <https://myaccount.google.com/apppasswords>. Name it
+   `YaVaKa`. Google shows 16 characters — copy them.
+3. Put the settings in `.env` in the repo root (git-ignored, and now loaded
+   automatically; real environment variables still take precedence):
+
+   ```bash
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USE_TLS=1
+   SMTP_USE_SSL=0
+   SMTP_USERNAME=you@gmail.com
+   SMTP_PASSWORD=abcdefghijklmnop
+   SMTP_FROM_EMAIL=YaVaKa <you@gmail.com>
+   ```
+
+4. Prove it before trusting it:
+
+   ```powershell
+   python -m tools.check_email you@gmail.com
+   ```
+
+   The tool prints the resolved settings with the password masked, sends one
+   message, and translates failures — a rejected login points at App Passwords,
+   a closed connection points at port 465/SSL, and a refused `From` explains
+   the alias rule.
+
+Notes that save an hour of debugging:
+
+- Paste all 16 characters with **no spaces**. Spaces are rejected.
+- `SMTP_FROM_EMAIL` must be the mailbox you authenticated as, otherwise Gmail
+  rewrites it. To send as another address, add it under *Send mail as* first.
+- Port 587 (STARTTLS) is blocked on some networks and on plenty of hosts. If
+  the connection closes immediately, use `SMTP_PORT=465`, `SMTP_USE_SSL=1`,
+  `SMTP_USE_TLS=0`.
+- A free Gmail account allows roughly 500 recipients a day, which is ample for
+  a pilot but not for a portfolio of hundreds of clients. Move to a transactional
+  provider (Resend, Postmark, SES) when you outgrow it — only the `SMTP_*`
+  values change.
+- On Render, set the same variables in the service's **Environment** tab rather
+  than committing a `.env`.
+- When email is not configured the app stays usable; it says so on screen
+  instead of silently dropping messages.
 
 ---
 

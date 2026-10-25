@@ -21,6 +21,16 @@
             <input class="input" type="text" name="name" value="{{ project.name }}" required maxlength="120" data-modal-autofocus />
           </label>
 
+          <label class="field">
+            <span class="field-label">What kind of work is this?</span>
+            <select class="select" name="kind">
+              {% for kind in project_kinds %}
+                <option value="{{ kind.key }}" {% if project.kind == kind.key %}selected{% endif %}>{{ kind.label }}</option>
+              {% endfor %}
+            </select>
+            <span class="field-hint">Changes the wording across the app. The stage plan is edited on the project page.</span>
+          </label>
+
           <div class="form-row">
             <label class="field">
               <span class="field-label">City / town</span>
@@ -42,7 +52,7 @@
               <input class="input" type="text" name="stand_number" value="{{ project.stand_number or '' }}" maxlength="80" />
             </label>
             <label class="field">
-              <span class="field-label">Build budget (USD)</span>
+              <span class="field-label">Budget (USD)</span>
               <input class="input" type="text" name="budget" inputmode="decimal" required
                      value="{{ (project.budget_cents / 100)|round(2) }}" data-money />
             </label>

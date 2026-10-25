@@ -1,11 +1,19 @@
+{# The card's colour language: red where money or time is running out,
+   green where the project is inside both. Tones come from health.py so the
+   list, the dashboard and the attention inbox all agree. #}
 {% set totals = project.totals %}
-<a class="project-card {{ 'is-active' if is_active }}" href="{{ url_for('projects.detail', project_id=project.id) }}" data-status="{{ project.status }}">
+{% set health = project.health %}
+<a class="project-card {{ 'is-active' if is_active }} {{ 'is-unhealthy' if health and health.tone == 'danger' }}"
+   href="{{ url_for('projects.detail', project_id=project.id) }}" data-status="{{ project.status }}">
   <div class="project-card-head">
     <span class="project-code">{{ project.code }}</span>
     {{ badge(project.status) }}
   </div>
   <h3>{{ project.name }}</h3>
-  <p class="project-location">{{ icon('map-pin', 13) }} {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}</p>
+  <p class="project-location">
+    {{ icon(kind_icon(project.kind), 13) }} {{ kind_label(project.kind) }}
+    {% if project.suburb %} · {{ project.suburb }}{% endif %} · {{ project.city }}
+  </p>
   <div class="project-card-progress">
     {{ progress_bar(project.progress) }}<span>{{ project.progress }}%</span>
   </div>
@@ -18,4 +26,10 @@
     {{ icon('calendar', 13) }}
     Target {{ project.target_date|date if project.target_date else 'not set' }}
   </p>
+  {% if health %}
+    <p class="health-flag health-flag--{{ health.tone }}">
+      {{ icon('alert' if health.tone == 'danger' else ('clock' if health.tone == 'warn' else 'check'), 12) }}
+      {{ health.label }}
+    </p>
+  {% endif %}
 </a>

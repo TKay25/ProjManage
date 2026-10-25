@@ -40,9 +40,17 @@ def suppliers_directory():
         "suppliers_public.html",
         suppliers=items,
         categories=SUPPLIER_CATEGORIES,
+        category_counts=_category_counts(SUPPLIERS),
         category=category,
         search=search,
     )
+
+
+def _category_counts(items):
+    counts = {}
+    for item in items:
+        counts[item["category"]] = counts.get(item["category"], 0) + 1
+    return counts
 
 
 @bp.get("/offline")

@@ -5,6 +5,8 @@ from datetime import datetime
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
+import project_kinds
+import updates
 import web
 from auth import accessible_projects, archived_projects, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query, touch_project
@@ -119,6 +121,7 @@ def new():
         title="New project",
         active="projects",
         values={},
+        kinds=project_kinds.PROJECT_KINDS,
         error=None,
     )
 
@@ -126,6 +129,7 @@ def new():
 def _read_project_form():
     return {
         "name": (request.form.get("name") or "").strip(),
+        "kind": (request.form.get("kind") or project_kinds.DEFAULT_KIND).strip(),
         "city": (request.form.get("city") or "Harare").strip(),
         "suburb": (request.form.get("suburb") or "").strip(),
         "stand_number": (request.form.get("stand_number") or "").strip(),
@@ -147,6 +151,8 @@ def _validate_project(values):
 
     if len(values["name"]) < 3:
         error = "Give the project a name of at least 3 characters."
+    elif not project_kinds.is_valid(values.get("kind")):
+        error = "Choose the kind of work this project covers."
     elif client_email and ("@" not in client_email or "." not in client_email.split("@")[-1]):
         error = "Enter a valid client email address."
     elif values["client_whatsapp"] and len(client_whatsapp) < 9:
@@ -166,7 +172,7 @@ def create():
     if error:
         if web.wants_json():
             return web.fail(error)
-        return render_template("app/project_new.html", title="New project", active="projects", values=values, error=error), 400
+        return render_template("app/project_new.html", title="New project", active="projects", values=values, kinds=project_kinds.PROJECT_KINDS, error=error), 400
 
     # Only a build manager (or staff) can file a build for somebody else. A
     # client creating their own project never sets a client contact, whatever
@@ -200,9 +206,9 @@ def create():
     execute(
         """INSERT INTO projects
              (id, code, name, description, owner_id, manager_id, city, suburb, stand_number,
-              client_email, client_whatsapp, status, budget_cents, start_date, target_date,
+              client_email, client_whatsapp, kind, status, budget_cents, start_date, target_date,
               workspace_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?, ?)""",
         (
             project_id,
             _next_code(),
@@ -215,6 +221,7 @@ def create():
             values["stand_number"][:80] or None,
             values["client_email"][:120] or None,
             normalize_phone(values["client_whatsapp"]) or None,
+            values["kind"],
             budget_cents,
             values["start_date"] or None,
             values["target_date"] or None,
@@ -226,7 +233,10 @@ def create():
 
     chosen = selected_stages(request.form.getlist("stage_keys"))
     if not chosen:
-        # No choice made (or JavaScript off): use the full Zimbabwe sequence.
+        # No choice made (or JavaScript off): use the plan this kind of work
+        # normally needs, rather than the whole house sequence.
+        chosen = selected_stages(project_kinds.default_stages(values["kind"]))
+    if not chosen:
         chosen = list(STAGES)
 
     allocations = allocate_budgets(chosen, budget_cents)
@@ -543,6 +553,7 @@ def update_budget(project_id):
         )
 
     log_event(g.user["id"], project_id, "project.budget", f"Budget set to {format_money(budget_cents)}")
+    updates.raise_health_alerts(project_id, actor_id=g.user["id"])
     message = "Budget updated and stage allocations recalculated."
 
     if web.wants_json():
@@ -583,7 +594,7 @@ def update(project_id):
     execute(
         """UPDATE projects
            SET name = ?, city = ?, suburb = ?, stand_number = ?, description = ?,
-               client_email = ?, client_whatsapp = ?,
+               client_email = ?, client_whatsapp = ?, kind = ?,
                status = ?, budget_cents = ?, start_date = ?, target_date = ?, updated_at = ?
            WHERE id = ?""",
         (
@@ -594,6 +605,7 @@ def update(project_id):
             values["description"][:2000] or None,
             client_email,
             client_whatsapp,
+            values["kind"],
             status,
             budget_cents,
             values["start_date"] or None,
@@ -615,6 +627,7 @@ def update(project_id):
             )
 
     log_event(g.user["id"], project_id, "project.updated", values["name"][:120])
+    updates.raise_health_alerts(project_id, actor_id=g.user["id"])
     message = "Project updated and stage budgets recalculated." if budget_changed else "Project updated."
 
     if web.wants_json():

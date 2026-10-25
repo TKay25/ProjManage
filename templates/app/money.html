@@ -64,7 +64,7 @@
   <div class="kpi">
     <div class="kpi-top"><span class="kpi-label">Total received</span><span class="kpi-icon">{{ icon('trending-up', 17) }}</span></div>
     <p class="kpi-value" data-kpi-funded>{{ totals.funded|money }}</p>
-    <p class="kpi-sub">Funds received for this build</p>
+    <p class="kpi-sub">Funds received for {{ kind_this(project.kind) if project.kind else 'this build' }}</p>
   </div>
   <div class="kpi">
     <div class="kpi-top"><span class="kpi-label">Total spent</span><span class="kpi-icon">{{ icon('receipt', 17) }}</span></div>

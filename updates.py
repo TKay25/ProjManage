@@ -9,6 +9,8 @@ device does not mark somebody else's inbox as read.
 """
 
 from db import execute, new_id, now_iso, query
+from health import alerts as health_alerts
+from queries import money_totals
 
 # action -> (icon, short label, tone). Anything not listed still records, using
 # a neutral label derived from the action name.
@@ -37,6 +39,10 @@ ACTIONS = {
     "team.joined": ("users", "Build manager joined", "success"),
     "team.removed": ("users", "Build manager removed", "warn"),
     "whatsapp.reply": ("message", "New WhatsApp reply", "warn"),
+    "project.over_budget": ("alert", "Budget exceeded", "danger"),
+    "project.over_spent": ("alert", "Spending exceeds funding", "danger"),
+    "project.deadline_passed": ("clock", "Handover date passed", "danger"),
+    "project.back_on_track": ("check", "Back within budget", "success"),
 }
 
 # Housekeeping that belongs in the audit log but is not news for a person.
@@ -54,6 +60,7 @@ KINDS = {
     "project": ("Project", ("project.",)),
     "team": ("Team", ("team.",)),
     "whatsapp": ("WhatsApp", ("whatsapp.",)),
+    "alerts": ("Alerts", ("project.over_", "project.deadline", "stage.blocked")),
 }
 
 
@@ -77,6 +84,108 @@ def _href(action: str, project_id: str) -> str:
     return f"/app/projects/{project_id}"
 
 
+def raise_health_alerts(project_id: str, actor_id=None) -> int:
+    """Notify the stakeholders when money or time goes wrong on a project.
+
+    Called after the ledger, the budget or the dates change. Only the moment a
+    threshold is *crossed* notifies — re-saving a project that is already over
+    budget does not send the same red alert again — so the check compares
+    against what was already raised for that project.
+    """
+    project = query(
+        """SELECT p.*,
+                  (SELECT COUNT(*) FROM stages s
+                    WHERE s.project_id = p.id AND s.status = 'blocked') AS blocked_stages,
+                  (SELECT COUNT(*) FROM transactions t
+                    WHERE t.project_id = p.id AND t.type = 'EXPENSE'
+                      AND NOT EXISTS (
+                        SELECT 1 FROM attachments a WHERE a.transaction_id = t.id
+                      )) AS missing_receipts
+           FROM projects p WHERE p.id = ?""",
+        (project_id,),
+        one=True,
+    )
+    if not project or project["archived_at"]:
+        return 0
+
+    totals = money_totals(project_id)
+    current = health_alerts(
+        project,
+        totals,
+        blocked_stages=int(project["blocked_stages"] or 0),
+        missing_receipts=int(project["missing_receipts"] or 0),
+    )
+
+    # What was already announced for this project, and is still true.
+    already = {
+        row["action"]
+        for row in query(
+            """SELECT DISTINCT action FROM notifications
+               WHERE project_id = ? AND action IN
+                 ('project.over_budget', 'project.over_spent', 'project.deadline_passed')""",
+            (project_id,),
+        )
+    }
+
+    mapping = {
+        "over_budget": "project.over_budget",
+        "over_funded_spend": "project.over_spent",
+        "past_deadline": "project.deadline_passed",
+    }
+
+    created = 0
+    live_actions = set()
+    for signal in current:
+        action = mapping.get(signal["key"])
+        if not action:
+            continue
+        live_actions.add(action)
+        if action in already:
+            continue
+        created += notify_stakeholders(
+            project,
+            action,
+            f"{project['name']}: {signal['label']}",
+            tone=signal["tone"],
+        )
+
+    # Coming back inside budget is good news worth telling once.
+    if not live_actions & {"project.over_budget", "project.over_spent"} and already & {
+        "project.over_budget",
+        "project.over_spent",
+    }:
+        cleared = query(
+            """SELECT COUNT(*) AS total FROM notifications
+               WHERE project_id = ? AND action = 'project.back_on_track'""",
+            (project_id,),
+            one=True,
+        )
+        if not int(cleared["total"] or 0):
+            created += notify_stakeholders(
+                project,
+                "project.back_on_track",
+                f"{project['name']} is back within budget",
+                tone="success",
+            )
+
+    return created
+
+
+def notify_stakeholders(project, action, detail, *, tone=None) -> int:
+    """Fan one notification out to the owner and manager of a project row."""
+    recipients = {project["owner_id"], project.get("manager_id")} - {None}
+    created = 0
+    for user_id in recipients:
+        created += notify(
+            user_id,
+            project["id"],
+            action,
+            detail,
+            tone=tone,
+        )
+    return created
+
+
 def describe(action: str, detail: str = "") -> dict:
     icon, title, tone = ACTIONS.get(action, ("activity", action.replace(".", " ").title(), ""))
     # The ledger detail already says "— spent"/"— received", which the action
@@ -87,7 +196,7 @@ def describe(action: str, detail: str = "") -> dict:
     return {"icon": icon, "title": title, "tone": tone, "detail": detail or "", "kind": kind_for(action)}
 
 
-def notify(user_id, project_id, action, detail="", *, href=None, actor_id=None, event_id=None) -> int:
+def notify(user_id, project_id, action, detail="", *, href=None, actor_id=None, event_id=None, tone=None) -> int:
     """Notify one named person instead of every project stakeholder.
 
     Used when the recipient is already known — for example the manager who has
@@ -100,8 +209,8 @@ def notify(user_id, project_id, action, detail="", *, href=None, actor_id=None, 
     execute(
         """INSERT INTO notifications
              (id, user_id, project_id, event_id, actor_id, action, title, body,
-              href, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+              href, tone, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             new_id(),
             user_id,
@@ -112,6 +221,7 @@ def notify(user_id, project_id, action, detail="", *, href=None, actor_id=None, 
             described["title"],
             described["detail"][:400] or None,
             href or _href(action, project_id),
+            tone or described["tone"] or None,
             now_iso(),
         ),
     )
@@ -172,7 +282,11 @@ def feed(user_id: str, kind: str = "all", limit: int = 25, offset_rows: int = 0)
     )
     for row in rows:
         # `body` holds the audit detail; the label/icon/tone come from the action.
+        stored = row.get("tone")
         row.update(describe(row["action"], row["body"] or ""))
+        row["notification_tone"] = stored
+        if stored:
+            row["tone"] = stored
     return rows
 
 

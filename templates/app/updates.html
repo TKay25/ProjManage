@@ -35,7 +35,9 @@
         <ul class="update-list">
           {% for item in group.rows %}
             <li class="update-item {{ 'is-new' if item.id in new_ids }}">
-              <span class="update-icon update-icon--{{ item.tone or 'neutral' }}">{{ icon(item.icon, 16) }}</span>
+        <!-- The stored tone wins, so a red signal raised days ago still reads
+             red; otherwise fall back to the action's own tone. -->
+        <span class="update-icon update-icon--{{ item.notification_tone or item.tone or 'neutral' }}">{{ icon(item.icon, 16) }}</span>
               <div class="update-body">
                 <p class="update-title">
                   {{ item.title }}

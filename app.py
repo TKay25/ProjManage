@@ -30,6 +30,7 @@ from money import (
 from paging import page_list
 from queries import attention_counts
 import observability
+import project_kinds
 import updates
 from stages import (
     PAYMENT_METHODS,
@@ -141,6 +142,11 @@ def create_app(config_object=Config):
         progress_bar=progress_bar,
         progress_ring=progress_ring,
         nav_items=NAV_ITEMS,
+        project_kinds=project_kinds.PROJECT_KINDS,
+        kind_label=project_kinds.kind_label,
+        kind_noun=project_kinds.kind_noun,
+        kind_this=project_kinds.kind_this,
+        kind_icon=project_kinds.kind_icon,
         tab_items=[item for item in NAV_ITEMS if item["key"] in {"dashboard", "updates", "money", "documents"}],
         asset_url=asset_url,
         page_list=page_list,

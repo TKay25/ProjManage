@@ -3188,8 +3188,10 @@ class PerformanceGuarantees(VakaTestCase):
             with patch.object(query_module, "query", spy):
                 query_module.projects_with_summary(projects)
 
-        # One query for stages, one for money — regardless of project count.
-        self.assertLessEqual(len(calls), 2)
+        # Stages, money and health flags — three queries regardless of how many
+        # projects there are. The point is that the count does not grow with the
+        # portfolio size.
+        self.assertLessEqual(len(calls), 3)
 
 
 class Observability(VakaTestCase):
@@ -3495,3 +3497,468 @@ class SupplierDirectory(VakaTestCase):
             after = query("SELECT COUNT(*) AS n FROM suppliers", one=True)["n"]
 
         self.assertEqual(before, after)
+
+class ProjectKinds(VakaTestCase):
+    """Not every project is a house from scratch."""
+
+    def test_the_catalogue_covers_the_work_a_house_needs(self):
+        import project_kinds
+
+        keys = {kind["key"] for kind in project_kinds.PROJECT_KINDS}
+        for expected in (
+            "full_build",
+            "renovation",
+            "extension",
+            "kitchen",
+            "bathroom",
+            "interior",
+            "roofing",
+            "solar",
+            "borehole",
+            "walls_gates",
+        ):
+            with self.subTest(kind=expected):
+                self.assertIn(expected, keys)
+
+    def test_every_kind_names_real_stages(self):
+        from stages import STAGES_BY_KEY
+        import project_kinds
+
+        for kind in project_kinds.PROJECT_KINDS:
+            with self.subTest(kind=kind["key"]):
+                self.assertTrue(kind["stages"], "a kind needs at least one stage")
+                for key in kind["stages"]:
+                    self.assertIn(key, STAGES_BY_KEY)
+
+    def test_a_kitchen_project_does_not_start_with_land_due_diligence(self):
+        import project_kinds
+
+        stages = project_kinds.default_stages("kitchen")
+        self.assertIn("finishes", stages)
+        self.assertNotIn("land_due_diligence", stages)
+        self.assertNotIn("foundation", stages)
+
+    def test_an_unknown_kind_falls_back_instead_of_raising(self):
+        import project_kinds
+
+        self.assertEqual(project_kinds.kind_for("nonsense")["key"], "full_build")
+        self.assertEqual(project_kinds.kind_for(None)["key"], "full_build")
+
+    def test_creating_a_project_records_its_kind(self):
+        from db import query
+
+        self.login("manager@yavaka.co.zw")
+        response = self.client.post(
+            "/app/projects",
+            data={
+                "csrf_token": self.csrf(),
+                "name": "Borrowdale Solar Install",
+                "kind": "solar",
+                "city": "Harare",
+                "suburb": "Borrowdale",
+                "budget": "4,000",
+                "start_date": "2026-10-01",
+            },
+            follow_redirects=False,
+        )
+        self.assertIn(response.status_code, (302, 200))
+
+        with self.app.app_context():
+            project = query(
+                "SELECT id, kind FROM projects WHERE name = 'Borrowdale Solar Install'",
+                one=True,
+            )
+            stages = query(
+                "SELECT key FROM stages WHERE project_id = ?", (project["id"],)
+            ) if project else []
+
+        self.assertIsNotNone(project)
+        self.assertEqual(project["kind"], "solar")
+        self.assertNotIn("land_due_diligence", {row["key"] for row in stages})
+
+        self.addCleanup(self._drop_project, project["id"])
+
+    def _drop_project(self, project_id):
+        from db import execute
+
+        with self.app.app_context():
+            for table in ("notifications", "audit_events", "transactions", "stages",
+                          "attachments", "agreements"):
+                execute(f"DELETE FROM {table} WHERE project_id = ?", (project_id,))
+            execute("DELETE FROM projects WHERE id = ?", (project_id,))
+
+    def test_an_invalid_kind_is_rejected(self):
+        self.login("manager@yavaka.co.zw")
+        response = self.client.post(
+            "/app/projects",
+            data={
+                "csrf_token": self.csrf(),
+                "name": "Invalid Kind Build",
+                "kind": "spaceship",
+                "budget": "5,000",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+
+
+class HealthSignals(VakaTestCase):
+    """Red for bad, green for good, and the thresholds in between."""
+
+    BASE = {
+        "id": "p1",
+        "name": "Test",
+        "status": "in_progress",
+        "budget_cents": 1_000_00,
+        "target_date": None,
+    }
+
+    def test_overspending_is_red(self):
+        import health
+
+        found = health.signals(
+            {**self.BASE, "budget_cents": 100_000},
+            {"funded": 200_000, "spent": 150_000},
+        )
+        over = next(s for s in found if s["key"] == "over_budget")
+        self.assertEqual(over["tone"], health.DANGER)
+
+    def test_spending_more_than_was_funded_is_red(self):
+        import health
+
+        found = health.signals(self.BASE, {"funded": 10_000, "spent": 50_000})
+        keys = {s["key"]: s["tone"] for s in found}
+        self.assertEqual(keys.get("over_funded_spend"), health.DANGER)
+
+    def test_passing_the_handover_date_is_red(self):
+        from datetime import date, timedelta
+        import health
+
+        late = (date.today() - timedelta(days=5)).isoformat()
+        found = health.signals({**self.BASE, "target_date": late}, {"funded": 0, "spent": 0})
+        signal = next(s for s in found if s["key"] == "past_deadline")
+        self.assertEqual(signal["tone"], health.DANGER)
+        self.assertIn("5 day", signal["label"])
+
+    def test_a_close_deadline_warns_without_crying_wolf(self):
+        from datetime import date, timedelta
+        import health
+
+        soon = (date.today() + timedelta(days=10)).isoformat()
+        found = health.signals({**self.BASE, "target_date": soon}, {"funded": 0, "spent": 0})
+        signal = next(s for s in found if s["key"] == "deadline_soon")
+        self.assertEqual(signal["tone"], health.WARN)
+
+    def test_a_healthy_project_is_green(self):
+        import health
+
+        found = health.signals(
+            {**self.BASE, "budget_cents": 10_000_000},
+            {"funded": 5_000_000, "spent": 100_000},
+        )
+        self.assertEqual(found[0]["tone"], health.SUCCESS)
+        self.assertEqual(found[0]["key"], "on_track")
+
+    def test_alerts_never_include_good_news(self):
+        import health
+
+        # A project comfortably inside a large budget has nothing to raise.
+        healthy = {**self.BASE, "budget_cents": 10_000_000}
+        found = health.alerts(healthy, {"funded": 5_000_000, "spent": 100_000})
+        self.assertEqual(found, [])
+
+    def test_worst_tone_wins_for_a_card(self):
+        import health
+
+        summary = health.summary(
+            {**self.BASE, "budget_cents": 100_000},
+            {"funded": 50_000, "spent": 500_000},
+        )
+
+        self.assertEqual(summary["tone"], health.DANGER)
+
+
+class HealthNotifications(VakaTestCase):
+    def test_going_over_budget_notifies_owner_and_manager_once(self):
+        import updates
+        from db import execute, new_id, now_iso, query
+
+        with self.app.app_context():
+            owner = query("SELECT id FROM users WHERE role = 'client' LIMIT 1", one=True)
+            manager = query(
+                "SELECT id FROM users WHERE email = 'manager@yavaka.co.zw'", one=True
+            )
+            project_id = new_id()
+            execute(
+                """INSERT INTO projects (id, code, name, owner_id, manager_id, kind, status,
+                        budget_cents, created_at, updated_at)
+                   VALUES (?, 'YVK-9401', 'Health Check Build', ?, ?, 'full_build',
+                           'in_progress', 100000, ?, ?)""",
+                (project_id, owner["id"], manager["id"], now_iso(), now_iso()),
+            )
+            execute(
+                """INSERT INTO transactions
+                     (id, project_id, type, amount_cents, currency, description,
+                      occurred_at, created_by, created_at)
+                   VALUES (?, ?, 'EXPENSE', 250000, 'USD', 'Over budget spend', ?, ?, ?)""",
+                (new_id(), project_id, now_iso(), manager["id"], now_iso()),
+            )
+
+            created = updates.raise_health_alerts(project_id)
+            rows = query(
+                "SELECT tone, action FROM notifications WHERE project_id = ?",
+                (project_id,),
+            )
+            again = updates.raise_health_alerts(project_id)
+            after = query(
+                "SELECT COUNT(*) AS n FROM notifications WHERE project_id = ?",
+                (project_id,),
+                one=True,
+            )["n"]
+
+        self.addCleanup(self._drop, project_id)
+        actions = {row["action"] for row in rows}
+        # Over budget *and* spending more than was funded: two red signals,
+        # each sent to the owner and the manager.
+        self.assertEqual(actions, {"project.over_budget", "project.over_spent"})
+        self.assertEqual(created, 4)  # 2 signals x 2 recipients
+        self.assertTrue(all(row["tone"] == "danger" for row in rows))
+        self.assertEqual(again, 0, "the same alert must not fire twice")
+        self.assertEqual(after, 4)
+
+    def _drop(self, project_id):
+        from db import execute
+
+        with self.app.app_context():
+            for table in ("notifications", "audit_events", "transactions", "stages"):
+                execute(f"DELETE FROM {table} WHERE project_id = ?", (project_id,))
+            execute("DELETE FROM projects WHERE id = ?", (project_id,))
+
+
+class SupplierCategoryDropdown(VakaTestCase):
+    def test_categories_live_in_one_dropdown_with_counts(self):
+        public = self.client.get("/suppliers").get_data(as_text=True)
+        self.assertNotIn('class="chip-row"', public)
+        self.assertIn('select name="category"', public.replace('class="select" ', ""))
+        self.assertRegex(public, r"All categories \(\d+\)")
+
+    def test_the_signed_in_directory_matches(self):
+        self.login()
+        page = self.client.get("/app/suppliers").get_data(as_text=True)
+        self.assertNotIn('class="chip-row"', page)
+        self.assertRegex(page, r"All categories \(\d+\)")
+
+class ColourContrast(VakaTestCase):
+    """Text colours must clear WCAG AA. These are the tokens every page uses."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        import re
+        from pathlib import Path
+
+        css = Path("static/css/app.css").read_text(encoding="utf-8")
+        cls.light = dict(
+            re.findall(r"(--(?:ink|ink-soft|ink-faint)):\s*(#[0-9a-fA-F]{6})", css)
+        )
+        cls.surfaces = dict(
+            re.findall(r"(--sand-[0-9]+):\s*(#[0-9a-fA-F]{6})", css)
+        )
+
+    @staticmethod
+    def _lum(hex_colour):
+        value = hex_colour.lstrip("#")
+        channels = [int(value[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+        linear = [
+            c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+            for c in channels
+        ]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    def _ratio(self, a, b):
+        hi, lo = sorted([self._lum(a), self._lum(b)], reverse=True)
+        return (hi + 0.05) / (lo + 0.05)
+
+    def test_muted_text_clears_aa_on_every_light_surface(self):
+        tokens = {
+            k: v for k, v in self.light.items() if k in ("--ink-soft", "--ink-faint")
+        }
+        surfaces = {
+            k: v for k, v in self.surfaces.items() if k in ("--sand-50", "--sand-100", "--sand-200")
+        }
+
+        self.assertTrue(tokens, "expected the text tokens in app.css")
+        self.assertTrue(surfaces)
+
+        for token, colour in tokens.items():
+            for surface, background in surfaces.items():
+                with self.subTest(token=token, surface=surface):
+                    ratio = self._ratio(colour, background)
+                    self.assertGreaterEqual(
+                        round(ratio, 2),
+                        4.5,
+                        f"{token} ({colour}) on {surface} ({background}) is {ratio:.2f}:1",
+                    )
+
+    def test_avatar_palette_clears_aa_against_white_initials(self):
+        from routes_auth import AVATAR_COLORS
+
+        for colour in AVATAR_COLORS:
+            with self.subTest(colour=colour):
+                ratio = self._ratio("#ffffff", colour)
+                self.assertGreaterEqual(
+                    round(ratio, 2), 4.5, f"white initials on {colour} is {ratio:.2f}:1"
+                )
+
+    def test_brass_eyebrows_use_the_readable_shade(self):
+        # brass-600 is 3.4:1 on sand and fails AA for 11px caps.
+        import re
+        from pathlib import Path
+
+        css = Path("static/css/app.css").read_text(encoding="utf-8")
+        eyebrow = re.search(r"\.eyebrow \{[^}]*\}", css, re.S).group(0)
+        self.assertIn("var(--brass-700)", eyebrow)
+
+    def test_mockup_placeholder_text_clears_aa_on_white(self):
+        # The landing WhatsApp mockup sits muted copy on a white pill; a raw
+        # grey there is easy to miss because the parent already looks dark.
+        import re
+        from pathlib import Path
+
+        css = Path("static/css/app.css").read_text(encoding="utf-8")
+        rule = re.search(r"\.phone-input \{[^}]*\}", css, re.S).group(0)
+        colour = re.search(r"color:\s*([^;]+);", rule).group(1).strip()
+        token = re.fullmatch(r"var\((--[a-z0-9-]+)\)", colour)
+        if token:
+            colour = re.search(
+                rf"{token.group(1)}:\s*(#[0-9a-fA-F]{{6}})", css
+            ).group(1)
+        self.assertRegex(colour, r"^#[0-9a-fA-F]{6}$")
+        self.assertGreaterEqual(
+            round(self._ratio(colour, "#ffffff"), 2),
+            4.5,
+            f"mockup placeholder {colour} on white fails AA",
+        )
+
+    def test_light_on_dark_text_clears_aa(self):
+        # Dark bands (footer, final CTA, phone mockup) use white alphas. Below
+        # ~0.55 the result drops under AA for small text, and light-surface
+        # tokens such as `.muted` sink to ~2.5:1 unless explicitly overridden.
+        import re
+        from pathlib import Path
+
+        css = Path("static/css/app.css").read_text(encoding="utf-8")
+        dark = "#052018"  # --forest-950, the darkest band behind white text
+        base = [int(dark[i : i + 2], 16) for i in (1, 3, 5)]
+
+        alphas = re.findall(
+            r"(?<![\w-])color:\s*rgba\(255,\s*255,\s*255,\s*([\d.]+)\)", css
+        )
+        self.assertTrue(alphas, "expected white-on-dark text colours")
+
+        for alpha in alphas:
+            a = float(alpha)
+            composited = "#" + "".join(
+                f"{round(a * 255 + (1 - a) * c):02x}" for c in base
+            )
+            with self.subTest(alpha=a):
+                self.assertGreaterEqual(
+                    round(self._ratio(composited, dark), 2),
+                    4.5,
+                    f"white@{a} on {dark} is {self._ratio(composited, dark):.2f}:1",
+                )
+
+        # `.muted` is tuned for sand surfaces; the footer must re-map it.
+        self.assertRegex(css, r"\.site-footer \.muted\s*\{[^}]*color:")
+
+
+class DotEnvLoading(unittest.TestCase):
+    """`.env` must work for a normal person editing a file on Windows."""
+
+    def _load(self, text, preset=None):
+        import config
+
+        directory = tempfile.mkdtemp(prefix="vaka-env-")
+        path = Path(directory) / ".env"
+        # A literal U+FEFF in the string encodes to the same EF BB BF bytes a
+        # Windows editor writes, so the BOM test exercises the real thing.
+        path.write_bytes(text.encode("utf-8"))
+
+        saved = {}
+        for key in ("SMTP_HOST", "SMTP_PORT", "SMTP_PASSWORD", "SMTP_FROM_EMAIL"):
+            if key in os.environ:
+                saved[key] = os.environ.pop(key)
+        os.environ.update(preset or {})
+        try:
+            config._load_dotenv(path)
+            loaded = {
+                key: os.environ.get(key)
+                for key in ("SMTP_HOST", "SMTP_PORT", "SMTP_PASSWORD", "SMTP_FROM_EMAIL")
+            }
+        finally:
+            for key in ("SMTP_HOST", "SMTP_PORT", "SMTP_PASSWORD", "SMTP_FROM_EMAIL"):
+                os.environ.pop(key, None)
+            os.environ.update(saved)
+        return loaded
+
+    def test_plain_values_are_read(self):
+        loaded = self._load("SMTP_HOST=smtp.gmail.com\nSMTP_PORT=587\n")
+        self.assertEqual(loaded["SMTP_HOST"], "smtp.gmail.com")
+        self.assertEqual(loaded["SMTP_PORT"], "587")
+
+    def test_windows_byte_order_mark_does_not_break_the_first_key(self):
+        # Notepad and PowerShell's Set-Content both write a BOM; without
+        # utf-8-sig the first key becomes "\ufeffSMTP_HOST" and silently fails.
+        loaded = self._load("\ufeffSMTP_HOST=smtp.gmail.com\n")
+        self.assertEqual(loaded["SMTP_HOST"], "smtp.gmail.com")
+
+    def test_quotes_are_stripped_and_inner_spaces_are_kept(self):
+        loaded = self._load('SMTP_PASSWORD="abcd efgh ijkl mnop"\n')
+        self.assertEqual(loaded["SMTP_PASSWORD"], "abcd efgh ijkl mnop")
+
+    def test_trailing_comment_is_dropped_but_a_hash_in_a_value_survives(self):
+        loaded = self._load("SMTP_HOST=smtp.gmail.com  # primary\nSMTP_PASSWORD=abc#def\n")
+        self.assertEqual(loaded["SMTP_HOST"], "smtp.gmail.com")
+        self.assertEqual(loaded["SMTP_PASSWORD"], "abc#def")
+
+    def test_real_environment_wins_over_the_file(self):
+        loaded = self._load("SMTP_HOST=from-file\n", preset={"SMTP_HOST": "from-host"})
+        self.assertEqual(loaded["SMTP_HOST"], "from-host")
+
+    def test_comments_and_blank_lines_are_skipped(self):
+        loaded = self._load("# a comment\n\n   \nSMTP_FROM_EMAIL=YaVaKa <x@y.z>\n")
+        self.assertEqual(loaded["SMTP_FROM_EMAIL"], "YaVaKa <x@y.z>")
+
+
+class EmailDiagnostics(unittest.TestCase):
+    """The SMTP checker should name the cause, not just echo the exception."""
+
+    def test_password_is_masked(self):
+        from tools.check_email import _mask
+
+        masked = _mask("abcdefghijklmnop")
+        self.assertNotIn("cdefghijklmno", masked)
+        self.assertTrue(masked.startswith("ab"))
+        self.assertTrue(masked.endswith("op"))
+        self.assertEqual(_mask(""), "(empty)")
+
+    def test_bad_login_points_at_app_passwords(self):
+        from tools.check_email import explain
+
+        hint = explain("(535, b'5.7.8 Username and Password not accepted')")
+        self.assertIn("App Password", hint)
+
+    def test_from_address_rejection_explains_the_alias_rule(self):
+        from tools.check_email import explain
+
+        hint = explain("(550, b'5.7.1 From address not owned')")
+        self.assertIn("SMTP_FROM_EMAIL", hint)
+
+    def test_closed_connection_suggests_port_465(self):
+        from tools.check_email import explain
+
+        self.assertIn("465", explain("Connection unexpectedly closed"))
+
+    def test_unknown_error_falls_back_to_the_settings_list(self):
+        from tools.check_email import explain
+
+        self.assertIn("SMTP_HOST", explain("something entirely novel"))

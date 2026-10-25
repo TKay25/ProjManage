@@ -384,6 +384,33 @@
         });
       });
 
+      /* Choosing the kind of work re-ticks the plan it normally needs, so a
+         kitchen fit-out does not start with land due diligence. */
+      const kindSelect = $("[data-project-kind]");
+      if (kindSelect && kindSelect.dataset.kindStages) {
+        let kinds = [];
+        try {
+          kinds = JSON.parse(kindSelect.dataset.kindStages) || [];
+        } catch {
+          kinds = [];
+        }
+
+        const summary = $("[data-kind-summary]");
+
+        const applyKind = (resetPicker) => {
+          const selected = kinds.find((kind) => kind.key === kindSelect.value);
+          if (summary && selected) summary.textContent = selected.summary;
+          if (!resetPicker || !selected) return;
+
+          const keep = new Set(selected.stages || []);
+          boxes.forEach((box) => (box.checked = keep.has(box.value)));
+          refresh();
+        };
+
+        kindSelect.addEventListener("change", () => applyKind(true));
+        applyKind(true);
+      }
+
       refresh();
     }
 

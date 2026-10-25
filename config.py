@@ -10,6 +10,49 @@ INSTANCE_DIR = BASE_DIR / "instance"
 INSTANCE_DIR.mkdir(exist_ok=True)
 
 
+def _load_dotenv(env_file: Path | None = None) -> None:
+    """Read .env from the repo root so .env.example is actually usable.
+
+    Real environment variables always win, so a hosting dashboard (Render,
+    Fly, Docker) still controls a deployed instance. Values may be wrapped in
+    quotes; a `#` starts a comment only when it follows whitespace, so
+    passwords containing `#` survive intact.
+    """
+
+    env_file = env_file or (BASE_DIR / ".env")
+    if not env_file.exists():
+        return
+
+    try:
+        # utf-8-sig drops the BOM that Windows editors add, which would
+        # otherwise end up glued to the first key.
+        lines = env_file.read_text(encoding="utf-8-sig").splitlines()
+    except OSError:
+        return
+
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[len("export ") :].strip()
+        if not key or key in os.environ:
+            continue
+
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        elif " #" in value:
+            value = value.split(" #", 1)[0].rstrip()
+        os.environ[key] = value
+
+
+_load_dotenv()
+
+
 def _secret_key() -> str:
     """Use SECRET_KEY from the environment, or persist a generated one."""
     env_value = os.environ.get("SECRET_KEY")

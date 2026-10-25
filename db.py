@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS projects (
   stand_number TEXT,
   client_email TEXT,
   client_whatsapp TEXT,
+  kind TEXT NOT NULL DEFAULT 'full_build',
   status TEXT NOT NULL DEFAULT 'planning',
   budget_cents INTEGER NOT NULL DEFAULT 0,
   start_date TEXT,
@@ -209,6 +210,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   title TEXT NOT NULL,
   body TEXT,
   href TEXT,
+  tone TEXT,
   created_at TEXT NOT NULL,
   read_at TEXT
 );
@@ -289,10 +291,12 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_email TEXT;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_whatsapp TEXT;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS archived_at TEXT;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS workspace_id TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'full_build';
 ALTER TABLE attachments ADD COLUMN IF NOT EXISTS stage_key TEXT;
 ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS claimed_at TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_at TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_by TEXT REFERENCES users(id);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS tone TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS session_epoch INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT;
@@ -301,6 +305,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled INTEGER NOT NULL DEFAULT
 -- existing SQLite database was copied across by tools/migrate_to_postgres.py.
 DELETE FROM suppliers a USING suppliers b
  WHERE lower(a.name) = lower(b.name) AND a.ctid > b.ctid;
+UPDATE users SET avatar_color = '#8F6524' WHERE upper(avatar_color) = '#C8963E';
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_events(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_events(action, created_at);
 CREATE INDEX IF NOT EXISTS idx_tx_type_date ON transactions(project_id, type, occurred_at);
@@ -740,6 +745,31 @@ def run_migrations(connection):
                WHERE rowid NOT IN (SELECT MIN(rowid) FROM suppliers GROUP BY lower(name))"""
         )
         connection.execute("PRAGMA user_version = 15")
+
+    if version < 16:        # Not every project is a house built from scratch: a kitchen fit-out or
+        # a borehole is the same kind of record with a different scope.
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(projects)")}
+        if "kind" not in columns:
+            connection.execute(
+                "ALTER TABLE projects ADD COLUMN kind TEXT NOT NULL DEFAULT 'full_build'"
+            )
+        # A notification carries its own tone so a red signal (over budget,
+        # past deadline) still reads red in the feed long after it was raised.
+        note_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(notifications)")
+        }
+        if "tone" not in note_columns:
+            connection.execute("ALTER TABLE notifications ADD COLUMN tone TEXT")
+        connection.execute("PRAGMA user_version = 16")
+
+    if version < 17:
+        # Avatar initials are white, so the background has to be dark enough to
+        # read. The original brass was 2.7:1; this is the same hue at 5.2:1.
+        connection.execute(
+            "UPDATE users SET avatar_color = '#8F6524' "
+            "WHERE upper(avatar_color) = '#C8963E'"
+        )
+        connection.execute("PRAGMA user_version = 17")
 
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.

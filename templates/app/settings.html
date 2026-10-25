@@ -42,7 +42,7 @@
           <label class="field">
             <span class="field-label">Avatar colour</span>
             <select class="select" name="avatar_color">
-              {% for value, label in [('#0F5D46', 'Forest'), ('#C8963E', 'Brass'), ('#2A7A5E', 'Emerald'), ('#A9573C', 'Brick'), ('#3E6B8A', 'Slate'), ('#6B5B95', 'Plum')] %}
+              {% for value, label in [('#0F5D46', 'Forest'), ('#8F6524', 'Brass'), ('#2A7A5E', 'Emerald'), ('#A9573C', 'Brick'), ('#3E6B8A', 'Slate'), ('#6B5B95', 'Plum')] %}
                 <option value="{{ value }}" {% if user.avatar_color == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>

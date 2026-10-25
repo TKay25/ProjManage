@@ -19,6 +19,21 @@
             <input class="input" type="text" name="name" required maxlength="120" placeholder="Greendale Family Home" data-modal-autofocus />
           </label>
 
+          {# The kind decides the wording used across the app and which stages
+             the plan starts with, so it comes before the stage picker. #}
+          <label class="field">
+            <span class="field-label">What kind of work is this?</span>
+            <select class="select" name="kind" data-project-kind
+                    data-kind-stages='{{ project_kinds|tojson }}'>
+              {% for kind in project_kinds %}
+                <option value="{{ kind.key }}" data-summary="{{ kind.summary }}">{{ kind.label }}</option>
+              {% endfor %}
+            </select>
+            <span class="field-hint" data-kind-summary>
+              A new house from the stand up: approvals, substructure, roof, services and handover.
+            </span>
+          </label>
+
           <div class="form-row">
             <label class="field">
               <span class="field-label">City / town</span>
@@ -40,7 +55,7 @@
               <input class="input" type="text" name="stand_number" placeholder="Stand 1421" maxlength="80" />
             </label>
             <label class="field">
-              <span class="field-label">Build budget (USD)</span>
+              <span class="field-label">Budget (USD)</span>
               <input class="input" type="text" name="budget" inputmode="decimal" required placeholder="85,000.00" data-money />
             </label>
           </div>
@@ -78,7 +93,7 @@
 
           <div class="field">
             <span class="field-label">Build stages</span>
-            <p class="field-hint">The 19-stage Zimbabwe sequence is selected by default. Keep only the stages this build needs; the budget is re-split across the plan you choose.</p>
+            <p class="field-hint">The stages this kind of work normally needs are ticked. Add or remove any; the budget is re-split across the plan you choose.</p>
 
             <div class="stage-picker" data-stage-picker>
               <div class="stage-picker-actions">

@@ -1,12 +1,23 @@
 {% extends "app/base.html" %}
 {% block title %}{{ project.name }} · YaVaKa{% endblock %}
 
-{% block page_title %}{{ project.name }}{% endblock %}
+{% block page_title %}
+  {{ project.name }}
+  {% if project.kind and project.kind != 'full_build' %}
+    <span class="badge badge-soft kind-badge">{{ icon(kind_icon(project.kind), 12) }} {{ kind_label(project.kind) }}</span>
+  {% endif %}
+{% endblock %}
 {% block page_subtitle %}
   <p class="page-subtitle">
     {{ project.code }} · {% if project.suburb %}{{ project.suburb }}, {% endif %}{{ project.city }}
     {% if project.stand_number %} · {{ project.stand_number }}{% endif %}
-    <span class="page-tagline">From the first approval to the final handover, keep every decision connected to this build.</span>
+    <span class="page-tagline">
+      {% if project.kind and project.kind != 'full_build' %}
+        {{ kind_label(project.kind) }} · every cost, approval and piece of proof in one record.
+      {% else %}
+        From the first approval to the final handover, keep every decision connected to this build.
+      {% endif %}
+    </span>
   </p>
 {% endblock %}
 {% block page_actions %}
@@ -53,7 +64,7 @@
     <div class="card">
       <div class="card-head">
         <div>
-          <h2>Build stages</h2>
+          <h2>{{ 'Work stages' if project.kind and project.kind != 'full_build' else 'Build stages' }}</h2>
           <p class="card-sub">{{ completed_count }} of {{ stages|length }} complete · <span data-progress-value>{{ progress }}%</span> weighted progress · a clear next step for everyone on the team</p>
         </div>
         <span class="badge badge-soft">{{ stages|length }} stages</span>

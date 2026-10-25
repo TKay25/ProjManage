@@ -111,7 +111,7 @@ def _seed_demo():
 
     for user_id, name, email, role, phone, country, colour in [
         (client_id, "Rudo Chikafu", "client@yavaka.co.zw", "client", "263771234567", "United Kingdom", "#0F5D46"),
-        (manager_id, "Tendai Moyo", "manager@yavaka.co.zw", "manager", "263772555001", "Zimbabwe", "#C8963E"),
+        (manager_id, "Tendai Moyo", "manager@yavaka.co.zw", "manager", "263772555001", "Zimbabwe", "#8F6524"),
     ]:
         execute(
             """INSERT INTO users (id, name, email, password_hash, role, phone, country, avatar_color, created_at)

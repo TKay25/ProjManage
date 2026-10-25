@@ -11,30 +11,35 @@
 
 {% block content %}
 <div class="card">
-  <form class="filter-bar filter-bar-lg filter-bar--single" method="get" action="{{ url_for('suppliers.index') }}">
+  <form class="filter-bar filter-bar-lg" method="get" action="{{ url_for('suppliers.index') }}">
     <label class="search-field">
       {{ icon('search', 16) }}
       <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search cement, roof sheets, tiles…" aria-label="Search suppliers" />
     </label>
-    <select class="select select-sm" name="category" data-autosubmit aria-label="Filter by category">
-      <option value="">All categories</option>
-      {% for item in categories %}
-        <option value="{{ item }}" {% if category == item %}selected{% endif %}>{{ item }}</option>
-      {% endfor %}
-    </select>
-    <button class="btn btn-outline btn-sm" type="submit">Search</button>
+    <label class="select-field">
+      <span class="sr-only">Filter by category</span>
+      <select class="select" name="category" data-autosubmit aria-label="Filter by category">
+        <option value="">All categories ({{ category_counts.values()|sum }})</option>
+        {% for item in categories %}
+          <option value="{{ item }}" {% if category == item %}selected{% endif %}>
+            {{ item }}{% if category_counts.get(item) %} ({{ category_counts[item] }}){% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+    <noscript><button class="btn btn-outline btn-sm" type="submit">Search</button></noscript>
     {% if search or category %}
       <a class="link-quiet" href="{{ url_for('suppliers.index') }}">Clear</a>
     {% endif %}
   </form>
 </div>
 
-<div class="chip-row">
-  <a class="chip {{ 'is-active' if not category }}" href="{{ url_for('suppliers.index', q=search) }}">All</a>
-  {% for item in categories %}
-    <a class="chip {{ 'is-active' if category == item }}" href="{{ url_for('suppliers.index', category=item, q=search) }}">{{ item }}</a>
-  {% endfor %}
-</div>
+{% if category %}
+  <p class="filter-summary">
+    Showing <strong>{{ category }}</strong>
+    <a class="link-quiet" href="{{ url_for('suppliers.index', q=search) }}">Clear category</a>
+  </p>
+{% endif %}
 
 {% if suppliers %}
   <div class="supplier-grid">

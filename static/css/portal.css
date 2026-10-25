@@ -1248,6 +1248,69 @@ body.app {
   margin-top: 2px;
 }
 
+/* A list card says out loud when money or time has gone wrong. Red is only
+   ever used for something that needs action. */
+.health-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.health-flag--danger {
+  background: var(--brick-soft);
+  color: var(--brick);
+}
+
+.health-flag--warn {
+  background: var(--amber-soft);
+  color: var(--brass-700);
+}
+
+.health-flag--success {
+  background: var(--success-soft);
+  color: var(--forest-700);
+}
+
+/* A red left edge lets an unhealthy card be spotted while scanning the grid. */
+.project-card.is-unhealthy {
+  border-left: 3px solid var(--brick);
+}
+
+/* ---------- Supplier category dropdown ---------- */
+/* One dropdown replaces the chip row: the same eight categories took four
+   lines of screen on a phone and duplicated the select above them. */
+.select-field {
+  display: flex;
+  flex: 0 1 230px;
+  min-width: 0;
+}
+
+.select-field .select {
+  width: 100%;
+}
+
+.filter-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 14px 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 640px) {
+  .select-field {
+    flex: 1 1 100%;
+  }
+}
+
 .project-card-new {
   border-style: dashed;
   background: transparent;
@@ -1626,7 +1689,7 @@ body.app {
 .plan-index {
   font-family: var(--font-mono);
   font-size: 0.62rem;
-  color: var(--brass-600);
+  color: var(--brass-700);
   padding-top: 2px;
 }
 
@@ -5419,5 +5482,245 @@ body.is-skeleton .shell-main {
 
   .sidebar {
     height: 100dvh;
+  }
+}
+
+/* ---------- Project kind & health ---------- */
+
+.kind-badge {
+  vertical-align: middle;
+  margin-left: 8px;
+  font-size: 0.62rem;
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+/* ============================================================
+   Visual polish — brass accents, layered depth, micro-motion.
+   Pure CSS: no new requests, no web fonts, and only transform /
+   opacity are animated so first paint stays flat.
+   Loaded after the structural rules but before theme.css, so the
+   dark palette still wins on colour.
+   ============================================================ */
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #fcfbf8 58%, #f9f7f2 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.8);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 93, 70, 0.16) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(15, 93, 70, 0.14);
+  border-radius: 99px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 93, 70, 0.24);
+}
+
+.nav-link {
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.nav-link .icon {
+  transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.nav-link:hover .icon {
+  transform: scale(1.08);
+}
+
+/* Brass rail replaces the flat inset edge: it grows in on the active item. */
+.nav-link::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 0;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--brass-500), var(--forest-600));
+  transform: translateY(-50%);
+  transition: height 0.18s ease;
+}
+
+.nav-link.is-active::before {
+  height: 17px;
+}
+
+.nav-link.is-active {
+  background: linear-gradient(90deg, var(--forest-50), rgba(238, 247, 242, 0.35));
+  box-shadow: none;
+}
+
+/* A brass dash gives each section label a focal left edge. */
+.sidebar-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-label::before {
+  content: "";
+  width: 13px;
+  height: 2px;
+  flex: none;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--brass-500), rgba(200, 150, 62, 0.12));
+}
+
+.nav-count {
+  box-shadow: inset 0 0 0 1px rgba(200, 150, 62, 0.16);
+}
+
+.side-project {
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.side-project:hover {
+  transform: translateX(2px);
+}
+
+.project-dot {
+  box-shadow: 0 0 0 3px rgba(15, 93, 70, 0.09);
+}
+
+.project-dot.tone-2 {
+  box-shadow: 0 0 0 3px rgba(200, 150, 62, 0.16);
+}
+
+.project-dot.tone-3 {
+  box-shadow: 0 0 0 3px rgba(62, 107, 138, 0.14);
+}
+
+.project-dot.tone-4 {
+  box-shadow: 0 0 0 3px rgba(169, 87, 60, 0.14);
+}
+
+.user-card {
+  transition: background 0.16s ease;
+}
+
+.user-card:hover {
+  background: linear-gradient(90deg, var(--sand-100), rgba(247, 244, 239, 0));
+}
+
+.sidebar .avatar {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(15, 93, 70, 0.12);
+}
+
+/* ---------- Topbar ---------- */
+
+.topbar {
+  background: linear-gradient(180deg, rgba(250, 248, 243, 0.94), rgba(247, 244, 239, 0.88));
+}
+
+/* Warm hairline instead of a flat divider — reads as a lit edge. */
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(200, 150, 62, 0.45) 24%,
+    rgba(15, 93, 70, 0.22) 68%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  box-shadow: 0 1px 1px rgba(16, 40, 32, 0.04), 0 14px 30px -26px rgba(20, 48, 38, 0.55);
+}
+
+.card-hover:hover {
+  box-shadow: 0 2px 4px rgba(16, 40, 32, 0.05), 0 26px 46px -28px rgba(20, 48, 38, 0.55);
+}
+
+/* A warm wash in the top-right corner keeps large white cards from going flat. */
+.kpi {
+  background-image: radial-gradient(
+    130% 100% at 100% 0%,
+    rgba(200, 150, 62, 0.08),
+    transparent 58%
+  );
+  box-shadow: 0 1px 1px rgba(16, 40, 32, 0.04), 0 16px 34px -28px rgba(20, 48, 38, 0.6);
+}
+
+/* The white sheen only makes sense on the light palette; in dark mode the
+   tile would read as a bright pill, so it is scoped to the light theme. */
+html:not([data-theme="dark"]) .kpi-icon {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
+  box-shadow: inset 0 0 0 1px rgba(15, 93, 70, 0.06);
+}
+
+/* ---------- Project cards ---------- */
+
+.project-card {
+  position: relative;
+  box-shadow: 0 1px 1px rgba(16, 40, 32, 0.04), 0 16px 34px -28px rgba(20, 48, 38, 0.6);
+}
+
+.project-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18px;
+  right: 18px;
+  height: 2px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, rgba(200, 150, 62, 0.9), rgba(200, 150, 62, 0.16) 52%, transparent);
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.project-card:hover::before,
+.project-card.is-active::before {
+  opacity: 1;
+}
+
+/* Health state drives the accent so scanning still works by colour. */
+.project-card.is-unhealthy::before {
+  background: linear-gradient(90deg, rgba(169, 87, 60, 0.9), rgba(169, 87, 60, 0.16) 52%, transparent);
+  opacity: 0.85;
+}
+
+.project-card:hover,
+.project-card.is-active {
+  box-shadow: 0 2px 4px rgba(16, 40, 32, 0.05), 0 28px 48px -30px rgba(20, 48, 38, 0.58);
+}
+
+/* The dashed "new project" tile stays quiet. */
+.project-card-new::before {
+  display: none;
+}
+
+/* ---------- Momentum ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-link,
+  .nav-link .icon,
+  .nav-link::before,
+  .side-project,
+  .project-card::before {
+    transition: none;
+  }
+
+  .side-project:hover {
+    transform: none;
   }
 }

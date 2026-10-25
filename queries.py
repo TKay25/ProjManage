@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 from db import query
+import health
 from stages import project_progress, stage_by_key
 
 
@@ -165,17 +166,42 @@ def projects_with_summary(projects):
         )
     }
 
+    # One extra query instead of one per row: what is blocked, and what is
+    # still missing proof, both feed the red/amber flag on each card.
+    flags = {
+        row["project_id"]: row
+        for row in query(
+            f"""SELECT p.id AS project_id,
+                     (SELECT COUNT(*) FROM stages s
+                       WHERE s.project_id = p.id AND s.status = 'blocked') AS blocked,
+                     (SELECT COUNT(*) FROM transactions t
+                       WHERE t.project_id = p.id AND t.type = 'EXPENSE'
+                         AND NOT EXISTS (
+                           SELECT 1 FROM attachments a WHERE a.transaction_id = t.id
+                         )) AS missing_receipts
+                FROM projects p WHERE p.id IN ({placeholders})""",
+            ids,
+        )
+    }
+
     summaries = []
     for project in projects:
         stages = stage_rows_by_project.get(project["id"], [])
         totals = totals_by_project.get(project["id"], {"funded": 0, "spent": 0})
         totals["balance"] = totals["funded"] - totals["spent"]
+        found = flags.get(project["id"], {})
         summaries.append(
             {
                 **project,
                 "totals": totals,
                 "stages": stages,
                 "progress": project_progress(stages),
+                "health": health.summary(
+                    project,
+                    totals,
+                    blocked_stages=int(found.get("blocked") or 0),
+                    missing_receipts=int(found.get("missing_receipts") or 0),
+                ),
             }
         )
     return summaries

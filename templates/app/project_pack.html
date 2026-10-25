@@ -62,7 +62,7 @@
     </dl>
 
     <section class="pack-section">
-      <h2>Build stages</h2>
+      <h2>{{ 'Work stages' if project and project.kind and project.kind != 'full_build' else 'Build stages' }}</h2>
       {% for group in grouped %}
         <div class="pack-group">
           <h3>{{ group.name }}</h3>

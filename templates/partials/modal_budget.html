@@ -3,7 +3,7 @@
     <header class="modal-head">
       <div>
         <p class="eyebrow">Budget</p>
-        <h2 id="modal-budget-title">Change the build budget</h2>
+        <h2 id="modal-budget-title">Change the {{ 'build ' if project.kind == 'full_build' else '' }}budget</h2>
         <p class="modal-sub">Stage allocations are recalculated from the same Zimbabwean weights.</p>
       </div>
       <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
