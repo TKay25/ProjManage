@@ -814,6 +814,21 @@ def run_migrations(connection):
         )
         connection.execute("PRAGMA user_version = 17")
 
+    if version < 18:
+        # Per-contact reply language for the WhatsApp assistant. English stays
+        # the default so nothing changes for anyone until they ask to switch.
+        # Guarded by a column check: this block must survive a re-run, which is
+        # what forces user_version back to 0 in the migration tests.
+        existing = {
+            row[1] for row in connection.execute("PRAGMA table_info(whatsapp_contacts)")
+        }
+        if "language" not in existing:
+            connection.execute(
+                "ALTER TABLE whatsapp_contacts "
+                "ADD COLUMN language TEXT NOT NULL DEFAULT 'en'"
+            )
+        connection.execute("PRAGMA user_version = 18")
+
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(

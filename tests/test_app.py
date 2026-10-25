@@ -4695,3 +4695,210 @@ class WhatsAppChannelReporting(unittest.TestCase):
         )
         self.assertEqual(body["whatsapp_missing"], [])
 
+
+
+class AssistantRolesAndLanguages(VakaTestCase):
+    """A build manager must not be greeted like a stranger, and a language
+    switch must change every later reply, not just the prompt."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        from db import execute, query
+
+        with cls.app.app_context():
+            manager = query("SELECT * FROM users WHERE role = 'manager' LIMIT 1", one=True)
+            client = query("SELECT * FROM users WHERE role = 'client' LIMIT 1", one=True)
+            execute("UPDATE users SET phone = ? WHERE id = ?", ("263771100001", manager["id"]))
+            execute("UPDATE users SET phone = ? WHERE id = ?", ("263771100002", client["id"]))
+            cls.manager_phone = "263771100001"
+            cls.client_phone = "263771100002"
+
+    def _say(self, phone, text):
+        from whatsapp import handle_inbound
+
+        with self.app.app_context():
+            return handle_inbound(phone, text, profile_name="Tester")
+
+    def test_manager_is_not_treated_as_a_stranger(self):
+        reply = self._say(self.manager_phone, "hi")
+        self.assertNotIn("not linked", reply["reply"])
+        self.assertIn("project(s) under you", reply["reply"])
+
+    def test_client_greeting_names_their_project(self):
+        reply = self._say(self.client_phone, "hi")
+        self.assertIn("Greendale Family Home", reply["reply"])
+
+    def test_unknown_number_gets_its_own_message(self):
+        reply = self._say("263779900123", "hi")
+        self.assertIn("not linked", reply["reply"])
+
+    def test_language_switch_changes_every_later_reply(self):
+        from whatsapp import handle_inbound
+
+        with self.app.app_context():
+            set_to_shona = handle_inbound(self.client_phone, "lang_sn")
+            self.assertEqual(set_to_shona["language"], "sn")
+
+            # A different intent, sent as a bare number, must also be Shona.
+            status = handle_inbound(self.client_phone, "2")
+            self.assertEqual(status["language"], "sn")
+            self.assertIn("Kufambira mberi", status["reply"])
+
+            junk = handle_inbound(self.client_phone, "zzzz")
+            self.assertIn("Handina", junk["reply"])
+
+            back = handle_inbound(self.client_phone, "lang_en")
+            self.assertEqual(back["language"], "en")
+            english = handle_inbound(self.client_phone, "2")
+            self.assertIn("Progress:", english["reply"])
+
+    def test_language_persists_on_the_contact_row(self):
+        from db import query
+
+        self._say(self.client_phone, "lang_nd")
+        with self.app.app_context():
+            row = query(
+                "SELECT language FROM whatsapp_contacts WHERE phone = ?",
+                (self.client_phone,),
+                one=True,
+            )
+        self.assertEqual(row["language"], "nd")
+        self._say(self.client_phone, "lang_en")
+
+    def test_shona_word_also_switches_language(self):
+        reply = self._say(self.client_phone, "mutauro")
+        self.assertEqual(reply["intent"], "language")
+        self._say(self.client_phone, "lang_en")
+
+    def test_manager_menu_lists_manager_actions_not_client_ones(self):
+        reply = self._say(self.manager_phone, "hi")
+        self.assertIn("My projects", reply["reply"])
+        self.assertIn("Needs attention", reply["reply"])
+        self.assertNotIn("Send a receipt", reply["reply"])
+
+    def test_tapped_button_id_is_understood_as_a_command(self):
+        # WhatsApp sends the button id, not the label.
+        reply = self._say(self.client_phone, "m_balance")
+        self.assertEqual(reply["intent"], "balance")
+        self.assertIn("Available:", reply["reply"])
+
+    def test_manager_can_post_an_update_by_message(self):
+        from db import query
+
+        with self.app.app_context():
+            project = query(
+                "SELECT code FROM projects WHERE manager_id IS NOT NULL LIMIT 1", one=True
+            )
+        reply = self._say(self.manager_phone, f"update {project['code']} Slab poured today")
+        self.assertIn("update posted", reply["reply"].lower())
+
+    def test_update_for_a_foreign_code_is_refused(self):
+        reply = self._say(self.manager_phone, "update YVK-9999 should not land")
+        self.assertIn("No project with that code", reply["reply"])
+
+
+class InteractiveMessages(VakaTestCase):
+    """Buttons and lists are what make the menu usable on a phone."""
+
+    def _app_with_credentials(self):
+        return create_app(
+            isolated_config(
+                DATABASE=str(Path(_TEMP_DIR) / "interactive.db"),
+                UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "interactive-uploads"),
+                SEED_DEMO=False,
+                DEMO_MODE=False,
+                WHATSAPP_TOKEN="token",
+                WHATSAPP_PHONE_NUMBER_ID="709678028897732",
+            )
+        )
+
+    def test_button_payload_shape(self):
+        from unittest import mock
+
+        import whatsapp
+
+        app = self._app_with_credentials()
+        captured = {}
+
+        def fake(to, content):
+            captured["content"] = content
+            return {"status": "sent"}
+
+        with app.app_context():
+            with mock.patch.object(whatsapp, "_send_whatsapp_payload", fake):
+                whatsapp.send_whatsapp_buttons(
+                    "263771234567", "Pick one", [("m_balance", "Balance")]
+                )
+
+        content = captured["content"]
+        self.assertEqual(content["type"], "interactive")
+        self.assertEqual(content["interactive"]["type"], "button")
+        button = content["interactive"]["action"]["buttons"][0]
+        self.assertEqual(button["reply"]["id"], "m_balance")
+        self.assertEqual(button["reply"]["title"], "Balance")
+
+    def test_meta_limits_are_enforced(self):
+        from unittest import mock
+
+        import whatsapp
+
+        app = self._app_with_credentials()
+        captured = {}
+
+        def fake(to, content):
+            captured["content"] = content
+            return {"status": "sent"}
+
+        rows = [(f"m_{index}", f"Option {index}" * 4) for index in range(14)]
+        with app.app_context():
+            with mock.patch.object(whatsapp, "_send_whatsapp_payload", fake):
+                whatsapp.send_whatsapp_list("263771234567", "Menu", "More options", rows)
+
+        section = captured["content"]["interactive"]["action"]["sections"][0]
+        # Meta rejects more than ten rows or a title longer than 24 characters.
+        self.assertEqual(len(section["rows"]), 10)
+        for row in section["rows"]:
+            self.assertLessEqual(len(row["title"]), 24)
+
+    def test_webhook_accepts_a_tapped_button(self):
+        from unittest import mock
+
+        import routes_whatsapp
+
+        app = self._app_with_credentials()
+        app.config.update(TESTING=True)
+        client = app.test_client()
+
+        with mock.patch.object(routes_whatsapp, "handle_inbound") as handled:
+            handled.return_value = {"reply": "ok"}
+            response = client.post(
+                "/api/whatsapp/webhook",
+                json={
+                    "entry": [
+                        {
+                            "changes": [
+                                {
+                                    "value": {
+                                        "contacts": [{"profile": {"name": "Tester"}}],
+                                        "messages": [
+                                            {
+                                                "from": "263771234567",
+                                                "type": "interactive",
+                                                "interactive": {
+                                                    "type": "button_reply",
+                                                    "button_reply": {"id": "m_status"},
+                                                },
+                                            }
+                                        ],
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        handled.assert_called_once()
+        self.assertEqual(handled.call_args.kwargs["body"], "m_status")

@@ -220,9 +220,18 @@ def webhook():
             profile_name = contacts[0].get("profile", {}).get("name", "") if contacts else ""
 
             for message in value.get("messages", []):
-                if message.get("type") != "text":
-                    continue
-                body = message.get("text", {}).get("body", "")
+                kind = message.get("type")
+                body = ""
+                if kind == "text":
+                    body = message.get("text", {}).get("body", "")
+                elif kind == "interactive":
+                    # A tapped reply button or list row carries an id, which the
+                    # assistant treats exactly like a typed command.
+                    interactive = message.get("interactive", {}) or {}
+                    body = (
+                        (interactive.get("button_reply") or {}).get("id", "")
+                        or (interactive.get("list_reply") or {}).get("id", "")
+                    )
                 if not body:
                     continue
                 handle_inbound(phone=message.get("from", ""), body=body, profile_name=profile_name)
