@@ -13,8 +13,24 @@ DEFAULT_LANGUAGE = "en"
 LANGUAGES = {"en": "English", "sn": "Shona", "nd": "Ndebele"}
 
 # Menu ids are stable machine values; titles are localised below.
-CLIENT_MENU = ("balance", "status", "projects", "receipt", "contact", "language")
-MANAGER_MENU = ("portfolio", "approvals", "update", "clients", "escalate", "language")
+CLIENT_MENU = (
+    "balance",
+    "status",
+    "documents",
+    "receipt",
+    "projects",
+    "contact",
+    "language",
+)
+MANAGER_MENU = (
+    "portfolio",
+    "approvals",
+    "update",
+    "clients",
+    "documents",
+    "escalate",
+    "language",
+)
 
 STRINGS = {
     # ---------- openings ----------
@@ -238,6 +254,26 @@ STRINGS = {
     "menu_update": {"en": "Post an update", "sn": "Tumira mashoko", "nd": "Thumela isaziso"},
     "menu_clients": {"en": "My clients", "sn": "Vatengi vangu", "nd": "Amaklayenti ami"},
     "menu_escalate": {"en": "Contact YaVaKa", "sn": "Bata YaVaKa", "nd": "Xhumana ne-YaVaKa"},
+    "menu_documents": {
+        "en": "My documents",
+        "sn": "Magwaro angu",
+        "nd": "Amadokhumenti ami",
+    },
+    "documents_heading": {
+        "en": "Your latest documents",
+        "sn": "Magwaro ako ekupedzisira",
+        "nd": "Amadokhumenti akho akamuva",
+    },
+    "documents_empty": {
+        "en": "No documents have been uploaded for this project yet.",
+        "sn": "Hapana magwaro akaiswa pachirongwa ichi.",
+        "nd": "Akukho madokhumenti afakwe kulo msebenzi.",
+    },
+    "documents_footer": {
+        "en": "These links work for 7 days. Reply DOCUMENTS any time to get them again.",
+        "sn": "Zvinongedzo izvi zvinoshanda mazuva 7. Pindura DOCUMENTS chero nguva.",
+        "nd": "Lezi zixhumanisi zisebenza izinsuku eziyi-7. Phendula DOCUMENTS noma nini.",
+    },
 }
 
 # Words that switch language, in all three languages plus the menu ids.

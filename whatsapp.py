@@ -235,8 +235,12 @@ def detect_intent(body: str):
         return "status", None
     if re.search(r"\b(project|projects|house|build|chirongwa|zvirongwa|umsebenzi)\b", text):
         return "projects", None
-    if re.search(r"\b(receipt|invoice|proof|upload|risiti|irisidi)\b", text):
+    if re.search(r"\b(receipt|proof|upload|risiti|irisidi)\b", text):
         return "receipt", None
+    if re.search(
+        r"\b(documents?|files?|download|invoices?|magwaro|amadokhumenti)\b", text
+    ):
+        return "documents", None
     if re.search(r"\b(clients|customers|vatengi|amaklayenti)\b", text):
         return "clients", None
     if re.search(r"\b(approvals|attention|blocked|zvinoda)\b", text):
@@ -449,6 +453,35 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
         return _menu(contact, role, language, opening, intent)
 
     # ---- client intents ----
+    if intent == "documents":
+        import downloads
+
+        if role == "manager" and contact["user_id"]:
+            project_ids = [item["id"] for item in managed_projects(contact["user_id"])]
+        else:
+            project_ids = [project["id"]] if project else []
+
+        rows = []
+        if project_ids:
+            placeholders = ",".join("?" for _ in project_ids)
+            rows = query(
+                f"""SELECT id, original_name, created_at FROM attachments
+                    WHERE project_id IN ({placeholders})
+                    ORDER BY created_at DESC, id DESC LIMIT 5""",
+                project_ids,
+            )
+        if not rows:
+            return _reply(contact, tr("documents_empty", language), intent, language)
+
+        lines = [f"*{tr('documents_heading', language)}*", ""]
+        for row in rows:
+            lines.append(f"- {row['original_name']}")
+            url = downloads.absolute_url(row["id"])
+            if url:
+                lines.append(url)
+        lines.extend(["", tr("documents_footer", language)])
+        return _reply(contact, "\n".join(lines), intent, language)
+
     if intent == "balance" and project:
         totals = query(
             """SELECT

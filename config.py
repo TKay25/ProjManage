@@ -133,6 +133,11 @@ class Config:
     MAILJET_API_KEY = os.environ.get("MAILJET_API_KEY", "")
     MAILJET_API_SECRET = os.environ.get("MAILJET_API_SECRET", "")
 
+    # Public origin used to build download links outside a request (queued
+    # notifications). Empty means "derive from the request", which is correct
+    # behind Render's proxy; set it if links must be built offline.
+    PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+
     # Shared token for the notification outbox scheduler. No default; the
     # endpoint remains closed until a deployment configures a secret.
     NOTIFICATIONS_TOKEN = os.environ.get("NOTIFICATIONS_TOKEN", "")

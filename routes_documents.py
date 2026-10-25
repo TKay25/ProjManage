@@ -152,12 +152,18 @@ def upload():
     )
 
     log_event(g.user["id"], project["id"], "document.uploaded", saved["original_name"])
+
+    # The notification carries a link, because a WhatsApp template cannot carry
+    # a file and the recipient may not have a login.
+    import downloads
+
     queue_manager_update(
         project["id"],
         g.user["id"],
         g.user["name"],
         "Project file uploaded",
         saved["original_name"],
+        link=downloads.absolute_url(attachment_id),
     )
 
     if web.wants_json():
@@ -215,6 +221,35 @@ def serve(attachment_id):
         mimetype=attachment["mime_type"],
         as_attachment=download,
         download_name=attachment["original_name"] if download else None,
+    )
+
+
+@bp.get("/d/<token>")
+def download(token):
+    """Tokenised download for links sent over WhatsApp.
+
+    Deliberately not @login_required: a client may have no YaVaKa account. The
+    HMAC in the token is what authorises the read, and it expires.
+    """
+    import downloads
+
+    attachment_id = downloads.verify(token)
+    if not attachment_id:
+        abort(404)
+
+    attachment = query(
+        "SELECT * FROM attachments WHERE id = ?", (attachment_id,), one=True
+    )
+    if not attachment:
+        abort(404)
+
+    directory = Path(current_app.config["UPLOAD_FOLDER"])
+    return send_from_directory(
+        directory,
+        attachment["filename"],
+        mimetype=attachment["mime_type"],
+        as_attachment=True,
+        download_name=attachment["original_name"],
     )
 
 

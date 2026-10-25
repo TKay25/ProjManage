@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -4902,3 +4903,113 @@ class InteractiveMessages(VakaTestCase):
         self.assertEqual(response.status_code, 200)
         handled.assert_called_once()
         self.assertEqual(handled.call_args.kwargs["body"], "m_status")
+
+
+class DocumentDownloads(VakaTestCase):
+    """Documents must be reachable from a WhatsApp message, without a login."""
+
+    def _attachment(self):
+        from pathlib import Path as _Path
+
+        from db import execute, new_id, now_iso, query
+
+        with self.app.app_context():
+            project = query("SELECT * FROM projects LIMIT 1", one=True)
+            owner = query("SELECT * FROM users WHERE id = ?", (project["owner_id"],), one=True)
+            attachment_id = f"att_dl_{new_id()[:8]}"
+            filename = f"download-fixture-{attachment_id}.pdf"
+            # The route streams from disk, so the file has to exist too.
+            directory = _Path(self.app.config["UPLOAD_FOLDER"])
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / filename).write_bytes(b"%PDF-1.4 fixture")
+            execute(
+                """INSERT INTO attachments
+                     (id, project_id, uploader_id, kind, filename, original_name,
+                      mime_type, size, stage_key, created_at)
+                   VALUES (?, ?, ?, 'receipt', ?, ?, 'application/pdf', 15, NULL, ?)""",
+                (
+                    attachment_id,
+                    project["id"],
+                    owner["id"],
+                    filename,
+                    "Supplier invoice.pdf",
+                    now_iso(),
+                ),
+            )
+        return attachment_id
+
+    def test_signed_link_downloads_without_a_session(self):
+        import downloads
+
+        attachment_id = self._attachment()
+        with self.app.app_context():
+            token = downloads.token_for(attachment_id)
+
+        response = self.app.test_client().get(f"/d/{token}")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment", response.headers.get("Content-Disposition", ""))
+        response.close()
+
+    def test_tampered_token_is_refused(self):
+        import downloads
+
+        attachment_id = self._attachment()
+        with self.app.app_context():
+            token = downloads.token_for(attachment_id)
+        forged = token[:-1] + ("0" if token[-1] != "0" else "1")
+
+        self.assertEqual(self.app.test_client().get(f"/d/{forged}").status_code, 404)
+
+    def test_expired_token_is_refused(self):
+        from unittest import mock
+
+        import downloads
+
+        attachment_id = self._attachment()
+        with self.app.app_context():
+            token = downloads.token_for(attachment_id)
+            # Jump forward past the seven-day window rather than trusting a
+            # negative ttl, which the helper clamps to one day.
+            with mock.patch.object(downloads.time, "time", return_value=time.time() + 8 * 86400):
+                self.assertIsNone(downloads.verify(token))
+
+    def test_verify_rejects_rubbish(self):
+        import downloads
+
+        for token in ("", "abc", "a.b", "a.b.c.d"):
+            with self.subTest(token=token):
+                self.assertIsNone(downloads.verify(token))
+
+    def test_documents_command_returns_download_links(self):
+        from whatsapp import handle_inbound
+
+        attachment_id = self._attachment()
+        with self.app.app_context():
+            with self.app.test_request_context(
+                "/api/whatsapp/webhook", base_url="https://yavaka.onrender.com"
+            ):
+                reply = handle_inbound("263771234567", "DOCUMENTS")
+
+        self.assertIn("/d/", reply["reply"])
+        self.assertIn("https://yavaka.onrender.com/d/", reply["reply"])
+
+    def test_upload_notification_carries_the_link(self):
+        from unittest import mock
+
+        import notifications
+
+        attachment_id = self._attachment()
+        with self.app.app_context():
+            with self.app.test_request_context(base_url="https://yavaka.onrender.com"):
+                with mock.patch.object(notifications, "schedule_dispatch"):
+                    notifications.queue_manager_update(
+                        "x", "y", "Manager", "Project file uploaded", "invoice.pdf",
+                        link=f"https://yavaka.onrender.com/d/{attachment_id}",
+                    )
+
+            row = notifications.query(
+                "SELECT body FROM notification_outbox ORDER BY created_at DESC LIMIT 1",
+                one=True,
+            )
+        if row:
+            self.assertIn("Download:", row["body"])

@@ -387,7 +387,7 @@ def send_email_async(recipient: str, subject: str, body: str) -> bool:
     return True
 
 
-def queue_manager_update(project_id, manager_id, manager_name, headline, detail) -> int:
+def queue_manager_update(project_id, manager_id, manager_name, headline, detail, link=None) -> int:
     """Queue an update only when it was posted by this project's assigned manager."""
     project = query(
         """SELECT p.id, p.name, p.code, p.manager_id,
@@ -440,6 +440,10 @@ def queue_manager_update(project_id, manager_id, manager_name, headline, detail)
         f"Build progress: {progress}%\n"
         f"Available balance: {format_money(balance)}"
     )
+    # A download link rides in the body: templates cannot carry a file, and the
+    # recipient may have no login for the web app.
+    if link:
+        body = f"{body}\n\nDownload: {link}"
     subject = f"YaVaKa update: {project['name']}"
     event_key = new_id()
     timestamp = now_iso()
