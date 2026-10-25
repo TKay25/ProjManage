@@ -31,3 +31,7 @@ artifacts/
 desktop/node_modules/
 desktop/dist/
 desktop/resources/server/
+
+# The poster PNGs are committed, so the regenerable bundle stays out of git.
+static/posters/*.zip
+poster-render.log

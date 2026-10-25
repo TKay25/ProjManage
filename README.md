@@ -144,6 +144,22 @@ then the shell expects Python on the machine. Auto-update stays dormant until
 python -m unittest discover -s tests -v
 ```
 
+### Marketing posters
+
+The poster set is generated, not drawn by hand: fifty 1080×1350 layouts built
+from one design system, written as SVG and rendered to PNG.
+
+```powershell
+python tools/make_posters.py         # writes the SVG sources
+python tools/make_poster_pngs.py     # renders static/posters/*.png + a zip
+python tools/make_poster_pngs.py --scale 2   # 2160×2700 for print
+```
+
+PNG rendering needs Chrome, Chromium or Edge installed — a browser is the only
+renderer that draws the poster fonts and filters exactly as the site does. Both
+formats are committed, so a poster can be posted straight from
+`/static/posters/` without rebuilding anything.
+
 ---
 
 ## Project layout

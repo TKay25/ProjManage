@@ -3973,6 +3973,115 @@ class ColourContrast(VakaTestCase):
         hi, lo = sorted([self._lum(a), self._lum(b)], reverse=True)
         return (hi + 0.05) / (lo + 0.05)
 
+    def _theme_tokens(self, selector):
+        """Every custom property declared inside one theme block, plus the
+        dark overrides layered on top of it."""
+        import re
+
+        css = Path("static/css/theme.css").read_text(encoding="utf-8")
+        tokens = {}
+        # Walk the file once, tracking the innermost at-rule-ish selector so a
+        # later block (the landing page override) wins over the base theme.
+        for block in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+            head, body = block.group(1), block.group(2)
+            if selector not in head:
+                continue
+            for name, value in re.findall(r"(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{6})", body):
+                tokens[name] = value
+        return tokens
+
+    def test_a_soft_panel_never_carries_ink_that_matches_it(self):
+        """Dark mode must not paint dark ink onto a dark panel.
+
+        The callout, the notices and the active states all sit on a
+        `--forest-50/100` slab. In light mode those slabs are pale and the ink
+        is a deep forest; in dark mode both flip, which silently produced 1:1
+        text. This pins the pairs that carry text.
+        """
+        import re
+
+        dark = self._theme_tokens('[data-theme="dark"]')
+        self.assertTrue(dark, "expected the dark theme tokens")
+
+        light_css = Path("static/css/app.css").read_text(encoding="utf-8")
+        light = dict(re.findall(r"(--[a-z0-9-]+):\\s*(#[0-9a-fA-F]{6})", light_css))
+
+        def resolved(name):
+            return dark.get(name) or light.get(name)
+
+        # Soft slab -> the ink each one is read with in the dark theme.
+        pairs = [
+            ("--forest-50", "--ink"),
+            ("--forest-100", "--ink"),
+            ("--success-soft", "--forest-200"),
+        ]
+        for surface, ink in pairs:
+            background, foreground = resolved(surface), resolved(ink)
+            if not (background and foreground):
+                continue
+            with self.subTest(surface=surface, ink=ink):
+                self.assertGreaterEqual(
+                    self._ratio(background, foreground),
+                    4.5,
+                    f"{ink} on {surface} is unreadable in dark mode",
+                )
+
+    def test_dark_mode_overrides_the_ink_on_soft_panels(self):
+        """Every component that sits on a soft slab is re-inked for dark mode.
+
+        Dropping one of these selectors is exactly the bug that made the
+        WhatsApp callout and the two landing buttons unreadable: the slab went
+        dark and the ink stayed dark with it.
+        """
+        css = Path("static/css/theme.css").read_text(encoding="utf-8")
+        dark_rules = [
+            block
+            for block in css.split("}")
+            if 'data-theme="dark"' in block
+        ]
+        scoped = "\n".join(dark_rules)
+
+        for selector in (
+            ".callout",
+            ".all-clear",
+            ".notice-info",
+            ".side-note",
+            ".wa-quick-btn",
+            ".nav-link:hover",
+            ".btn-light",
+        ):
+            with self.subTest(selector=selector):
+                self.assertIn(
+                    selector,
+                    scoped,
+                    f"{selector} keeps its light-mode ink in dark mode",
+                )
+
+        # The light button is light on the bright site and dark in the app, so
+        # its ink has to be scoped to the shell that made it dark.
+        self.assertIn('body.app .btn-light', scoped)
+        self.assertIn('body:not(.app) .btn-light', scoped)
+
+    def test_the_landing_page_keeps_pale_panels_in_dark_mode(self):
+        """The bright site is bright in both themes, so its panels stay pale."""
+        import re
+
+        css = Path("static/css/theme.css").read_text(encoding="utf-8")
+        block = re.search(
+            r'\[data-theme="dark"\]\s+body:not\(\.app\)\s*\{([^}]*)\}', css
+        )
+        self.assertIsNotNone(block, "the landing dark block is missing")
+        body = block.group(1)
+
+        # A pale panel needs its pale fill restored, or the callout is a dark
+        # slab under dark ink.
+        for token in ("--forest-50", "--ink"):
+            with self.subTest(token=token):
+                self.assertIn(token, body)
+
+        # And the solid light button must carry dark ink, not the app's white.
+        self.assertIn('body:not(.app) .btn-light', css)
+
     def test_muted_text_clears_aa_on_every_light_surface(self):
         tokens = {
             k: v for k, v in self.light.items() if k in ("--ink-soft", "--ink-faint")
@@ -5694,6 +5803,15 @@ class PosterBrand(VakaTestCase):
         for path in rendered:
             with self.subTest(poster=path.name):
                 self.assertIn("yavaka.onrender.com", path.read_text(encoding="utf-8"))
+
+        # Every poster also ships as a PNG, because that is what a phone and a
+        # social platform actually accept.
+        images = sorted(Path("static/posters").glob("yavaka-*.png"))
+        self.assertEqual(len(images), 50)
+        for image in images:
+            with self.subTest(png=image.name):
+                self.assertGreater(image.stat().st_size, 20_000)
+                self.assertEqual(image.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
 
     def test_every_layout_draws_and_its_required_keys_are_present(self):
         import sys

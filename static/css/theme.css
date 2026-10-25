@@ -220,8 +220,8 @@
 
 /* Filled controls keep light text on the forest fill. */
 [data-theme="dark"] .btn-primary,
-[data-theme="dark"] .btn-light,
-[data-theme="dark"] .btn-light:hover,
+[data-theme="dark"] body.app .btn-light,
+[data-theme="dark"] body.app .btn-light:hover,
 [data-theme="dark"] .segment.is-active,
 [data-theme="dark"] .nav-link.is-active {
   color: #eaf6f0;
@@ -284,6 +284,12 @@
   --ink-faint: #5c6862;
   --line: rgba(15, 93, 70, 0.12);
   --line-strong: rgba(15, 93, 70, 0.22);
+  /* The bright site never shows a dark panel, so its soft greens stay pale.
+     Without this a callout is a dark slab carrying dark ink. The deepest
+     greens still read as dark, so the vision card is unaffected. */
+  --forest-50: #eef7f2;
+  --forest-100: #d9ece3;
+  --forest-900: #0a3327;
   color-scheme: light;
 }
 
@@ -582,4 +588,74 @@ dialog.modal--auth-register {
   .side-note {
     border-width: 2px;
   }
+}
+
+/* ---------- Ink on soft panels ----------
+
+   Every "soft" surface (a pale tint in light mode) stays a dark slab in this
+   theme. Ink that was a dark forest - -forest-700 through -900 - therefore
+   lands dark-on-dark and disappears. These are the pairs that carry text, a
+   count or a glyph, so each one has to follow its surface up. */
+
+[data-theme="dark"] .callout,
+[data-theme="dark"] .all-clear,
+[data-theme="dark"] .notice-info,
+[data-theme="dark"] .side-note,
+[data-theme="dark"] .status-choice input:checked + span,
+[data-theme="dark"] .wa-quick-btn {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .callout .icon,
+[data-theme="dark"] .side-note .icon,
+[data-theme="dark"] .notice-info .icon {
+  color: var(--brass-600);
+}
+
+/* On the bright site the callout is a pale panel again, so the glyph needs the
+   darker brass it uses in light mode. */
+[data-theme="dark"] body:not(.app) .callout .icon,
+[data-theme="dark"] body:not(.app) .side-note .icon {
+  color: #a97b2f;
+}
+
+[data-theme="dark"] .badge-soft,
+[data-theme="dark"] .badge-success,
+[data-theme="dark"] .health-flag--success,
+[data-theme="dark"] .nav-count--live {
+  color: var(--forest-200);
+}
+
+[data-theme="dark"] .feature-icon,
+[data-theme="dark"] .agreement-icon,
+[data-theme="dark"] .project-new-icon,
+[data-theme="dark"] .float-avatar,
+[data-theme="dark"] .checklist-item.is-done .checklist-mark,
+[data-theme="dark"] .kpi-icon-positive,
+[data-theme="dark"] .ledger-in,
+[data-theme="dark"] .tx-in,
+[data-theme="dark"] .update-icon--success {
+  color: var(--forest-300);
+}
+
+/* A hover that darkens the row also darkened the label, so the link vanished
+   under the pointer. The row keeps its tint; the text stays legible. */
+[data-theme="dark"] .nav-link:hover,
+[data-theme="dark"] .side-project:hover,
+[data-theme="dark"] .pager-page:hover,
+[data-theme="dark"] .onboarding-details > summary:hover,
+[data-theme="dark"] .btn-outline:hover {
+  color: var(--ink);
+}
+
+/* The landing page keeps a light canvas here, so a solid light button needs
+   dark ink - the app-level override above assumes a dark button. */
+[data-theme="dark"] body:not(.app) .btn-light {
+  background: var(--sand-50);
+  color: #0a3327;
+}
+
+[data-theme="dark"] body:not(.app) .btn-light:hover {
+  background: #fff;
+  color: #04120d;
 }
