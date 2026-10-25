@@ -55,7 +55,7 @@
             <input type="file" name="file" accept="{{ upload_accept }}" required data-drop-input data-modal-autofocus />
             <span class="dropzone-icon">{{ icon('upload', 24) }}</span>
             <span class="dropzone-title" data-drop-title>Drop a file or tap to browse</span>
-            <span class="dropzone-hint">JPG, PNG, WebP or PDF · up to 8MB</span>
+            <span class="dropzone-hint">PDF, images, audio, video, Office files · up to {{ upload_limit_mb }}MB</span>
           </label>
         </div>
       </div>
