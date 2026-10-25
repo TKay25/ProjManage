@@ -5853,3 +5853,202 @@ table {
     transition: none;
   }
 }
+
+/* ============================================================
+   Design system v2 — typography, elevation, interaction.
+   Pure CSS: no extra requests, nothing animated that costs layout.
+   ============================================================ */
+
+/* ---------- Type: let the browser balance headlines ---------- */
+
+h1,
+h2,
+h3,
+.hero-title,
+.final-card h2,
+.about-card h3 {
+  text-wrap: balance;
+}
+
+p,
+li,
+.section-sub,
+.card-sub {
+  text-wrap: pretty;
+}
+
+body {
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+}
+
+/* Money and counts must line up in columns, always. */
+.kpi-value,
+.money,
+.amount,
+.stat-value,
+td.align-right,
+.table .align-right,
+.admin-table .align-right {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ---------- Selection and scrollbars ---------- */
+
+::selection {
+  background: rgba(200, 150, 62, 0.3);
+  color: inherit;
+}
+
+.sidebar,
+.admin-table-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 93, 70, 0.22) transparent;
+}
+
+.sidebar::-webkit-scrollbar,
+.admin-table-wrap::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.sidebar::-webkit-scrollbar-thumb,
+.admin-table-wrap::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: rgba(15, 93, 70, 0.2);
+}
+
+/* ---------- One brass focus ring, everywhere ---------- */
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--brass-600);
+  outline-offset: 2px;
+  border-radius: 7px;
+}
+
+/* Dark bands need a lighter ring to stay visible. */
+.site-footer :where(a, button):focus-visible,
+.final-card :where(a, button):focus-visible,
+.about-card--vision :where(a, button):focus-visible {
+  outline-color: var(--brass-300);
+}
+
+/* ---------- Interaction: every pressable element answers the press ---------- */
+
+.btn,
+.icon-btn,
+.nav-link,
+.side-project,
+.project-card,
+.card-hover,
+.segmented a,
+.tab {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active,
+.icon-btn:active {
+  transform: translateY(1px) scale(0.995);
+}
+
+.project-card:active,
+.card-hover:active {
+  transform: translateY(0) scale(0.998);
+}
+
+/* ---------- Tables: readable while scrolling, aligned like a ledger ---------- */
+
+.table thead th,
+.admin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fbfaf6;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.table tbody tr,
+.admin-table tbody tr {
+  transition: background 0.14s ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(15, 93, 70, 0.035);
+}
+
+/* A long description column can never push the table wider than its card. */
+.table td,
+.admin-table td {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Empty states read as designed, not broken ---------- */
+
+.empty-state,
+.sidebar-empty {
+  color: var(--ink-soft);
+}
+
+.empty-state {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 26px 4px;
+}
+
+.empty-state h3 {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--forest-950);
+}
+
+/* ---------- Accessibility preferences, for free ---------- */
+
+@media (prefers-contrast: more) {
+  .card,
+  .kpi,
+  .project-card {
+    border-color: rgba(15, 93, 70, 0.34);
+  }
+
+  .nav-link {
+    color: var(--forest-900);
+  }
+}
+
+@media (forced-colors: active) {
+  /* Let the OS draw the affordances; drop decorative tints that vanish. */
+  .kpi,
+  .card,
+  .project-card,
+  .btn {
+    border: 1px solid ButtonBorder;
+  }
+
+  .health-flag,
+  .nav-count,
+  .chip-count {
+    forced-color-adjust: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table tbody tr,
+  .admin-table tbody tr,
+  .btn,
+  .icon-btn,
+  .project-card,
+  .card-hover {
+    transition: none;
+  }
+
+  .btn:active,
+  .icon-btn:active,
+  .project-card:active,
+  .card-hover:active {
+    transform: none;
+  }
+}

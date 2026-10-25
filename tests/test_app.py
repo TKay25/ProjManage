@@ -5331,3 +5331,43 @@ class PosterBrand(VakaTestCase):
         ):
             with self.subTest(slug=required):
                 self.assertIn(required, slugs)
+
+
+class DesignSystemPolish(VakaTestCase):
+    """The refinements that make the UI feel finished are pinned down here."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.css = Path("static/css/portal.css").read_text(encoding="utf-8")
+
+    def test_headlines_are_balanced_and_paragraphs_pretty(self):
+        self.assertIn("text-wrap: balance", self.css)
+        self.assertIn("text-wrap: pretty", self.css)
+
+    def test_one_brand_focus_ring_for_every_control(self):
+        # :where() keeps specificity at zero, so component rules still win.
+        self.assertIn(":where(a, button, input, select, textarea, summary, [tabindex]):focus-visible", self.css)
+        self.assertIn("outline-color: var(--brass-300)", self.css)
+
+    def test_numbers_are_tabular_so_columns_line_up(self):
+        self.assertIn("font-variant-numeric: tabular-nums lining-nums", self.css)
+
+    def test_accessibility_preferences_are_respected(self):
+        for query in ("prefers-contrast: more", "forced-colors: active", "prefers-reduced-motion: reduce"):
+            with self.subTest(query=query):
+                self.assertIn(query, self.css)
+
+    def test_table_headers_stick_and_rows_hover(self):
+        self.assertIn("thead th", self.css)
+        self.assertIn("position: sticky", self.css)
+        self.assertIn(".table tbody tr:hover", self.css)
+
+    def test_no_layout_property_is_transitioned(self):
+        # Guards the "nothing heavy" rule: only paint/composite properties.
+        block = self.css[self.css.index("Design system v2"):]
+        for rule in re.findall(r"transition:\s*([^;]+);", block):
+            lowered = rule.lower()
+            for banned in ("width ", "height ", "margin", "padding", "top ", "left "):
+                with self.subTest(rule=rule.strip(), banned=banned):
+                    self.assertNotIn(banned, lowered)
