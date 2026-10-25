@@ -31,12 +31,11 @@ def _mask(value: str) -> str:
 # the socket instead. Naming the cause saves a lot of guessing.
 HINTS = {
     "535": (
-        "The provider rejected the username/password. For Gmail this almost "
-        "always means you used your normal password: create an App Password "
-        "at https://myaccount.google.com/apppasswords (2-Step Verification "
-        "must be on) and paste all 16 characters with no spaces."
+        "The provider rejected the username/password. Many providers need an "
+        "app-specific password here rather than your account password - check "
+        "the provider's SMTP documentation."
     ),
-    "534": "The provider wants a stronger login method - use an App Password.",
+    "534": "The provider wants a stronger login method - use an app password.",
     "530": "Authentication is required before sending. Check SMTP_USERNAME.",
     "550": (
         "The From address was refused. The sender must be the address you "
@@ -60,6 +59,25 @@ HINTS = {
     ),
 }
 
+# The same code means different things per provider, so name the fix precisely.
+HOST_HINTS = {
+    "brevo.com": (
+        "Brevo rejected the login. Use the SMTP key from Brevo "
+        "(SMTP & API -> SMTP tab), not your Brevo account password. The login "
+        "is the generated xxxx@smtp-brevo.com address, and the key is shown "
+        "once. Also check EMAIL_FROM is a sender verified in Brevo - the "
+        "smtp-brevo.com login itself is not a valid From address."
+    ),
+    "gmail.com": (
+        "Gmail rejected the login. Your normal Google password will not work: "
+        "create an App Password at https://myaccount.google.com/apppasswords "
+        "(2-Step Verification must be on) and paste all 16 characters with no "
+        "spaces."
+    ),
+    "sendgrid.net": "SendGrid needs an API key as the SMTP password, not your account password.",
+    "mailjet.com": "Mailjet needs the SMTP token from your API key page, not your login password.",
+}
+
 API_HINTS = {
     "401": (
         "The API key was rejected. Copy it again from the provider dashboard "
@@ -78,7 +96,7 @@ API_HINTS = {
 HINTS["smtpauthenticationerror"] = HINTS["535"]
 
 
-def explain(error: str) -> str:
+def explain(error: str, host: str = "") -> str:
     lowered = error.lower()
     for needle, hint in API_HINTS.items():
         # API errors are reported as "<code> <body>", so match the leading code.
@@ -86,6 +104,10 @@ def explain(error: str) -> str:
             return hint
     for needle, hint in HINTS.items():
         if needle in lowered:
+            # A provider-specific instruction beats a generic one.
+            for domain, specific in HOST_HINTS.items():
+                if domain in (host or "").lower():
+                    return specific
             return hint
     if "name or service not known" in lowered or "getaddrinfo" in lowered:
         return "SMTP_HOST could not be resolved - check the spelling."
@@ -183,7 +205,7 @@ def main(argv=None) -> int:
         return 0
 
     error = result.get("error", "unknown error")
-    print(f"Failed: {error}\n{explain(error)}")
+    print(f"Failed: {error}\n{explain(error, config.get('SMTP_HOST') or '')}")
     return 1
 
 

@@ -3944,7 +3944,7 @@ class EmailDiagnostics(unittest.TestCase):
     def test_bad_login_points_at_app_passwords(self):
         from tools.check_email import explain
 
-        hint = explain("(535, b'5.7.8 Username and Password not accepted')")
+        hint = explain("(535, b'5.7.8 Username and Password not accepted')", "smtp.gmail.com")
         self.assertIn("App Password", hint)
 
     def test_from_address_rejection_explains_the_alias_rule(self):
@@ -3970,6 +3970,29 @@ class EmailDiagnostics(unittest.TestCase):
         self.assertIn("sender", explain("403 domain not verified").lower())
         self.assertIn("quota", explain("429 too many requests").lower())
 
+
+    def test_brevo_relay_login_failure_names_the_smtp_key(self):
+        # A 535 from the Brevo relay is not a Gmail App Password problem.
+        from tools.check_email import explain
+
+        hint = explain(
+            "(535, b'5.7.8 Authentication failed')", "smtp-relay.brevo.com"
+        )
+        self.assertIn("SMTP key", hint)
+        self.assertNotIn("App Password", hint)
+
+    def test_gmail_login_failure_points_at_app_passwords(self):
+        from tools.check_email import explain
+
+        hint = explain("(535, b'5.7.8 bad credentials')", "smtp.gmail.com")
+        self.assertIn("App Password", hint)
+
+    def test_unknown_host_gets_the_generic_login_hint(self):
+        from tools.check_email import explain
+
+        hint = explain("(535, b'no')", "mail.example.org")
+        self.assertIn("provider", hint.lower())
+        self.assertNotIn("Brevo", hint)
 
 class EmailApiProviders(unittest.TestCase):
     """Email must also work where outbound SMTP is blocked (Render Free)."""
@@ -4398,4 +4421,175 @@ class EphemeralDataWarning(unittest.TestCase):
             with self.subTest(key=key):
                 with mock.patch.dict(os.environ, {key: "1"}, clear=False):
                     self.assertTrue(_ephemeral_host())
+class EmailChannelReporting(unittest.TestCase):
+    """A misconfigured mail path must be visible, not discovered by a client."""
+
+    def _health(self, **overrides):
+        config = isolated_config(
+            DATABASE=str(Path(_TEMP_DIR) / f"chan-{len(overrides)}-{id(overrides)}.db"),
+            UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "chan-uploads"),
+            SEED_DEMO=False,
+            DEMO_MODE=False,
+            **overrides,
+        )
+        return create_app(config).test_client().get("/health").get_json()
+
+    def test_nothing_configured_reports_none(self):
+        body = self._health(
+            SMTP_HOST="", BREVO_API_KEY="", MAILJET_API_KEY="",
+            RESEND_API_KEY="", SENDGRID_API_KEY="",
+        )
+        self.assertEqual(body["email"], "none")
+
+    def test_api_key_is_named(self):
+        body = self._health(
+            SMTP_HOST="", BREVO_API_KEY="xkeysib-test", MAILJET_API_KEY="",
+            RESEND_API_KEY="", SENDGRID_API_KEY="",
+        )
+        self.assertEqual(body["email"], "brevo-api")
+
+    def test_smtp_is_reported_as_smtp(self):
+        body = self._health(
+            SMTP_HOST="smtp-relay.brevo.com", SMTP_USERNAME="a@smtp-brevo.com",
+            BREVO_API_KEY="", MAILJET_API_KEY="", RESEND_API_KEY="",
+            SENDGRID_API_KEY="",
+        )
+        self.assertEqual(body["email"], "smtp")
+
+    def test_render_blocks_smtp_so_a_warning_is_logged(self):
+        from unittest import mock
+
+        import app as app_module
+
+        class Relay(Config):
+            TESTING = True
+            DATABASE_URL = ""
+            SEED_DEMO = False
+            DEMO_MODE = False
+            DATABASE = str(Path(_TEMP_DIR) / "smtp-render.db")
+            UPLOAD_FOLDER = str(Path(_TEMP_DIR) / "smtp-render-uploads")
+            SMTP_HOST = "smtp-relay.brevo.com"
+            SMTP_PORT = 587
+            SMTP_USERNAME = "bfe097001@smtp-brevo.com"
+            BREVO_API_KEY = ""
+            MAILJET_API_KEY = ""
+            RESEND_API_KEY = ""
+            SENDGRID_API_KEY = ""
+
+        with mock.patch.dict(os.environ, {"RENDER": "true"}, clear=False):
+            with self.assertLogs("app", level="WARNING") as logs:
+                app_module.create_app(Relay)
+
+        combined = " ".join(logs.output)
+        self.assertIn("EMAIL WILL FAIL", combined)
+        self.assertIn("587", combined)
+
+    def test_an_api_key_silences_the_smtp_warning(self):
+        from unittest import mock
+
+        import app as app_module
+
+        class Both(Config):
+            TESTING = True
+            DATABASE_URL = ""
+            SEED_DEMO = False
+            DEMO_MODE = False
+            DATABASE = str(Path(_TEMP_DIR) / "smtp-and-api.db")
+            UPLOAD_FOLDER = str(Path(_TEMP_DIR) / "smtp-and-api-uploads")
+            SMTP_HOST = "smtp-relay.brevo.com"
+            BREVO_API_KEY = "xkeysib-test"
+
+        with mock.patch.dict(os.environ, {"RENDER": "true"}, clear=False):
+            with self.assertLogs("app", level="WARNING") as logs:
+                app_module.create_app(Both)
+
+        self.assertNotIn("EMAIL WILL FAIL", " ".join(logs.output))
+
+
+
+
+
+
+
+class PlaceholderCredentialGuard(unittest.TestCase):
+    """Pasted template text must be called out, not silently rejected by Brevo."""
+
+    def _app(self, **overrides):
+        base = dict(
+            DATABASE=str(Path(_TEMP_DIR) / f"guard-{id(overrides)}.db"),
+            UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "guard-uploads"),
+            SEED_DEMO=False,
+            DEMO_MODE=False,
+        )
+        base.update(overrides)
+        return create_app(isolated_config(**base))
+
+    def test_literal_placeholder_key_warns(self):
+        with self.assertLogs("app", level="WARNING") as logs:
+            self._app(BREVO_API_KEY="xkeysib-...", SMTP_FROM_EMAIL="a@b.co.zw")
+        self.assertIn("EMAIL CREDENTIALS LOOK WRONG", " ".join(logs.output))
+
+    def test_placeholder_from_address_warns(self):
+        with self.assertLogs("app", level="WARNING") as logs:
+            self._app(
+                BREVO_API_KEY="",
+                SMTP_FROM_EMAIL="YaVaKa <you@verified-address>",
+            )
+        self.assertIn("EMAIL_FROM", " ".join(logs.output))
+
+    def test_wrong_prefix_warns(self):
+        # A Brevo key pasted without its prefix is a different secret entirely.
+        with self.assertLogs("app", level="WARNING") as logs:
+            self._app(
+                BREVO_API_KEY="abcdefghijklmnopqrstuvwxyz0123456789",
+                SMTP_FROM_EMAIL="a@b.co.zw",
+            )
+        self.assertIn("BREVO_API_KEY", " ".join(logs.output))
+
+    def test_a_realistic_key_does_not_warn(self):
+        import logging
+
+        realistic = "xkeysib-" + "a1b2c3d4" * 8 + "-Kq7Zx9" + "p2Lm4N"
+        records = []
+        handler = logging.Handler()
+        handler.emit = records.append
+        logger = logging.getLogger("app")
+        logger.addHandler(handler)
+        try:
+            self._app(BREVO_API_KEY=realistic, SMTP_FROM_EMAIL="builds@yavaka.co.zw")
+        finally:
+            logger.removeHandler(handler)
+
+        warnings = [r.getMessage() for r in records if r.levelno >= logging.WARNING]
+        self.assertFalse(
+            [w for w in warnings if "EMAIL CREDENTIALS LOOK WRONG" in w],
+            warnings,
+        )
+
+    def test_display_name_only_from_address_warns(self):
+        # `EMAIL_FROM=YaVaKa` looks fine in a dashboard and is not an address.
+        with self.assertLogs("app", level="WARNING") as logs:
+            self._app(BREVO_API_KEY="", SMTP_FROM_EMAIL="YaVaKa")
+        combined = " ".join(logs.output)
+        self.assertIn("EMAIL CREDENTIALS LOOK WRONG", combined)
+        self.assertIn("no email address", combined)
+
+    def test_bare_address_is_accepted_without_warning(self):
+        import logging
+
+        records = []
+        handler = logging.Handler()
+        handler.emit = records.append
+        logger = logging.getLogger("app")
+        logger.addHandler(handler)
+        try:
+            self._app(BREVO_API_KEY="", SMTP_FROM_EMAIL="builds@yavaka.co.zw")
+        finally:
+            logger.removeHandler(handler)
+
+        self.assertFalse(
+            [r for r in records if "EMAIL CREDENTIALS" in r.getMessage()],
+            [r.getMessage() for r in records],
+        )
+
 

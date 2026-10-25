@@ -63,6 +63,31 @@ NAV_ITEMS = [
 ]
 
 
+# Platforms whose filesystem is discarded on deploy. Render additionally drops
+# outbound SMTP on its Free plan.
+HOSTED_PLATFORMS = {
+    "RENDER": "Render",
+    "DYNO": "Heroku",
+    "FLY_APP_NAME": "Fly.io",
+    "RAILWAY_ENVIRONMENT": "Railway",
+}
+EMAIL_API_KEYS = (
+    "RESEND_API_KEY",
+    "BREVO_API_KEY",
+    "SENDGRID_API_KEY",
+    "MAILJET_API_KEY",
+)
+
+# provider key -> (expected prefix, minimum plausible length)
+SECRET_SHAPES = {
+    "BREVO_API_KEY": ("xkeysib-", 40),
+    "RESEND_API_KEY": ("re_", 20),
+    "SENDGRID_API_KEY": ("SG.", 60),
+    "MAILJET_API_KEY": (None, 20),
+}
+PLACEHOLDER_MARKERS = ("...", "your", "xxxx", "changeme", "placeholder")
+
+
 def _warn_if_ephemeral_database(app) -> None:
     """Shout when accounts are about to live on a disk that gets wiped.
 
@@ -71,13 +96,7 @@ def _warn_if_ephemeral_database(app) -> None:
     reporting "it says my email and password do not match" the next day, which
     looks like a login bug and is really data loss.
     """
-    hosts = {
-        "RENDER": "Render",
-        "DYNO": "Heroku",
-        "FLY_APP_NAME": "Fly.io",
-        "RAILWAY_ENVIRONMENT": "Railway",
-    }
-    platform = next((label for key, label in hosts.items() if os.environ.get(key)), None)
+    platform = next((label for key, label in HOSTED_PLATFORMS.items() if os.environ.get(key)), None)
     if not platform or app.config.get("DATABASE_URL"):
         return
 
@@ -89,6 +108,72 @@ def _warn_if_ephemeral_database(app) -> None:
         platform,
         app.config.get("DATABASE"),
     )
+
+
+def _warn_if_smtp_will_be_blocked(app) -> None:
+    """Render's Free plan drops outbound SMTP, so a relay fails at send time.
+
+    The failure is a bare "Connection unexpectedly closed", which reads like a
+    credentials problem. Say plainly that the port is closed and that an HTTPS
+    API key is the way through.
+    """
+    if not app.config.get("SMTP_HOST"):
+        return
+    if any(app.config.get(key) for key in EMAIL_API_KEYS):
+        return  # an API key takes precedence, so SMTP is never dialled
+    if not os.environ.get("RENDER"):
+        return
+
+    app.logger.warning(
+        "EMAIL WILL FAIL: SMTP_HOST is set to %s:%s, but Render blocks outbound "
+        "traffic on ports 25, 465 and 587 for Free web services. Sends will end "
+        "with 'Connection unexpectedly closed'. Set BREVO_API_KEY (or another "
+        "provider key) instead - HTTPS on 443 is not blocked.",
+        app.config.get("SMTP_HOST"),
+        app.config.get("SMTP_PORT"),
+    )
+
+
+def _warn_if_placeholder_secrets(app) -> None:
+    """Catch pasted template text, which otherwise fails as a silent 401.
+
+    Copying `xkeysib-...` from a README into a hosting dashboard is easy, and
+    the only feedback is "email is configured" followed by a rejected send.
+    """
+    sender = app.config.get("SMTP_FROM_EMAIL") or ""
+    if sender and "@" not in sender:
+        app.logger.warning(
+            "EMAIL CREDENTIALS LOOK WRONG: EMAIL_FROM is %r, which contains no "
+            "email address. Save a real address you verified with the provider, "
+            "either bare (builds@example.co.zw) or as 'YaVaKa <builds@example.co.zw>'.",
+            sender,
+        )
+    elif sender and ("example." in sender or "verified-address" in sender):
+        app.logger.warning(
+            "EMAIL CREDENTIALS LOOK WRONG: EMAIL_FROM is %r, which is placeholder "
+            "text. Replace it with an address you verified with the provider.",
+            sender,
+        )
+
+    for key, (prefix, min_length) in SECRET_SHAPES.items():
+        value = app.config.get(key) or ""
+        if not value:
+            continue
+        lowered = value.lower()
+        if (
+            any(marker in lowered for marker in PLACEHOLDER_MARKERS)
+            or len(value) < min_length
+            or (prefix and not value.startswith(prefix))
+        ):
+            app.logger.warning(
+                "EMAIL CREDENTIALS LOOK WRONG: %s is %d characters and starts "
+                "with %r, but a real key starts with %r and is longer. Paste "
+                "the value from the provider dashboard, not its example.",
+                key,
+                len(value),
+                value[:12],
+                prefix,
+            )
 
 
 def create_app(config_object=Config):
@@ -103,6 +188,8 @@ def create_app(config_object=Config):
 
     db.init_app(app)
     _warn_if_ephemeral_database(app)
+    _warn_if_smtp_will_be_blocked(app)
+    _warn_if_placeholder_secrets(app)
     # Tracing starts first, so even a rejected CSRF token or an auth failure is
     # logged with a request id.
     observability.init_app(app)

@@ -99,10 +99,21 @@ def health():
             # every deploy, restart and spin-down. Say so out loud: silently
             # losing accounts is how people end up unable to sign in.
             "durable": is_postgres() or not _ephemeral_host(),
+            "email": _email_channel(),
             "uploads": uploads,
             "uptime_s": round(time.time() - STARTED_AT),
         }
     )
+
+
+def _email_channel() -> str:
+    """Name the outbound path so a misconfiguration is visible without logs."""
+    from notifications import api_provider
+
+    provider = api_provider()
+    if provider:
+        return f"{provider}-api"
+    return "smtp" if current_app.config.get("SMTP_HOST") else "none"
 
 
 def _ephemeral_host() -> bool:

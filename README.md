@@ -429,6 +429,47 @@ Notes that save an hour of debugging:
   committing a `.env`.
 - When email is not configured the app stays usable; it says so on screen
   instead of silently dropping messages.
+- `/health` names the live path (`"email": "brevo-api"`, `"smtp"` or `"none"`),
+  and the app logs `EMAIL WILL FAIL` at startup if SMTP is configured on a host
+  that blocks it.
+
+### Brevo SMTP relay
+
+Brevo also offers an SMTP relay, which uses a **different credential** from the
+API key:
+
+```
+SMTP relay : smtp-relay.brevo.com
+Port       : 587   (STARTTLS)
+Login      : bfe097001@smtp-brevo.com      (generated, not your account email)
+Password   : the SMTP key from SMTP & API -> SMTP tab
+```
+
+```bash
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USE_TLS=1
+SMTP_USE_SSL=0
+SMTP_USERNAME=bfe097001@smtp-brevo.com
+SMTP_PASSWORD=<the SMTP key, not the API key>
+EMAIL_FROM="YaVaKa <an-address-you-verified-in-brevo>"
+```
+
+Two traps make this fail with a bare `535 Authentication failed`:
+
+1. The SMTP login (`…@smtp-brevo.com`) is **not** a valid sender. `EMAIL_FROM`
+   must be an address you verified under *Senders*.
+2. The SMTP key is shown once, in a different tab from the API key. They are not
+   interchangeable.
+
+And one trap that has nothing to do with Brevo: **this route cannot work on
+Render Free**, because that plan blocks outbound ports 25, 465 and 587 for every
+web service. The relay is fine on a paid Render instance, on a VPS, or locally.
+On the free plan use `BREVO_API_KEY` instead — same account, same free
+allowance, HTTPS on 443.
+
+Both routes can be left configured at once: an API key always wins, so SMTP is
+never dialled while one is present.
 
 ### Sending email with Gmail
 
