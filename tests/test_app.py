@@ -4644,15 +4644,29 @@ class WhatsAppChannelReporting(unittest.TestCase):
         self.assertIn("WHATSAPP IS IN SIMULATOR MODE", combined)
         self.assertIn("WHATSAPP_TOKEN", combined)
 
-    def test_unauthenticated_webhook_is_flagged(self):
-        with self.assertLogs("app", level="WARNING") as logs:
-            self._app(
-                WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="t",
-                WHATSAPP_VERIFY_TOKEN="v", WHATSAPP_APP_SECRET="",
-            )
-        combined = " ".join(logs.output)
-        self.assertIn("UNAUTHENTICATED", combined)
-        self.assertIn("WHATSAPP_APP_SECRET", combined)
+    def test_app_secret_is_not_required(self):
+        # Deliberately optional: the channel works without X-Hub-Signature-256.
+        # It must not be nagged about, and must not appear in /health.
+        body = self._health(
+            WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="t",
+            WHATSAPP_VERIFY_TOKEN="v", WHATSAPP_APP_SECRET="",
+        )
+        self.assertEqual(body["whatsapp"], "live")
+        self.assertNotIn("WHATSAPP_APP_SECRET", body["whatsapp_missing"])
+
+    def test_signature_check_still_runs_when_the_secret_is_set(self):
+        # Removing the requirement must not remove the protection.
+        app = self._app(
+            WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="t",
+            WHATSAPP_VERIFY_TOKEN="v", WHATSAPP_APP_SECRET="shh",
+        )
+        client = app.test_client()
+        unsigned = client.post(
+            "/api/whatsapp/webhook",
+            data='{"entry": []}',
+            content_type="application/json",
+        )
+        self.assertEqual(unsigned.status_code, 403)
 
     def test_missing_verify_token_is_flagged(self):
         with self.assertLogs("app", level="WARNING") as logs:

@@ -35,6 +35,7 @@ services:
         sync: false
       - key: WHATSAPP_VERIFY_TOKEN
         sync: false
+      # Optional: only needed to switch on X-Hub-Signature-256 checks.
       - key: WHATSAPP_APP_SECRET
         sync: false
       - key: WHATSAPP_UPDATE_TEMPLATE

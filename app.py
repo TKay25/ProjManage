@@ -185,9 +185,8 @@ def _warn_if_whatsapp_incomplete(app) -> None:
     token = app.config.get("WHATSAPP_TOKEN")
     phone_id = app.config.get("WHATSAPP_PHONE_NUMBER_ID")
     verify_token = app.config.get("WHATSAPP_VERIFY_TOKEN")
-    app_secret = app.config.get("WHATSAPP_APP_SECRET")
 
-    if not any((token, phone_id, verify_token, app_secret)):
+    if not any((token, phone_id, verify_token)):
         return  # WhatsApp simply not in use
 
     if bool(token) != bool(phone_id):
@@ -204,14 +203,6 @@ def _warn_if_whatsapp_incomplete(app) -> None:
             "WHATSAPP WEBHOOK VERIFICATION WILL FAIL: WHATSAPP_VERIFY_TOKEN is "
             "empty, so Meta's 'Verify and save' is refused. Set it to a random "
             "string, then paste the same value into the Meta webhook dialog."
-        )
-
-    if token and phone_id and not app_secret:
-        app.logger.warning(
-            "WHATSAPP WEBHOOK IS UNAUTHENTICATED: WHATSAPP_APP_SECRET is empty, so "
-            "incoming POSTs are not signature-checked and anyone who learns the "
-            "webhook URL can inject messages. Copy the App Secret from Meta -> "
-            "App settings -> Basic."
         )
 
 

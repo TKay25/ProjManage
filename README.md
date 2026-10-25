@@ -249,11 +249,16 @@ release of funds happen under the client's written agreement, outside the app.
    WHATSAPP_TOKEN=EAAG...            # permanent system-user token
    WHATSAPP_PHONE_NUMBER_ID=123456789
    WHATSAPP_VERIFY_TOKEN=some-random-string
-   WHATSAPP_APP_SECRET=...           # enables X-Hub-Signature-256 checks
+   WHATSAPP_APP_SECRET=...           # optional: X-Hub-Signature-256 checks
    ```
 
    `WHATSAPP_VERIFY_TOKEN` has **no default**: the webhook returns `403` until it
    is set, so a forgotten variable can never leave a public verification open.
+
+   `WHATSAPP_APP_SECRET` is optional. Leave it empty and the channel still works,
+   but the inbound webhook performs no signature check — anyone who learns the
+   URL can post messages into the inbox. Set it to switch the check on; nothing
+   else needs to change.
 
 3. In Meta → WhatsApp → Configuration, set the callback URL to
    `https://your-domain/api/whatsapp/webhook` and the same verify token.
@@ -532,9 +537,10 @@ WSGI can host it.
    disk at `/var/data`** for uploaded receipts.
 3. Set the secrets flagged `sync: false` in the dashboard before going live:
    `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`,
-   `WHATSAPP_APP_SECRET`, `WHATSAPP_UPDATE_TEMPLATE`, `SMTP_HOST`,
-   `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` (also enables password
-   reset emails), and `NOTIFICATIONS_TOKEN` when enabling automatic updates.
+   `WHATSAPP_UPDATE_TEMPLATE`, `BREVO_API_KEY`, `MAILJET_API_KEY`,
+   `MAILJET_API_SECRET`, `EMAIL_FROM`, and `NOTIFICATIONS_TOKEN` when enabling
+   automatic updates. `WHATSAPP_APP_SECRET` is optional (switch on webhook
+   signature checks); the `SMTP_*` variables are only needed for a relay.
 4. Health checks hit `/health`, which probes the database for read **and** write
    access, so a missing or read-only database fails the deploy instead of
    silently breaking sign-ups.

@@ -120,14 +120,18 @@ def _whatsapp_channel() -> str:
 
 
 def _whatsapp_missing() -> list[str]:
-    """Empty WhatsApp settings, by name. Values are never exposed."""
+    """Required WhatsApp settings that are still empty. Values are never exposed.
+
+    WHATSAPP_APP_SECRET is deliberately not listed: it is optional. Setting it
+    enables X-Hub-Signature-256 checking of inbound webhooks, which is worth
+    turning on, but the channel works without it.
+    """
     return [
         name
         for name in (
             "WHATSAPP_TOKEN",
             "WHATSAPP_PHONE_NUMBER_ID",
             "WHATSAPP_VERIFY_TOKEN",
-            "WHATSAPP_APP_SECRET",
         )
         if not current_app.config.get(name)
     ]
