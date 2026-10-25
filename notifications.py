@@ -19,7 +19,11 @@ from db import execute, get_db, is_postgres, log_event, new_id, now_iso, query
 from money import format_money
 from queries import money_totals, stage_rows
 from stages import project_progress
-from whatsapp import normalize_phone, send_whatsapp_project_update
+from whatsapp import (
+    normalize_phone,
+    send_whatsapp_document,
+    send_whatsapp_project_update,
+)
 
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="yavaka-notifications")
 logger = logging.getLogger("yavaka.notifications")
@@ -273,10 +277,54 @@ def _claim_next_delivery():
         raise
 
 
+def _within_service_window(phone: str) -> bool:
+    """True when the contact messaged us in the last 24 hours.
+
+    Meta only allows free-form messages (including document attachments) inside
+    that window; outside it, only an approved template may be sent.
+    """
+    from datetime import datetime, timezone as _tz
+
+    row = query(
+        """SELECT MAX(m.created_at) AS last_in
+           FROM whatsapp_messages m
+           JOIN whatsapp_contacts c ON c.id = m.contact_id
+           WHERE c.phone = ? AND m.direction = 'IN'""",
+        (normalize_phone(phone),),
+        one=True,
+    )
+    if not row or not row["last_in"]:
+        return False
+    try:
+        last = datetime.fromisoformat(str(row["last_in"]))
+    except ValueError:
+        return False
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=_tz.utc)
+    return (datetime.now(_tz.utc) - last).total_seconds() < 24 * 3600
+
+
 def _deliver(delivery) -> dict:
     if delivery["channel"] == "email":
         return _send_email(delivery["recipient"], delivery["subject"], delivery["body"])
     if delivery["channel"] == "whatsapp":
+        file_url = delivery.get("file_url") if hasattr(delivery, "get") else None
+        file_name = delivery.get("file_name") if hasattr(delivery, "get") else None
+
+        # Inside the 24h window the document can be sent as a real attachment.
+        if file_url and _within_service_window(delivery["recipient"]):
+            result = send_whatsapp_document(
+                delivery["recipient"], file_url, file_name or "document", delivery["body"]
+            )
+            if result.get("status") == "sent":
+                return result
+            logger.warning(
+                "WhatsApp document send failed (%s); falling back to the template.",
+                result.get("error"),
+            )
+
+        # Outside the window - or if the attachment was refused - use the
+        # approved template, whose text already carries the download link.
         return send_whatsapp_project_update(delivery["recipient"], delivery["body"])
     return {"status": "failed", "error": "Unsupported notification channel."}
 

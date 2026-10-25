@@ -177,6 +177,23 @@ def send_whatsapp_project_update(to: str, body: str) -> dict:
     )
 
 
+def send_whatsapp_document(to: str, link: str, filename: str, caption: str = "") -> dict:
+    """Send a real attachment. Only valid inside Meta's 24-hour window.
+
+    Passing a public `link` avoids a separate media upload: WhatsApp fetches the
+    file itself, and our /d/<token> URLs are public and expiring.
+    """
+    if not whatsapp_configured():
+        return {"status": "queued", "simulated": True}
+    if not link:
+        return {"status": "failed", "error": "No document link to send."}
+
+    document = {"link": link, "filename": str(filename)[:240]}
+    if caption:
+        document["caption"] = str(caption)[:900]
+    return _send_whatsapp_payload(to, {"type": "document", "document": document})
+
+
 def _send_whatsapp_payload(to: str, content: dict) -> dict:
     url = (
         f"https://graph.facebook.com/v21.0/"
@@ -307,6 +324,18 @@ def resolve_contact(phone: str, profile_name: str = ""):
     return query("SELECT * FROM whatsapp_contacts WHERE id = ?", (contact_id,), one=True)
 
 
+def _stored_language(contact) -> str:
+    """Read the saved language without assuming the column exists.
+
+    A migration that has not run yet must degrade to English, never raise: a
+    missing column took the live webhook down once already.
+    """
+    try:
+        return contact["language"] or DEFAULT_LANGUAGE
+    except (KeyError, IndexError):
+        return DEFAULT_LANGUAGE
+
+
 def contact_role(contact) -> str:
     """manager, admin, client, or stranger when the number is unknown."""
     if not contact["user_id"]:
@@ -383,7 +412,7 @@ def _menu(contact, role, language, opening, intent="help"):
 def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
     contact = resolve_contact(phone, profile_name)
     intent, argument = detect_intent(body)
-    language = normalise_language(contact["language"] or DEFAULT_LANGUAGE)
+    language = normalise_language(_stored_language(contact) or DEFAULT_LANGUAGE)
     role = contact_role(contact)
     project = load_project(contact)
 

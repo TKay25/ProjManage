@@ -5013,3 +5013,50 @@ class DocumentDownloads(VakaTestCase):
             )
         if row:
             self.assertIn("Download:", row["body"])
+
+
+DEFAULT_LANGUAGE_FOR_TEST = "en"
+
+
+class PostgresParity(VakaTestCase):
+    """Every column the code writes must exist on both backends.
+
+    A SQLite-only migration put `whatsapp_contacts.language` into production
+    Postgres's blind spot and took the live webhook down with a 500.
+    """
+
+    def test_every_upgraded_column_is_also_in_the_postgres_upgrades(self):
+        import re
+        from pathlib import Path
+
+        source = Path("db.py").read_text(encoding="utf-8")
+        upgrades = source.split("POSTGRES_UPGRADES", 1)[1]
+
+        # Columns added by SQLite migrations via ALTER TABLE.
+        added = set(
+            re.findall(
+                r"ALTER TABLE (\w+) ADD COLUMN (\w+)", source.split("POSTGRES_UPGRADES", 1)[0]
+            )
+        )
+        for table, column in added:
+            with self.subTest(table=table, column=column):
+                self.assertRegex(
+                    upgrades,
+                    rf"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column}\b",
+                    f"{table}.{column} is migrated on SQLite but not on Postgres",
+                )
+
+    def test_whatsapp_contacts_language_is_present_in_the_base_schema(self):
+        from db import SCHEMA
+
+        block = SCHEMA.split("CREATE TABLE IF NOT EXISTS whatsapp_contacts", 1)[1]
+        block = block.split(");", 1)[0]
+        self.assertIn("language", block)
+
+    def test_missing_language_column_degrades_to_english(self):
+        # A row shaped like an un-migrated database must not raise.
+        from whatsapp import _stored_language
+
+        self.assertEqual(_stored_language({}), DEFAULT_LANGUAGE_FOR_TEST)
+        self.assertEqual(_stored_language({"language": "sn"}), "sn")
+        self.assertEqual(_stored_language({"language": None}), DEFAULT_LANGUAGE_FOR_TEST)

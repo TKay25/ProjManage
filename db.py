@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_contacts (
   project_id TEXT REFERENCES projects(id),
   handoff_at TEXT,
   handoff_by TEXT REFERENCES users(id),
+  language TEXT NOT NULL DEFAULT 'en',
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_wa_contact_user ON whatsapp_contacts(user_id);
@@ -294,6 +295,9 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS workspace_id TEXT;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'full_build';
 ALTER TABLE attachments ADD COLUMN IF NOT EXISTS stage_key TEXT;
 ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS claimed_at TEXT;
+ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS file_url TEXT;
+ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS file_name TEXT;
+ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_at TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_by TEXT REFERENCES users(id);
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS tone TEXT;
@@ -828,6 +832,19 @@ def run_migrations(connection):
                 "ADD COLUMN language TEXT NOT NULL DEFAULT 'en'"
             )
         connection.execute("PRAGMA user_version = 18")
+
+    if version < 19:
+        # Document notifications can carry a real WhatsApp attachment inside the
+        # 24h window, so the queued row has to remember which file and where.
+        existing = {
+            row[1] for row in connection.execute("PRAGMA table_info(notification_outbox)")
+        }
+        for column in ("file_url", "file_name"):
+            if column not in existing:
+                connection.execute(
+                    f"ALTER TABLE notification_outbox ADD COLUMN {column} TEXT"
+                )
+        connection.execute("PRAGMA user_version = 19")
 
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
