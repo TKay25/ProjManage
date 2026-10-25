@@ -1,15 +1,16 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-palette="{{ palette }}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ agreement.title }} · YaVaKa</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/palettes.css') }}" />
   <style>
     @page { margin: 18mm; }
     body { background: #fff; }
-    .print-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 24px; background: #F7F4EF; border-bottom: 1px solid #E2D9CA; }
+    .print-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 24px; background: var(--sand-100); border-bottom: 1px solid var(--sand-300); }
     .print-actions { display: flex; gap: 8px; }
     @media print { .print-toolbar { display: none !important; } .print-sheet { box-shadow: none !important; margin: 0 !important; max-width: none !important; } }
   </style>

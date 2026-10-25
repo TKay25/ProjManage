@@ -30,6 +30,8 @@ from auth import accessible_projects, admin_required, login_required
 from db import dump_sql, execute, is_postgres, new_id, now_iso, query
 from whatsapp import display_phone, normalize_phone
 
+PALETTES = ("forest", "laterite", "granite", "msasa")
+
 bp = Blueprint("settings", __name__)
 
 DENSITIES = {"comfortable", "compact"}
@@ -103,6 +105,12 @@ def update_preferences():
     if density not in DENSITIES:
         density = g.user["density"]
 
+    # The palette is saved server-side, not just in localStorage, so printed
+    # documents and exported pages come out in the colour the user chose.
+    palette = (request.form.get("palette") or "").strip().lower()
+    if palette not in PALETTES:
+        palette = (g.user["palette"] if "palette" in g.user.keys() else "forest") or "forest"
+
     try:
         page_size = int(request.form.get("page_size") or "")
     except (TypeError, ValueError):
@@ -111,13 +119,15 @@ def update_preferences():
         page_size = g.user["page_size"]
 
     execute(
-        "UPDATE users SET density = ?, page_size = ? WHERE id = ?",
-        (density, page_size, g.user["id"]),
+        "UPDATE users SET density = ?, page_size = ?, palette = ? WHERE id = ?",
+        (density, page_size, palette, g.user["id"]),
     )
 
     # The palette's density action posts here and stays on the current page.
     if request.headers.get("X-Requested-With") == "fetch":
-        return jsonify({"ok": True, "density": density, "page_size": page_size})
+        return jsonify(
+            {"ok": True, "density": density, "page_size": page_size, "palette": palette}
+        )
 
     if request.form.get("save") == "1":
         flash("Display preferences saved.", "success")

@@ -1,0 +1,115 @@
+/* ============================================================
+   Colour palettes.
+
+   The default (forest) lives in app.css :root. Each block below only
+   overrides the brand ramps, so spacing, radii, shadows and every
+   component rule stay exactly as they are.
+
+   Ink is never overridden: it is the contrast anchor the WCAG tests
+   measure against, and each surface here is chosen to keep it valid.
+   ============================================================ */
+
+/* ---------- Laterite & Ivory: warm earth, terracotta, ochre ---------- */
+
+[data-palette="laterite"] {
+  --forest-950: #43190f;
+  --forest-900: #5e2415;
+  --forest-800: #7a3520;
+  --forest-700: #9a4527;
+  --forest-600: #a9502f;
+  --forest-500: #bc6242;
+  --forest-400: #c97c5e;
+  --forest-300: #d9a184;
+  --forest-200: #e7c4b2;
+  --forest-100: #f3e1d8;
+  --forest-50: #fbf1ec;
+
+  --brass-700: #7e5a16;
+  --brass-600: #9a6e1c;
+  --brass-500: #b98a2e;
+  --brass-400: #cfa24b;
+  --brass-300: #debe7c;
+  --brass-100: #f6ead2;
+
+  --sand-50: #fdfbf7;
+  --sand-100: #f8f2ea;
+  --sand-200: #f0e6d9;
+  --sand-300: #e4d5c2;
+  --sand-400: #d2bfa6;
+
+  --line: rgba(154, 69, 39, 0.14);
+  --line-strong: rgba(154, 69, 39, 0.26);
+  --amber-soft: #fdf1e2;
+  --success: #2f6b3f;
+  --success-soft: #e6f2e8;
+}
+
+/* ---------- Granite & Verdigris: architectural, cool, engineered ---------- */
+
+[data-palette="granite"] {
+  --forest-950: #141a1d;
+  --forest-900: #1d2529;
+  --forest-800: #2b353a;
+  --forest-700: #354248;
+  --forest-600: #43525a;
+  --forest-500: #596b74;
+  --forest-400: #7a8d96;
+  --forest-300: #a3b2b9;
+  --forest-200: #c6d2d7;
+  --forest-100: #e2eaec;
+  --forest-50: #f0f4f5;
+
+  --brass-700: #2f6154;
+  --brass-600: #397666;
+  --brass-500: #4e8a7b;
+  --brass-400: #6ba394;
+  --brass-300: #93bfb3;
+  --brass-100: #dcebe6;
+
+  --sand-50: #fbfbfb;
+  --sand-100: #f4f6f6;
+  --sand-200: #e9eded;
+  --sand-300: #d7dedf;
+  --sand-400: #bcc7c9;
+
+  --line: rgba(43, 53, 58, 0.14);
+  --line-strong: rgba(43, 53, 58, 0.26);
+  --amber-soft: #eef4f1;
+  --success: #397666;
+  --success-soft: #e2efeb;
+}
+
+/* ---------- Msasa & Clay: the most "Zimbabwe", deepest contrast ---------- */
+
+[data-palette="msasa"] {
+  --forest-950: #1c1610;
+  --forest-900: #2a2118;
+  --forest-800: #3b2e23;
+  --forest-700: #4d3c2d;
+  --forest-600: #634c39;
+  --forest-500: #7d614a;
+  --forest-400: #9d8168;
+  --forest-300: #c0a892;
+  --forest-200: #dccbb9;
+  --forest-100: #ede2d7;
+  --forest-50: #f8f2eb;
+
+  --brass-700: #8a4522;
+  --brass-600: #a55629;
+  --brass-500: #c0764a;
+  --brass-400: #cf9068;
+  --brass-300: #e0b192;
+  --brass-100: #f7e5d8;
+
+  --sand-50: #fdfaf6;
+  --sand-100: #f7f0e8;
+  --sand-200: #eee3d7;
+  --sand-300: #e0d1c0;
+  --sand-400: #cbb6a0;
+
+  --line: rgba(77, 60, 45, 0.16);
+  --line-strong: rgba(77, 60, 45, 0.28);
+  --amber-soft: #fbf0e4;
+  --success: #4a6b3e;
+  --success-soft: #e9f0e3;
+}

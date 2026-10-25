@@ -98,6 +98,31 @@
           <span class="field-hint">Applies to the ledger, the document vault and staff tables.</span>
         </label>
 
+        <div class="field">
+          <span class="field-label">Colour palette</span>
+          <div class="palette-picker" role="radiogroup" aria-label="Colour palette">
+            {% for key, label, note in [
+              ('forest', 'Forest & Brass', 'The original green and brass'),
+              ('laterite', 'Laterite & Ivory', 'Warm earth and terracotta'),
+              ('granite', 'Granite & Verdigris', 'Cool slate and oxidised copper'),
+              ('msasa', 'Msasa & Clay', 'Deep msasa and clay')
+            ] %}
+              <label class="palette-option palette-option--{{ key }}">
+                <input class="sr-only" type="radio" name="palette" value="{{ key }}"
+                       data-palette-choice {% if palette == key %}checked{% endif %} />
+                <span class="palette-swatches" aria-hidden="true">
+                  <span class="swatch swatch--deep"></span>
+                  <span class="swatch swatch--mid"></span>
+                  <span class="swatch swatch--accent"></span>
+                </span>
+                <span class="palette-name">{{ label }}</span>
+                <span class="palette-note">{{ note }}</span>
+              </label>
+            {% endfor %}
+          </div>
+          <span class="field-hint">Applies to the app, the site and printed documents.</span>
+        </div>
+
         <button class="btn btn-outline" type="submit" name="save" value="1">{{ icon('check', 15) }} Save display settings</button>
       </form>
       <p class="micro-note"><a class="link-quiet" href="#modal-shortcuts" data-modal-open="modal-shortcuts">Keyboard shortcuts</a></p>

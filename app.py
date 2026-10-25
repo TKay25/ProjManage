@@ -361,6 +361,13 @@ def create_app(config_object=Config):
             "sidebar_workspaces": workspaces_for(user),
             "attention": attention,
             "unread_updates": unread_updates,
+            # Also used by the standalone print documents, which cannot read
+            # localStorage, so the server must know the choice.
+            "palette": (
+                (user["palette"] if "palette" in user.keys() and user["palette"] else "forest")
+                if user
+                else "forest"
+            ),
         }
 
     # ------------------------------------------------------------------

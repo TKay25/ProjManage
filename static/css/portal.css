@@ -6199,3 +6199,82 @@ td.align-right,
     animation: none;
   }
 }
+
+/* ---------- Palette picker ---------- */
+
+.palette-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.palette-option {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.palette-option:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+}
+
+.palette-option:has(input:checked) {
+  border-color: var(--brass-600);
+  box-shadow: 0 0 0 2px rgba(200, 150, 62, 0.22);
+}
+
+.palette-option:has(input:focus-visible) {
+  outline: 2px solid var(--brass-600);
+  outline-offset: 2px;
+}
+
+.palette-swatches {
+  display: flex;
+  gap: 4px;
+}
+
+.swatch {
+  flex: 1;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.palette-name {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.palette-note {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+/* Each option previews its own colours, not the active palette's. */
+.palette-option--forest .swatch--deep { background: #0f5d46; }
+.palette-option--forest .swatch--mid { background: #d9ece3; }
+.palette-option--forest .swatch--accent { background: #c8963e; }
+
+.palette-option--laterite .swatch--deep { background: #a9502f; }
+.palette-option--laterite .swatch--mid { background: #f3e1d8; }
+.palette-option--laterite .swatch--accent { background: #b98a2e; }
+
+.palette-option--granite .swatch--deep { background: #2b353a; }
+.palette-option--granite .swatch--mid { background: #e2eaec; }
+.palette-option--granite .swatch--accent { background: #4e8a7b; }
+
+.palette-option--msasa .swatch--deep { background: #3b2e23; }
+.palette-option--msasa .swatch--mid { background: #ede2d7; }
+.palette-option--msasa .swatch--accent { background: #c0764a; }
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-option:hover {
+    transform: none;
+  }
+}

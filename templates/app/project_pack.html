@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-palette="{{ palette }}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,17 +7,18 @@
   <title>{{ project.name }} · project pack · YaVaKa</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/palettes.css') }}" />
   <style>
     @page { margin: 16mm; }
     body { background: #fff; }
-    .print-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 24px; background: #F7F4EF; border-bottom: 1px solid #E2D9CA; }
+    .print-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 24px; background: var(--sand-100); border-bottom: 1px solid var(--sand-300); }
     .print-actions { display: flex; gap: 8px; }
     .pack-section { margin-top: 26px; }
-    .pack-section h2 { font-size: 1rem; letter-spacing: 0.02em; text-transform: uppercase; color: #0F5D46; margin-bottom: 8px; }
+    .pack-section h2 { font-size: 1rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--forest-700); margin-bottom: 8px; }
     .pack-group { margin-top: 14px; }
-    .pack-group h3 { font-size: 0.8rem; color: #6B6257; margin-bottom: 4px; }
+    .pack-group h3 { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 4px; }
     .pack-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 22px; margin: 14px 0; }
-    .pack-facts dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8A8073; }
+    .pack-facts dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); }
     .pack-facts dd { margin: 0 0 4px; font-weight: 600; }
     @media print {
       .print-toolbar { display: none !important; }

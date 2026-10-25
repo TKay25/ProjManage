@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"{% if user %} data-density="{{ user.density }}" data-user-id="{{ user.id }}"{% endif %}>
+<html lang="en" data-palette="{{ palette }}"{% if user %} data-density="{{ user.density }}" data-user-id="{{ user.id }}"{% endif %}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -21,11 +21,13 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="stylesheet" href="{{ asset_url('css/app.css') }}" />
   <link rel="stylesheet" href="{{ asset_url('css/portal.css') }}" />
+  <link rel="stylesheet" href="{{ asset_url('css/palettes.css') }}" />
   <link rel="stylesheet" href="{{ asset_url('css/palette.css') }}" />
   <link rel="stylesheet" href="{{ asset_url('css/theme.css') }}" />
   <link rel="stylesheet" href="{{ asset_url('css/transitions.css') }}" />
   {# Synchronous: sets data-theme before the first paint so there is no flash. #}
   <script src="{{ asset_url('js/theme.js') }}"></script>
+  <script src="{{ asset_url('js/palette-switch.js') }}" defer></script>
   {% block head_extra %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">

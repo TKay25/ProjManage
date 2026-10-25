@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
   onboarded_at TEXT,
   totp_secret TEXT,
   totp_enabled INTEGER NOT NULL DEFAULT 0,
+  palette TEXT NOT NULL DEFAULT 'forest',
   created_at TEXT NOT NULL
 );
 
@@ -305,6 +306,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS session_epoch INTEGER NOT NULL DEFAUL
 ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS palette TEXT NOT NULL DEFAULT 'forest';
 -- The random-id duplicates came from the old seeding; collapse them if an
 -- existing SQLite database was copied across by tools/migrate_to_postgres.py.
 DELETE FROM suppliers a USING suppliers b
@@ -845,6 +847,16 @@ def run_migrations(connection):
                     f"ALTER TABLE notification_outbox ADD COLUMN {column} TEXT"
                 )
         connection.execute("PRAGMA user_version = 19")
+
+    if version < 20:
+        # Chosen colour palette. Server-side so printed documents and exported
+        # pages match what the user sees in the app.
+        existing = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
+        if "palette" not in existing:
+            connection.execute(
+                "ALTER TABLE users ADD COLUMN palette TEXT NOT NULL DEFAULT 'forest'"
+            )
+        connection.execute("PRAGMA user_version = 20")
 
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.

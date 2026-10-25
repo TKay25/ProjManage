@@ -5417,7 +5417,16 @@ class MoneyTrendAndStickyHeader(VakaTestCase):
 
         self.login("manager@yavaka.co.zw")
         with self.app.app_context():
-            project = query("SELECT id FROM projects LIMIT 1", one=True)
+            # A project this manager is actually assigned to; the database now
+            # holds projects that belong to other accounts.
+            project = query(
+                """SELECT p.id FROM projects p
+                   JOIN users u ON u.id = p.manager_id
+                   WHERE u.email = 'manager@yavaka.co.zw'
+                   LIMIT 1""",
+                one=True,
+            )
+        self.assertIsNotNone(project, "the demo manager has no assigned project")
         body = self.client.get(f"/app/projects/{project['id']}").get_data(as_text=True)
         self.assertIn("project-hero", body)
         self.assertIn("project-hero-gate", body)
@@ -5436,3 +5445,94 @@ class MoneyTrendAndStickyHeader(VakaTestCase):
         js = Path("static/js/nav.js").read_text(encoding="utf-8")
         self.assertIn("is-settling", js)
         self.assertIn("is-skeleton", js)
+
+
+class PaletteSystem(VakaTestCase):
+    """Every palette must stay readable, and must reach printed documents."""
+
+    @staticmethod
+    def _lum(colour):
+        value = colour.lstrip("#")
+        channels = [int(value[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+        linear = [
+            c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+            for c in channels
+        ]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    def _ratio(self, a, b):
+        hi, lo = sorted([self._lum(a), self._lum(b)], reverse=True)
+        return (hi + 0.05) / (lo + 0.05)
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.base = Path("static/css/app.css").read_text(encoding="utf-8")
+        cls.palettes = Path("static/css/palettes.css").read_text(encoding="utf-8")
+
+    def _tokens(self, block):
+        return dict(re.findall(r"(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{6})", block))
+
+    def _palette_blocks(self):
+        blocks = {}
+        for name in ("laterite", "granite", "msasa"):
+            marker = f'[data-palette="{name}"]'
+            start = self.palettes.index(marker)
+            end = self.palettes.index("}", start)
+            blocks[name] = self._tokens(self.palettes[start:end])
+        return blocks
+
+    def test_primary_buttons_stay_readable_in_every_palette(self):
+        for name, tokens in self._palette_blocks().items():
+            with self.subTest(palette=name):
+                for key in ("--forest-700", "--forest-800"):
+                    ratio = self._ratio("#ffffff", tokens[key])
+                    self.assertGreaterEqual(
+                        round(ratio, 2), 4.5, f"white on {name} {key} is {ratio:.2f}:1"
+                    )
+
+    def test_accent_text_stays_readable_in_every_palette(self):
+        # Eyebrows and labels use brass-700 on the lightest sand surface.
+        for name, tokens in self._palette_blocks().items():
+            with self.subTest(palette=name):
+                ratio = self._ratio(tokens["--brass-700"], tokens["--sand-100"])
+                self.assertGreaterEqual(
+                    round(ratio, 2), 4.5, f"{name} brass-700 on sand is {ratio:.2f}:1"
+                )
+
+    def test_body_text_stays_readable_in_every_palette(self):
+        ink = self._tokens(self.base)["--ink"]
+        for name, tokens in self._palette_blocks().items():
+            with self.subTest(palette=name):
+                ratio = self._ratio(ink, tokens["--sand-100"])
+                self.assertGreaterEqual(round(ratio, 2), 4.5)
+
+    def test_ink_is_never_overridden(self):
+        # Ink is the contrast anchor the tests above rely on.
+        self.assertNotIn("--ink:", self.palettes)
+
+    def test_palette_is_stored_on_the_user(self):
+        from db import query
+
+        with self.app.app_context():
+            row = query("SELECT palette FROM users LIMIT 1", one=True)
+        self.assertIn(row["palette"], ("forest", "laterite", "granite", "msasa"))
+
+    def test_printed_documents_follow_the_palette(self):
+        for path in (
+            "templates/app/project_pack.html",
+            "templates/app/agreement_print.html",
+        ):
+            with self.subTest(template=path):
+                source = Path(path).read_text(encoding="utf-8")
+                self.assertIn('data-palette="{{ palette }}"', source)
+                self.assertIn("palettes.css", source)
+                # Brand colours must come from tokens, not hardcoded hex.
+                for hexcode in ("#0F5D46", "#F7F4EF", "#E2D9CA"):
+                    self.assertNotIn(hexcode, source)
+
+    def test_app_shell_exposes_the_palette_attribute(self):
+        source = Path("templates/base.html").read_text(encoding="utf-8")
+        self.assertIn('data-palette="{{ palette }}"', source)
+        self.assertIn("palettes.css", source)
+        self.assertIn("palette-switch.js", source)
