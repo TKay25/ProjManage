@@ -135,6 +135,46 @@ def monthly_cashflow(project_id: str, months: int = 6):
     return series
 
 
+def balance_sparkline(series, width=640, height=132):
+    """Points for a running-balance line, computed once on the server.
+
+    Drawn as an SVG polyline so the chart costs no JavaScript and no extra
+    request. A flat or empty series renders as a centred line rather than a
+    divide-by-zero.
+    """
+    running = 0
+    values = []
+    for row in series or []:
+        running += int(row.get("funded", 0)) - int(row.get("spent", 0))
+        values.append(running)
+
+    if not values:
+        return {"points": "", "area": "", "last": 0, "min": 0, "max": 0, "flat": True}
+
+    low, high = min(values + [0]), max(values + [0])
+    span = high - low
+    if span <= 0:
+        span = 1
+
+    step = width / max(len(values) - 1, 1)
+    coords = []
+    for index, value in enumerate(values):
+        x = round(index * step, 2)
+        y = round(height - ((value - low) / span) * height, 2)
+        coords.append((x, y))
+
+    points = " ".join(f"{x},{y}" for x, y in coords)
+    area = f"0,{height} " + points + f" {coords[-1][0]},{height}"
+    return {
+        "points": points,
+        "area": area,
+        "last": values[-1],
+        "min": low,
+        "max": high,
+        "flat": len(set(values)) == 1,
+    }
+
+
 def projects_with_summary(projects):
     """Stages and money for every project in three queries, not three per row.
 

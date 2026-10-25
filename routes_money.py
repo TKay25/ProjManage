@@ -13,7 +13,15 @@ from money import format_money, parse_money_to_cents
 import updates
 from notifications import queue_manager_update
 from paging import offset, page_number, page_size, page_window
-from queries import category_breakdown, missing_receipts, money_totals, stage_rows, stage_spend
+from queries import (
+    balance_sparkline,
+    category_breakdown,
+    missing_receipts,
+    money_totals,
+    monthly_cashflow,
+    stage_rows,
+    stage_spend,
+)
 from stages import TRANSACTION_CATEGORIES, category_label, method_label, stage_name
 from storage import UploadError, delete_upload, save_upload
 import web
@@ -238,6 +246,8 @@ def index():
     stages = stage_rows(project["id"])
     breakdown = category_breakdown(project["id"])
     spent_total = totals["spent"] or 1
+    trend = monthly_cashflow(project["id"])
+    sparkline = balance_sparkline(trend)
 
     return render_template(
         "app/money.html",
@@ -247,6 +257,8 @@ def index():
         project=project,
         transactions=transactions,
         totals=totals,
+        trend=trend,
+        sparkline=sparkline,
         stages=stages,
         breakdown=breakdown,
         spent_total=spent_total,

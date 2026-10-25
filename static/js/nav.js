@@ -224,6 +224,17 @@
 
     const main = document.getElementById("main");
     document.dispatchEvent(new CustomEvent("vaka:pagechange", { detail: { url, root: main } }));
+
+    // Fade the real page in after a skeleton, so a slow 3G swap settles
+    // instead of snapping. One class, removed on the next frame.
+    const shell = document.querySelector(".shell");
+    if (shell && document.body.classList.contains("is-skeleton")) {
+      shell.classList.add("is-settling");
+      window.requestAnimationFrame(() => {
+        setTimeout(() => shell.classList.remove("is-settling"), 320);
+      });
+    }
+    hideSkeleton();
     if (main) {
       document.dispatchEvent(new CustomEvent("vaka:fragment", { detail: { root: main } }));
       const heading = main.querySelector("h1");

@@ -151,6 +151,45 @@
   <aside class="money-side">
     <div class="card">
       <div class="card-head">
+        <h2>Balance over time</h2>
+        <span class="muted small">Last 6 months</span>
+      </div>
+      {% if trend %}
+        <figure class="trend">
+          <svg class="trend-chart" viewBox="0 0 640 132" preserveAspectRatio="none"
+               role="img"
+               aria-label="Running balance over the last {{ trend|length }} months, ending at {{ sparkline.last|money }}">
+            <defs>
+              <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#16745a" stop-opacity="0.26"/>
+                <stop offset="100%" stop-color="#16745a" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            {% if sparkline.area %}
+              <polygon points="{{ sparkline.area }}" fill="url(#trend-fill)"/>
+              <polyline points="{{ sparkline.points }}" fill="none"
+                        stroke="#0f5d46" stroke-width="2.6"
+                        stroke-linecap="round" stroke-linejoin="round"
+                        vector-effect="non-scaling-stroke"/>
+            {% else %}
+              <line x1="0" y1="66" x2="640" y2="66" stroke="#cfc3ae"
+                    stroke-width="2" stroke-dasharray="6 6"/>
+            {% endif %}
+          </svg>
+          <figcaption class="trend-labels">
+            {% for month in trend %}<span>{{ month.label }}</span>{% endfor %}
+          </figcaption>
+          <p class="trend-figure {{ 'is-negative' if sparkline.last < 0 }}">
+            {{ sparkline.last|money }} <span class="muted small">closing balance</span>
+          </p>
+        </figure>
+      {% else %}
+        <p class="muted small">No movements in the last six months.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
         <h2>Spend by category</h2>
         <span class="muted small">{{ totals.spent|money }} total</span>
       </div>

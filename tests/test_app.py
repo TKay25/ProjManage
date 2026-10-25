@@ -5371,3 +5371,68 @@ class DesignSystemPolish(VakaTestCase):
             for banned in ("width ", "height ", "margin", "padding", "top ", "left "):
                 with self.subTest(rule=rule.strip(), banned=banned):
                     self.assertNotIn(banned, lowered)
+
+
+class MoneyTrendAndStickyHeader(VakaTestCase):
+    """The three depth additions: a real chart, a settling swap, a sticky header."""
+
+    def test_sparkline_handles_an_empty_series(self):
+        from queries import balance_sparkline
+
+        empty = balance_sparkline([])
+        self.assertEqual(empty["points"], "")
+        self.assertTrue(empty["flat"])
+
+    def test_sparkline_runs_a_balance_not_raw_money(self):
+        from queries import balance_sparkline
+
+        series = [
+            {"label": "Jan", "funded": 1000_00, "spent": 0},
+            {"label": "Feb", "funded": 0, "spent": 400_00},
+        ]
+        line = balance_sparkline(series, width=100, height=100)
+        self.assertEqual(line["last"], 600_00)
+        # Two points, one per month, spanning the full width.
+        self.assertEqual(len(line["points"].split(" ")), 2)
+        self.assertTrue(line["points"].startswith("0.0,"))
+        self.assertIn("100.0,", line["points"])
+
+    def test_flat_series_does_not_divide_by_zero(self):
+        from queries import balance_sparkline
+
+        flat = balance_sparkline(
+            [{"label": "Jan", "funded": 0, "spent": 0}, {"label": "Feb", "funded": 0, "spent": 0}]
+        )
+        self.assertTrue(flat["flat"])
+        self.assertNotIn("nan", flat["points"].lower())
+
+    def test_money_page_draws_the_trend(self):
+        self.login("manager@yavaka.co.zw")
+        body = self.client.get("/app/money").get_data(as_text=True)
+        self.assertIn("Balance over time", body)
+        self.assertIn("trend-chart", body)
+
+    def test_project_header_is_sticky_and_shows_the_next_gate(self):
+        from db import query
+
+        self.login("manager@yavaka.co.zw")
+        with self.app.app_context():
+            project = query("SELECT id FROM projects LIMIT 1", one=True)
+        body = self.client.get(f"/app/projects/{project['id']}").get_data(as_text=True)
+        self.assertIn("project-hero", body)
+        self.assertIn("project-hero-gate", body)
+
+    def test_sticky_rules_exist_and_are_desktop_only(self):
+        css = Path("static/css/portal.css").read_text(encoding="utf-8")
+        block = css[css.index("Project header stays in view"):]
+        self.assertIn("position: sticky", block)
+        # Sticky on a phone would eat the screen; it must be gated.
+        self.assertIn("@media (min-width: 900px)", block)
+
+    def test_skeleton_swap_fades_instead_of_snapping(self):
+        css = Path("static/css/portal.css").read_text(encoding="utf-8")
+        self.assertIn("is-settling", css)
+        self.assertIn("@keyframes content-settle", css)
+        js = Path("static/js/nav.js").read_text(encoding="utf-8")
+        self.assertIn("is-settling", js)
+        self.assertIn("is-skeleton", js)
