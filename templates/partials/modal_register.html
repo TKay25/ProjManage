@@ -1,3 +1,4 @@
+{% from "partials/phone_field.html" import phone_field with context %}
 {# Registration dialog, available on every public page so "Get started",
    "Create an account" and the landing CTAs never navigate away. The same form
    still lives at /register for direct visits and no-JavaScript browsers. #}
@@ -36,7 +37,7 @@
               </label>
               <label class="field">
                 <span class="field-label">WhatsApp number</span>
-                <input class="input" type="tel" name="phone" autocomplete="tel" placeholder="+263 77 123 4567" />
+                {{ phone_field('phone') }}
               </label>
             </div>
 

@@ -5724,3 +5724,132 @@ html:not([data-theme="dark"]) .kpi-icon {
     transform: none;
   }
 }
+
+/* ============================================================
+   Layout system — one container scale, one gutter scale.
+   The workspace can never scroll sideways, and the primary content
+   sits above the fold on a laptop instead of below an onboarding wall.
+   ============================================================ */
+
+:root {
+  /* Gutters step with the viewport so text lines stay readable and the
+     container never hugs the window edge. */
+  --gutter: 20px;
+  --gutter-lg: 32px;
+}
+
+@media (min-width: 720px) {
+  :root { --gutter: 28px; }
+}
+
+@media (min-width: 1200px) {
+  :root { --gutter: 36px; --gutter-lg: 44px; }
+}
+
+.content {
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+  /* A long unbroken token (a URL in a table cell, a long project name) must
+     wrap rather than push the page wider than the window. */
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Dashboard: fit the real content above the fold ---------- */
+
+.page-head {
+  margin-bottom: 18px;
+}
+
+.kpi-grid {
+  /* Fill the row at every width instead of four cramped columns on a tablet. */
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kpi {
+  padding: 16px 18px;
+}
+
+.kpi-value {
+  font-size: 1.32rem;
+  margin: 6px 0 3px;
+}
+
+/* The checklist is reference material, not the work. Collapsed by default, it
+   takes one row; the KPIs and the current stage move up into view. */
+.onboarding-card {
+  padding: 16px 18px;
+}
+
+.onboarding-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-xs);
+  background: var(--sand-100);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  list-style: none;
+}
+
+.onboarding-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.onboarding-details > summary::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  margin-left: 2px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.18s ease;
+}
+
+.onboarding-details[open] > summary::after {
+  transform: rotate(-135deg) translateY(-2px);
+}
+
+.onboarding-details > summary:hover {
+  background: var(--sand-200);
+  color: var(--forest-800);
+}
+
+.onboarding-details .checklist {
+  margin-top: 12px;
+}
+
+/* ---------- Tablet: two comfortable columns, not four thin ones ---------- */
+
+@media (min-width: 720px) and (max-width: 1100px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Nothing may scroll sideways ---------- */
+
+.shell,
+.content,
+.card,
+.kpi,
+.project-card {
+  min-width: 0;
+}
+
+table {
+  max-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-details > summary::after {
+    transition: none;
+  }
+}

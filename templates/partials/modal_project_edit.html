@@ -1,3 +1,4 @@
+{% from "partials/phone_field.html" import phone_field with context %}
 {# Editing an existing project. Rendered on the detail page so it works without
    JavaScript; the form posts normally and the route redirects back. #}
 <dialog class="modal" id="modal-project-edit" aria-labelledby="modal-project-edit-title">
@@ -77,7 +78,7 @@
               </label>
               <label class="field">
                 <span class="field-label">Client WhatsApp</span>
-                <input class="input" type="tel" name="client_whatsapp" value="{{ project.client_whatsapp or '' }}" maxlength="30" placeholder="+263 77 123 4567" />
+                {{ phone_field('client_whatsapp', project.client_whatsapp or '') }}
               </label>
             </div>
           {% endif %}

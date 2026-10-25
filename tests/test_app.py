@@ -459,7 +459,10 @@ class ClientContactDetails(VakaTestCase):
         self.assertEqual(project["client_whatsapp"], "263771234567")
         page = response.get_data(as_text=True)
         self.assertIn("client@example.com", page)
-        self.assertIn("+263 77 123 4567", page)
+        # The number is displayed through the country-aware field, which keeps
+        # the dial code in the selector rather than in the text box.
+        self.assertIn("data-phone-field", page)
+        self.assertIn("263771234567", page)
         # And the manager is told how the client takes the build over.
         self.assertIn("sign up with that address", page)
 
@@ -5232,3 +5235,99 @@ class WhatsAppDocumentAttachments(VakaTestCase):
 
         self.assertEqual(result["status"], "sent")
         templated.assert_called_once()
+
+
+class PhoneFields(VakaTestCase):
+    """Phone capture needs a dial code, not a free-text guess."""
+
+    def test_register_page_offers_a_country_selector(self):
+        body = self.app.test_client().get("/register").get_data(as_text=True)
+        self.assertIn("data-phone-field", body)
+        self.assertIn("data-phone-code", body)
+        # Zimbabwe first, since most clients are building there.
+        self.assertIn('<option value="263"', body)
+        self.assertIn("phone-field.js", body)
+
+    def test_every_phone_input_uses_the_shared_component(self):
+        from pathlib import Path
+
+        templates = [
+            "templates/auth/register.html",
+            "templates/partials/modal_register.html",
+            "templates/app/settings.html",
+            "templates/partials/modal_project.html",
+            "templates/app/project_new.html",
+            "templates/partials/modal_project_edit.html",
+        ]
+        for path in templates:
+            with self.subTest(template=path):
+                source = Path(path).read_text(encoding="utf-8")
+                self.assertIn("phone_field(", source)
+                self.assertNotIn('type="tel"', source)
+
+    def test_combined_value_normalises_to_a_stored_number(self):
+        # The field submits +447700900123; storage keeps 447700900123 and the
+        # Zimbabwean shorthand 0771234567 becomes 263771234567.
+        from whatsapp import normalize_phone
+
+        self.assertEqual(normalize_phone("+44 7700 900123"), "447700900123")
+        self.assertEqual(normalize_phone("077 123 4567"), "263771234567")
+        self.assertEqual(normalize_phone("+263 77 123 4567"), "263771234567")
+
+    def test_phone_component_is_loaded_on_both_shells(self):
+        from pathlib import Path
+
+        for path in ("templates/base.html", "templates/app/base.html"):
+            with self.subTest(shell=path):
+                self.assertIn(
+                    "phone-field.js", Path(path).read_text(encoding="utf-8")
+                )
+
+    def test_landing_states_vision_mission_and_objectives(self):
+        body = self.app.test_client().get("/").get_data(as_text=True)
+        for heading in ("Our vision", "Our mission", "Our objectives"):
+            with self.subTest(heading=heading):
+                self.assertIn(heading, body)
+
+
+class PosterBrand(VakaTestCase):
+    """Posters and the site must show the same mark."""
+
+    def test_poster_logo_uses_the_web_app_mark(self):
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path.cwd() / "tools"))
+        import make_posters
+        import ui
+
+        site = ui.logo_mark(54)
+        poster = make_posters.logo("light")
+
+        # Same tile, roof line and three bar colours as ui.logo_mark().
+        for token in ("#0F5D46", "#F7F4EF", "#C8963E", "#E3B968"):
+            with self.subTest(token=token):
+                self.assertIn(token, site)
+                self.assertIn(token, poster)
+
+        # Three bars, in rising height order, on both.
+        self.assertEqual(poster.count("<rect"), 4)  # tile + three bars
+        self.assertEqual(site.count("<rect"), 4)
+
+    def test_poster_set_covers_running_builds_and_managers(self):
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path.cwd() / "tools"))
+        import make_posters
+
+        slugs = [poster["slug"] for poster in make_posters.POSTERS]
+        self.assertGreaterEqual(len(slugs), 26)
+        for required in (
+            "already-three-months-in",
+            "no-need-to-sack-anybody",
+            "every-project-one-screen",
+            "built-for-the-distance",
+        ):
+            with self.subTest(slug=required):
+                self.assertIn(required, slugs)

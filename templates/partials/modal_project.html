@@ -1,3 +1,4 @@
+{% from "partials/phone_field.html" import phone_field with context %}
 <dialog class="modal" id="modal-project" aria-labelledby="modal-project-title">
   <div class="modal-panel">
     <header class="modal-head">
@@ -80,7 +81,7 @@
               </label>
               <label class="field">
                 <span class="field-label">Client WhatsApp (optional)</span>
-                <input class="input" type="tel" name="client_whatsapp" maxlength="30" placeholder="+263 77 123 4567" />
+                {{ phone_field('client_whatsapp') }}
                 <span class="field-hint">Progress updates go here so they can ask for BALANCE or STATUS.</span>
               </label>
             </div>

@@ -1,0 +1,59 @@
+{# Country-aware phone input.
+
+   Rendered as a dial-code selector plus a local-number box. phone-field.js
+   combines them into +<code><number> on submit, which is what the server's
+   normalize_phone() already understands. With JS off the field still submits a
+   plain number, and Zimbabwean 0-prefixed numbers are still normalised.
+#}
+{% macro phone_field(name, value='', required=False, label='', hint='', id='') %}
+<div class="phone-field" data-phone-field>
+  {% if label %}<span class="phone-field-label">{{ label }}</span>{% endif %}
+  <div class="phone-field-row">
+    <select class="input phone-field-code" data-phone-code
+            aria-label="Country dialling code">
+      <option value="263" data-placeholder="77 123 4567">🇿🇼 Zimbabwe +263</option>
+      <option value="27" data-placeholder="82 123 4567">🇿🇦 South Africa +27</option>
+      <option value="260" data-placeholder="97 123 4567">🇿🇲 Zambia +260</option>
+      <option value="267" data-placeholder="71 123 456">🇧🇼 Botswana +267</option>
+      <option value="258" data-placeholder="82 123 4567">🇲🇿 Mozambique +258</option>
+      <option value="265" data-placeholder="99 123 4567">🇲🇼 Malawi +265</option>
+      <option value="255" data-placeholder="71 123 4567">🇹🇿 Tanzania +255</option>
+      <option value="254" data-placeholder="71 123 4567">🇰🇪 Kenya +254</option>
+      <option value="234" data-placeholder="80 123 4567">🇳🇬 Nigeria +234</option>
+      <option value="233" data-placeholder="24 123 4567">🇬🇭 Ghana +233</option>
+      <option value="44" data-placeholder="7700 900123">🇬🇧 United Kingdom +44</option>
+      <option value="353" data-placeholder="85 123 4567">🇮🇪 Ireland +353</option>
+      <option value="1" data-placeholder="202 555 0143">🇺🇸 United States +1</option>
+      <option value="1" data-placeholder="416 555 0142">🇨🇦 Canada +1</option>
+      <option value="61" data-placeholder="412 345 678">🇦🇺 Australia +61</option>
+      <option value="64" data-placeholder="21 123 4567">🇳🇿 New Zealand +64</option>
+      <option value="971" data-placeholder="50 123 4567">🇦🇪 UAE +971</option>
+      <option value="966" data-placeholder="50 123 4567">🇸🇦 Saudi Arabia +966</option>
+      <option value="974" data-placeholder="3312 3456">🇶🇦 Qatar +974</option>
+      <option value="49" data-placeholder="1512 3456789">🇩🇪 Germany +49</option>
+      <option value="31" data-placeholder="6 12345678">🇳🇱 Netherlands +31</option>
+      <option value="32" data-placeholder="470 12 34 56">🇧🇪 Belgium +32</option>
+      <option value="351" data-placeholder="912 345 678">🇵🇹 Portugal +351</option>
+      <option value="34" data-placeholder="612 34 56 78">🇪🇸 Spain +34</option>
+      <option value="39" data-placeholder="312 345 6789">🇮🇹 Italy +39</option>
+      <option value="33" data-placeholder="6 12 34 56 78">🇫🇷 France +33</option>
+      <option value="41" data-placeholder="78 123 45 67">🇨🇭 Switzerland +41</option>
+      <option value="46" data-placeholder="70 123 45 67">🇸🇪 Sweden +46</option>
+      <option value="47" data-placeholder="412 34 567">🇳🇴 Norway +47</option>
+      <option value="45" data-placeholder="20 12 34 56">🇩🇰 Denmark +45</option>
+      <option value="86" data-placeholder="131 2345 6789">🇨🇳 China +86</option>
+      <option value="91" data-placeholder="81234 56789">🇮🇳 India +91</option>
+      <option value="90" data-placeholder="532 123 4567">🇹🇷 Türkiye +90</option>
+      <option value="92" data-placeholder="300 1234567">🇵🇰 Pakistan +92</option>
+      <option value="880" data-placeholder="1712 345678">🇧🇩 Bangladesh +880</option>
+    </select>
+    <input class="input phone-field-number"
+           type="tel" name="{{ name }}" value="{{ value }}"
+           {% if id %}id="{{ id }}"{% endif %}
+           data-phone-number inputmode="tel" autocomplete="tel"
+           placeholder="77 123 4567" maxlength="32"
+           {% if required %}required{% endif %} />
+  </div>
+  {% if hint %}<p class="field-hint">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}

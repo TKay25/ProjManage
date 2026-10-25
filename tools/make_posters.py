@@ -105,20 +105,46 @@ def pill(x, y, label, size=15, spacing=1.8, height=42):
 
 
 def logo(tone="light"):
+    """The same mark the web app draws in ui.logo_mark().
+
+    Geometry is copied from that 64-unit viewBox and scaled, so the poster and
+    the site cannot drift apart: forest tile, cream roof line, three brass bars
+    of rising height.
+    """
     face = CREAM if tone == "light" else INK
     sub = "#d2ded7" if tone == "light" else "#6b7a70"
-    y = 62
-    out = [
-        rect(M, y, 54, 54, CREAM if tone != "light" else FOREST, rx=14,
-             opacity=0.14 if tone != "light" else None),
-        f'<path d="m{M + 11} {y + 28} 16-14 16 14" fill="none" stroke="{CREAM}" stroke-width="3.5" '
-        f'stroke-linecap="round" stroke-linejoin="round"/>',
-        f'<path d="M{M + 16} {y + 30}v13h22V{y + 30}M{M + 22} {y + 43}V{y + 32}h9v11" fill="none" '
-        f'stroke="{BRASS}" stroke-width="3" stroke-linejoin="round"/>',
-        text(M + 70, y + 38, "YaVaKa", 32, face, weight=700, family=SANS, spacing=-0.5),
-        text(M + 72, y + 62, "BUILD FROM ANYWHERE", 13, sub, weight=700, family=SANS, spacing=2.2),
-    ]
-    return "".join(out)
+    x0, y0, size = M, 62, 54
+    scale = size / 64.0
+
+    def px(value):
+        return round(x0 + value * scale, 2)
+
+    def py(value):
+        return round(y0 + value * scale, 2)
+
+    mark = "".join(
+        [
+            f'<rect x="{x0}" y="{y0}" width="{size}" height="{size}" '
+            f'rx="{round(15 * scale, 2)}" fill="#0F5D46"/>',
+            f'<path d="M{px(12)} {py(32)} L{px(32)} {py(15)} L{px(52)} {py(32)}" '
+            f'fill="none" stroke="#F7F4EF" stroke-width="{round(4.2 * scale, 2)}" '
+            'stroke-linecap="round" stroke-linejoin="round"/>',
+            f'<rect x="{px(17)}" y="{py(34)}" width="{round(5.5 * scale, 2)}" '
+            f'height="{round(15 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#C8963E"/>',
+            f'<rect x="{px(26.5)}" y="{py(29)}" width="{round(5.5 * scale, 2)}" '
+            f'height="{round(20 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#E3B968"/>',
+            f'<rect x="{px(36)}" y="{py(24)}" width="{round(5.5 * scale, 2)}" '
+            f'height="{round(25 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#C8963E"/>',
+        ]
+    )
+
+    return "".join(
+        [
+            mark,
+            text(M + 70, y0 + 38, "YaVaKa", 32, face, weight=700, family=SANS, spacing=-0.5),
+            text(M + 72, y0 + 62, "BUILD FROM ANYWHERE", 13, sub, weight=700, family=SANS, spacing=2.2),
+        ]
+    )
 
 
 def cta(x, y, label, fill=BRASS, color="#142f27", arrow="#142f27", h=72):
@@ -731,18 +757,184 @@ POSTERS = [
         footer="VERIFY. QUOTE. RECORD.",
     ),
     dict(
-        slug="you-dont-need-to-be-there", layout="quote",
-        eyebrow="THE WHOLE IDEA",
-        title="You don't need to be in Zimbabwe to build in Zimbabwe.",
-        desc="YaVaKa lets Zimbabweans abroad build or manage a build back home with independent oversight, logged payments and receipts.",
-        quote_lines=["\u201cYou don't need", "to be in Zimbabwe", "to build", "in Zimbabwe.\u201d"],
+        slug="already-three-months-in", layout="statement",
+        eyebrow="ALREADY BUILDING? GOOD.",
+        title="Three months in, with a house half up and no record of what the money did.",
+        desc="YaVaKa can take over supervision of a build that is already under way, without restarting it or replacing the contractor.",
+        lines=[("Already three", "cream"), ("months in?", "cream"), ("We can still take the wheel.", "brass")],
+        sub=["You do not have to demolish anything or start again. We take over the",
+             "programme, photograph what exists, price what is missing and supervise",
+             "from where the site actually stands today."],
+        gold="A build that is already running can still be brought under control.",
+        points=[("camera", "SNAPSHOT", "Recorded as it stands"),
+                ("check", "GAP CHECK", "What is done, what is not"),
+                ("shield", "CONTROL", "From that point forward")],
+        quote="Late is not the same as lost.",
+        cta="BRING IN OVERSIGHT",
+        footer="START FROM WHERE YOU ARE.",
+    ),
+    dict(
+        slug="no-need-to-sack-anybody", layout="statement",
+        eyebrow="MID-BUILD RECOVERY",
+        title="Take control of the site without sacking a single worker.",
+        desc="YaVaKa supervises the contractor already on site rather than demanding a change of builder, so relationships and progress survive.",
+        lines=[("Take control.", "cream"), ("Keep the site.", "cream"), ("Keep the crew.", "brass")],
+        sub=["Changing contractors mid-build costs time, money and the goodwill of",
+             "everyone on site. Supervising the one you already have costs a",
+             "conversation - and it is usually the cheaper repair."],
+        gold="We manage the builder you hired. We do not ask you to start over.",
+        points=[("chat", "SAME CREW", "No wholesale change"),
+                ("clock", "NO RESTART", "The programme continues"),
+                ("wallet", "NEW RULES", "Evidence before payment")],
+        quote="You do not need a new contractor. You need a standard.",
+        cta="SUPERVISE WHAT EXISTS",
+        footer="KEEP THE CREW. CHANGE THE RULES.",
+    ),
+    dict(
+        slug="cannot-audit-what-nobody-recorded", layout="quote",
+        eyebrow="FOR BUILDS ALREADY RUNNING",
+        title="You cannot audit what nobody recorded.",
+        desc="Most mid-build disputes fail for want of a record: no dated photos, no invoices against stages, no approvals in writing.",
+        quote_lines=["\u201cYou cannot audit", "what nobody", "recorded.\u201d"],
         last_brass=True,
-        attribution="YAVAKA · INDEPENDENT BUILD MANAGEMENT",
-        sub=["Someone accountable stands on the site, approves the payments, resolves",
-             "the differences and logs it all. You keep living your life."],
-        callout=("Start your build record", "Free to set up · add your manager later"),
-        cta="START YOUR BUILD",
+        attribution="WHY MID-BUILD ARGUMENTS CANNOT BE WON",
+        sub=["If the last eight months exist only as phone calls and partial photos,",
+             "there is nothing to measure. From today, everything is dated,",
+             "attached to a stage and kept."],
+        callout=("Start the record today", "Yesterday is gone. Today is evidence"),
+        cta="START THE RECORD",
+        footer="EVIDENCE FROM HERE FORWARD.",
+    ),
+    dict(
+        slug="every-project-one-screen", layout="statement",
+        eyebrow="FOR BUILD MANAGERS",
+        title="Every project you run, on one screen, held to one standard.",
+        desc="YaVaKa gives a build manager a portfolio view: stages, budgets, receipts, approvals and client updates across every project at once.",
+        lines=[("Every project.", "cream"), ("One screen.", "cream"), ("One standard.", "brass")],
+        sub=["No spreadsheets by night. No WhatsApp archaeology. Stage status,",
+             "balances, missing receipts and approvals for the whole portfolio,",
+             "in one place and already written up."],
+        gold="Run ten builds with the discipline you give your best one.",
+        points=[("folder", "PORTFOLIO", "All projects, one view"),
+                ("receipt", "RECEIPTS", "Missing proof, flagged"),
+                ("chat", "UPDATES", "Clients informed for you")],
+        quote="Management is easier when the record keeps itself.",
+        cta="RUN YOUR PORTFOLIO",
+        footer="MANAGE MORE. CHASE LESS.",
+    ),
+    dict(
+        slug="the-paperwork-does-itself", layout="twotone",
+        eyebrow="WHAT MANAGERS STOP DOING",
+        title="The paperwork does itself. You do the building.",
+        desc="YaVaKa removes the administrative weight of build management: stage tracking, receipts, client updates and reporting are generated from the work you record.",
+        lines=[("The paperwork", "cream"), ("does itself.", "brass")],
+        sub=["Three things managers lose hours to every week. All three are produced",
+             "by the system the moment the stage or the payment is recorded."],
+        answer_head="Automated for you",
+        answer=[("Client updates", "Stage and balance changes sent by email and WhatsApp"),
+                ("Progress reports", "Portfolio and project packs, ready to hand over"),
+                ("Receipt trails", "Every payment tied to the document that proves it")],
+        cta="SEE THE MANAGER VIEW",
+        footer="LESS ADMIN. MORE SITE.",
+    ),
+    dict(
+        slug="win-clients-on-evidence", layout="statement",
+        eyebrow="FOR BUILD MANAGERS",
+        title="Win the next client on evidence, not on promises.",
+        desc="A YaVaKa record gives a build manager something most contractors cannot show: dated progress, approved payments and a complete handover file.",
+        lines=[("Win on evidence.", "cream"), ("Not on promises.", "brass")],
+        sub=["Every completed project leaves behind a record: stages signed off,",
+             "receipts filed, updates sent, handover documented. That record is",
+             "what wins the next diaspora client."],
+        gold="Your best reference is a file, not a photograph.",
+        points=[("folder", "A REAL RECORD", "Proof per project"),
+                ("shield", "CREDIBILITY", "Independent standard"),
+                ("globe", "REMOTE CLIENTS", "Confidence from abroad")],
+        quote="Show the file. Win the work.",
+        cta="BUILD YOUR TRACK RECORD",
+        footer="EVIDENCE WINS WORK.",
+    ),
+    dict(
+        slug="built-for-the-distance", layout="statement",
+        eyebrow="WHY YAVAKA EXISTS",
+        title="Zimbabwe is full of good builders and unfinished houses. The gap is oversight.",
+        desc="YaVaKa is an independent build management company for Zimbabweans abroad, created to make distance irrelevant to the quality of a build.",
+        lines=[("Built for", "cream"), ("the distance.", "brass")],
+        sub=["Almost every diaspora build stalls the same way: the money is real,",
+             "the intentions are good, and nobody with authority is standing on",
+             "the site. YaVaKa exists to be that person, in writing."],
+        gold="Our distance, for once, is the advantage: we answer to you, not the site.",
+        points=[("globe", "DIASPORA FIRST", "Designed around distance"),
+                ("shield", "INDEPENDENT", "No contractor loyalty"),
+                ("lock", "ACCOUNTABLE", "Named, recorded, answerable")],
+        quote="A trust problem needs a record, not a promise.",
+        cta="START YOUR BUILD FILE",
         footer="BUILD FROM ANYWHERE.",
+    ),
+    dict(
+        slug="the-second-opinion", layout="statement",
+        eyebrow="FOR A BUILD ALREADY UNDER WAY",
+        title="A second opinion costs far less than a second slab.",
+        desc="YaVaKa reviews a build in progress and reports what is sound, what is missing and what should not be paid for next.",
+        lines=[("A second opinion", "cream"), ("costs less than", "cream"), ("a second slab.", "brass")],
+        sub=["Bring us in for a review of the work so far. We check what stands,",
+             "what was specified, what was paid and what the next payment should",
+             "actually release. Then you decide."],
+        gold="You do not have to hand over the whole build to get the truth about it.",
+        points=[("check", "REVIEW", "Work checked as found"),
+                ("receipt", "PAPERWORK", "Paid against what"),
+                ("shield", "ADVICE", "What to release next")],
+        quote="Ask before the next tranche, not after.",
+        cta="BOOK A REVIEW",
+        footer="A SECOND OPINION, IN WRITING.",
+    ),
+    dict(
+        slug="four-payments-ahead", layout="quote",
+        eyebrow="THE MID-BUILD TRAP",
+        title="You are four payments ahead of the paperwork.",
+        desc="On a build already running, money often moves faster than evidence. The gap is where disputes live.",
+        quote_lines=["\u201cYou are four", "payments ahead", "of the paperwork.\u201d"],
+        last_brass=True,
+        attribution="HOW A RUNNING BUILD STARTS TO SLIP",
+        sub=["It rarely starts with a fraud. It starts with trust, speed and a",
+             "receipt promised for next week. Six weeks later nobody can",
+             "reconstruct what was paid for what."],
+        callout=("Stop the drift", "Evidence before the next release"),
+        cta="CLOSE THE GAP",
+        footer="EVIDENCE BEFORE THE NEXT RELEASE.",
+    ),
+    dict(
+        slug="run-more-builds", layout="statement",
+        eyebrow="FOR BUILD MANAGERS",
+        title="Run more builds without giving up your evenings.",
+        desc="YaVaKa removes the evening admin of build management: stage records, receipt trails, client updates and reports are produced from the work you already do.",
+        lines=[("Run more builds.", "cream"), ("Keep your evenings.", "brass")],
+        sub=["The reason a manager caps out at a handful of projects is rarely the",
+             "building. It is the reporting, the chasing and the explaining. That",
+             "part can be carried by the system."],
+        gold="Your time should go to the site, not to the spreadsheet.",
+        points=[("folder", "ONE VIEW", "Whole portfolio, not tabs"),
+                ("chat", "CLIENTS TOLD", "Updates sent automatically"),
+                ("clock", "HOURS BACK", "Admin done as you record")],
+        quote="Manage more. Chase less.",
+        cta="SEE THE MANAGER VIEW",
+        footer="MORE PROJECTS. LESS ADMIN.",
+    ),
+    dict(
+        slug="who-we-are", layout="twotone",
+        eyebrow="THE COMPANY",
+        title="A Zimbabwean company built for Zimbabweans abroad.",
+        desc="YaVaKa is an independent build management and delivery company: we supervise, we record, and where the client prefers, we build.",
+        lines=[("Zimbabwean built.", "cream"), ("For those abroad.", "brass")],
+        sub=["We are not an app pretending to be a builder, and not a builder",
+             "pretending to be independent. The record and the site are the",
+             "same business, which is why the record can be trusted."],
+        answer_head="What we stand on",
+        answer=[("Independence", "Paid by the client, never by the contractor"),
+                ("Evidence", "Every stage and payment carries proof"),
+                ("Presence", "People on the ground, all year")],
+        cta="WORK WITH US",
+        footer="INDEPENDENT BUILD MANAGEMENT.",
     ),
 ]
 

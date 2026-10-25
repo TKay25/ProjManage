@@ -1,4 +1,5 @@
 {% extends "app/base.html" %}
+{% from "partials/phone_field.html" import phone_field with context %}
 {% block title %}Settings · YaVaKa{% endblock %}
 
 {% block page_title %}Settings{% endblock %}
@@ -25,7 +26,7 @@
           </label>
           <label class="field">
             <span class="field-label">WhatsApp number</span>
-            <input class="input" type="tel" name="phone" value="{{ user.phone or '' }}" placeholder="+263 77 123 4567" />
+            {{ phone_field('phone', user.phone or '') }}
             <span class="field-hint">Used to link WhatsApp messages to your account.</span>
           </label>
         </div>

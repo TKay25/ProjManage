@@ -35,6 +35,11 @@
       <button class="btn btn-ghost btn-sm" type="button" data-onboarding-dismiss>Hide for now</button>
     </div>
     <div class="bar-track"><span class="bar-fill" style="width:{{ onboarding.percent }}%"></span></div>
+    <details class="onboarding-details" {% if onboarding.completed == 0 %}open{% endif %}>
+      <summary class="onboarding-summary">
+        {{ 'Show the checklist' if onboarding.completed else 'Hide the checklist' }}
+        <span class="mini-meta">{{ onboarding.remaining or (onboarding.total - onboarding.completed) }} left</span>
+      </summary>
     <ul class="checklist">
       {% for step in onboarding.steps %}
         <li class="checklist-item {{ 'is-done' if step.done }}">
@@ -49,6 +54,7 @@
         </li>
       {% endfor %}
     </ul>
+    </details>
   </div>
 {% endif %}
 

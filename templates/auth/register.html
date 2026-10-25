@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "partials/phone_field.html" import phone_field with context %}
 {% block title %}Create your account · YaVaKa{% endblock %}
 {% block body_class %}auth-body{% endblock %}
 {% block chrome %}{% endblock %}
@@ -56,7 +57,7 @@
           </label>
           <label class="field">
             <span class="field-label">WhatsApp number</span>
-            <input class="input" type="tel" name="phone" value="{{ values.get('phone', '') }}" autocomplete="tel" placeholder="+263 77 123 4567" />
+            {{ phone_field('phone', values.get('phone', ''), hint='So your build manager can reach you.') }}
           </label>
         </div>
 
