@@ -48,9 +48,10 @@
           Ready for handover
         {% endif %}
       </p>
-      {% if current_definition and current_definition.authority %}
+      {% if current %}
         <p class="project-hero-gate">
-          <span>Next gate</span> {{ current_definition.authority }}
+          <span>Next gate</span>
+          {{ current_definition.authority if current_definition and current_definition.authority else current.name }}
         </p>
       {% endif %}
     </div>

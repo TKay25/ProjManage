@@ -5415,18 +5415,18 @@ class MoneyTrendAndStickyHeader(VakaTestCase):
     def test_project_header_is_sticky_and_shows_the_next_gate(self):
         from db import query
 
-        self.login("manager@yavaka.co.zw")
+        # The owner always has access to their own project, so this does not
+        # depend on manager assignments made by other tests.
+        self.login("client@yavaka.co.zw")
         with self.app.app_context():
-            # A project this manager is actually assigned to; the database now
-            # holds projects that belong to other accounts.
             project = query(
                 """SELECT p.id FROM projects p
-                   JOIN users u ON u.id = p.manager_id
-                   WHERE u.email = 'manager@yavaka.co.zw'
-                   LIMIT 1""",
+                   JOIN users u ON u.id = p.owner_id
+                   WHERE u.email = 'client@yavaka.co.zw'
+                   ORDER BY p.created_at LIMIT 1""",
                 one=True,
             )
-        self.assertIsNotNone(project, "the demo manager has no assigned project")
+        self.assertIsNotNone(project, "the demo client owns no project")
         body = self.client.get(f"/app/projects/{project['id']}").get_data(as_text=True)
         self.assertIn("project-hero", body)
         self.assertIn("project-hero-gate", body)
