@@ -23,7 +23,7 @@
           </label>
 
           <label class="field">
-            <span class="field-label">What kind of work is this?</span>
+            <span class="field-label">What kind of a project is this?</span>
             <select class="select" name="kind">
               {% for kind in project_kinds %}
                 <option value="{{ kind.key }}" {% if project.kind == kind.key %}selected{% endif %}>{{ kind.label }}</option>

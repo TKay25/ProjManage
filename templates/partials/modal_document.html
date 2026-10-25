@@ -9,7 +9,7 @@
       <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
     </header>
 
-    <form class="modal-form" method="post" action="{{ url_for('documents.upload') }}" enctype="multipart/form-data" data-ajax>
+    <form class="modal-form" method="post" action="{{ url_for('documents.upload') }}" enctype="multipart/form-data" data-ajax data-upload-progress>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
       <div class="modal-body">
@@ -52,7 +52,7 @@
           </label>
 
           <label class="dropzone" data-dropzone>
-            <input type="file" name="file" accept="image/*,application/pdf" required data-drop-input data-modal-autofocus />
+            <input type="file" name="file" accept="{{ upload_accept }}" required data-drop-input data-modal-autofocus />
             <span class="dropzone-icon">{{ icon('upload', 24) }}</span>
             <span class="dropzone-title" data-drop-title>Drop a file or tap to browse</span>
             <span class="dropzone-hint">JPG, PNG, WebP or PDF · up to 8MB</span>
@@ -60,6 +60,17 @@
         </div>
       </div>
 
+
+        {# Replaces the form while bytes are in flight, so a 20MB video shows a
+           percentage instead of an unresponsive button. #}
+        <div class="transfer" data-transfer-progress hidden>
+          <p class="transfer-file" data-transfer-name>Uploading</p>
+          <div class="transfer-track" data-transfer-track role="progressbar"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="transfer-bar" data-transfer-bar></span>
+          </div>
+          <p class="transfer-label" data-transfer-label>Starting…</p>
+        </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
         <button class="btn btn-primary" type="submit" data-ajax-submit>

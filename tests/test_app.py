@@ -5428,6 +5428,138 @@ class WhatsAppDocumentAttachments(VakaTestCase):
         templated.assert_called_once()
 
 
+class DocumentStorage(VakaTestCase):
+    """Every advertised file type is stored, and the bytes live in the database."""
+
+    BLOB = b"\x00\x01\x02payload" + b"z" * 300
+
+    def _project_id(self):
+        from db import query
+
+        with self.app.app_context():
+            row = query(
+                """SELECT p.id FROM projects p JOIN users u ON u.id = p.owner_id
+                   WHERE u.email = 'client@yavaka.co.zw' ORDER BY p.created_at LIMIT 1""",
+                one=True,
+            )
+        return row["id"]
+
+    def _upload(self, filename, blob=None, mime=None):
+        import io
+
+        self.login()
+        return self.client.post(
+            "/app/documents/upload",
+            data={
+                "project_id": self._project_id(),
+                "kind": "document",
+                "csrf_token": self.csrf(),
+                "file": (io.BytesIO(blob if blob is not None else self.BLOB), filename),
+            },
+            content_type="multipart/form-data",
+        )
+
+    def _latest(self):
+        from db import query
+
+        with self.app.app_context():
+            return query(
+                "SELECT * FROM attachments ORDER BY created_at DESC, id DESC LIMIT 1",
+                one=True,
+            )
+
+    def test_voice_notes_video_and_office_files_all_upload(self):
+        for filename, mime in (
+            ("voice note.ogg", "audio/ogg"),
+            ("site-walk.mp4", "video/mp4"),
+            ("quote.pdf", "application/pdf"),
+            ("contract.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            ("ledger.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        ):
+            with self.subTest(filename=filename):
+                response = self._upload(filename)
+                self.assertIn(response.status_code, (200, 302))
+                row = self._latest()
+                self.assertEqual(row["mime_type"], mime)
+                self.assertEqual(row["original_name"], filename)
+                self.assertEqual(bytes(row["data"]), self.BLOB)
+                self.assertGreater(row["size"], 0)
+
+    def test_the_bytes_survive_a_wiped_uploads_directory(self):
+        import shutil
+        import tempfile
+        from pathlib import Path as _Path
+
+        scratch = tempfile.mkdtemp()
+        previous = self.app.config["UPLOAD_FOLDER"]
+        self.app.config["UPLOAD_FOLDER"] = scratch
+        try:
+            self._upload("receipt.pdf")
+            row = self._latest()
+            # A redeploy replaces the container filesystem. Nothing is in it now.
+            shutil.rmtree(scratch, ignore_errors=True)
+            self.assertFalse(_Path(scratch).exists())
+
+            self.login()
+            response = self.client.get(f"/files/{row['id']}?download=1")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, self.BLOB)
+            self.assertIn("attachment", response.headers["Content-Disposition"])
+        finally:
+            self.app.config["UPLOAD_FOLDER"] = previous
+
+    def test_a_refused_type_names_what_is_allowed(self):
+        import storage
+
+        self._upload("payload.svg")
+        self.assertIn(storage.ALLOWED_HINT.split(",")[0], "PDF")
+
+    def test_every_allowed_type_is_actually_accepted(self):
+        import storage
+
+        for extension in storage.ALLOWED_EXTENSIONS:
+            with self.subTest(extension=extension):
+                self._upload("sample." + extension)
+                self.assertEqual(bytes(self._latest()["data"]), self.BLOB)
+
+    def test_the_modal_advertises_the_real_limits(self):
+        import storage
+
+        self.login()
+        page = self.client.get("/app/documents").get_data(as_text=True)
+
+        for extension in (".pdf", ".mp3", ".mp4", ".docx"):
+            with self.subTest(extension=extension):
+                self.assertIn(extension, page)
+        self.assertIn("data-upload-progress", page)
+        self.assertIn("data-transfer-bar", page)
+        self.assertIn("data-download", page)
+        self.assertIn("modal-transfer", page)
+        with self.app.app_context():
+            self.assertGreaterEqual(storage.max_upload_bytes(), 25 * 1024 * 1024)
+
+    def test_an_oversized_file_is_refused_by_name(self):
+        self.app.config["MAX_UPLOAD_BYTES"] = 1024
+        try:
+            import io
+
+            self.login()
+            response = self.client.post(
+                "/app/documents/upload",
+                data={
+                    "project_id": self._project_id(),
+                    "kind": "document",
+                    "csrf_token": self.csrf(),
+                    "file": (io.BytesIO(b"x" * 4096), "big.mp4"),
+                },
+                content_type="multipart/form-data",
+                follow_redirects=True,
+            )
+            self.assertIn("limit", response.get_data(as_text=True).lower())
+        finally:
+            self.app.config.pop("MAX_UPLOAD_BYTES", None)
+
+
 class PhoneFields(VakaTestCase):
     """Phone capture needs a dial code, not a free-text guess."""
 
@@ -5464,6 +5596,29 @@ class PhoneFields(VakaTestCase):
         self.assertEqual(normalize_phone("+44 7700 900123"), "447700900123")
         self.assertEqual(normalize_phone("077 123 4567"), "263771234567")
         self.assertEqual(normalize_phone("+263 77 123 4567"), "263771234567")
+
+    def test_the_dial_code_sits_inside_the_field_and_is_code_only(self):
+        import re
+
+        markup = Path("templates/partials/phone_field.html").read_text(encoding="utf-8")
+
+        # One shell holds both halves, so it reads as a single control.
+        self.assertIn('class="phone-shell"', markup)
+        self.assertIn('class="phone-dial"', markup)
+        self.assertIn('class="phone-number"', markup)
+
+        # The dial block shows the code and nothing else: no country names.
+        options = re.findall(r'<option value="(\d+)"[^>]*>([^<]+)</option>', markup)
+        self.assertTrue(options)
+        for code, label in options:
+            with self.subTest(code=code):
+                self.assertEqual(label, "+" + code)
+
+        # Regions keep a long list navigable without putting a name in the field.
+        self.assertIn("<optgroup", markup)
+        self.assertIn('label="Africa"', markup)
+        # Zimbabwe is still first, so the default is +263.
+        self.assertTrue(options[0][0] == "263")
 
     def test_phone_component_is_loaded_on_both_shells(self):
         from pathlib import Path

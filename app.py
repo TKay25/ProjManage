@@ -32,6 +32,7 @@ from paging import page_list
 from queries import attention_counts
 import observability
 import project_kinds
+import storage
 import updates
 from stages import (
     PAYMENT_METHODS,
@@ -370,6 +371,10 @@ def create_app(config_object=Config):
             "recent_updates": recent_updates,
             # Chips under the assistant composer, phrased for the role.
             "aide_suggestions": assistant.suggestions_for(user) if user else (),
+            # The upload modal advertises exactly what the server will accept,
+            # so the picker and the error message cannot disagree.
+            "upload_accept": storage.upload_accept(),
+            "upload_limit_mb": max(1, round(storage.max_upload_bytes() / (1024 * 1024))),
             # Also used by the standalone print documents, which cannot read
             # localStorage, so the server must know the choice.
             "palette": (

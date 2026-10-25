@@ -77,7 +77,11 @@ class Config:
     DATABASE_URL = os.environ.get("DATABASE_URL", "")
     DATABASE = os.environ.get("DATABASE_FILE", str(INSTANCE_DIR / "vaka.db"))
     UPLOAD_FOLDER = os.environ.get("UPLOAD_DIR", str(BASE_DIR / "uploads"))
-    MAX_CONTENT_LENGTH = 8 * 1024 * 1024
+    # One ceiling for a single file. Video and voice notes are the point, so it
+    # is generous; MAX_CONTENT_LENGTH sits above it to leave room for the rest
+    # of the multipart body.
+    MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 25 * 1024 * 1024))
+    MAX_CONTENT_LENGTH = MAX_UPLOAD_BYTES + (4 * 1024 * 1024)
 
     SESSION_COOKIE_NAME = "vaka_session"
     SESSION_COOKIE_HTTPONLY = True

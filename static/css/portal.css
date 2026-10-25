@@ -6772,3 +6772,71 @@ td.align-right,
     transition: none;
   }
 }
+
+
+/* ===================================================================
+   Transfer progress (upload and download)
+   A real percentage, because a 20MB site video is not an instant.
+   =================================================================== */
+
+.transfer {
+  padding: 6px 2px 2px;
+}
+
+.transfer-file {
+  margin: 0 0 10px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--ink, #16211c);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-sunken, #ece9e3);
+  overflow: hidden;
+}
+
+.transfer-bar {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--forest-600, #147054), var(--brass-500, #c8963e));
+  transition: width 180ms linear;
+}
+
+.transfer-track[data-state="done"] .transfer-bar {
+  background: var(--forest-600, #147054);
+}
+
+.transfer-track[data-state="error"] .transfer-bar {
+  background: var(--brick, #9a3e2a);
+}
+
+.transfer-label {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  color: var(--ink-faint, #5c6862);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.doc-pdf--video,
+.doc-pdf--audio {
+  background: linear-gradient(160deg, #123f34, #0a2a23);
+}
+
+.doc-pdf--audio small,
+.doc-pdf--video small {
+  color: var(--brass-300, #e2b967);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transfer-bar {
+    transition: none;
+  }
+}

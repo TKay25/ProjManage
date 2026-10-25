@@ -1,0 +1,30 @@
+{# One progress panel reused for every download. Any link marked data-download
+   streams through it and saves when the bytes are complete. #}
+<dialog class="modal modal--slim" id="modal-transfer" aria-labelledby="modal-transfer-title">
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <p class="eyebrow">Download</p>
+        <h2 id="modal-transfer-title">Fetching your file</h2>
+        <p class="modal-sub">The file saves to your device when it is complete.</p>
+      </div>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+    </header>
+
+    <div class="modal-body">
+      <div class="transfer" data-transfer-progress>
+        <p class="transfer-file">Your document</p>
+        <div class="transfer-track" data-transfer-track role="progressbar"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span class="transfer-bar" data-transfer-bar></span>
+        </div>
+        <p class="transfer-label" data-transfer-label>Starting?</p>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <a class="btn btn-ghost" href="#" data-transfer-fallback hidden>Open directly instead</a>
+      <button class="btn btn-primary" type="button" data-modal-close>Close</button>
+    </div>
+  </div>
+</dialog>

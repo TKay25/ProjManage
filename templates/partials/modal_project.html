@@ -23,7 +23,7 @@
           {# The kind decides the wording used across the app and which stages
              the plan starts with, so it comes before the stage picker. #}
           <label class="field">
-            <span class="field-label">What kind of work is this?</span>
+            <span class="field-label">What kind of a project is this?</span>
             <select class="select" name="kind" data-project-kind
                     data-kind-stages='{{ project_kinds|tojson }}'>
               {% for kind in project_kinds %}

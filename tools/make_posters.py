@@ -338,6 +338,12 @@ def svg_doc(title, desc, body):
 
 def layout_statement(p):
     body = [dark_backdrop(), logo("light"), pill(M + 2, 157, p["eyebrow"])]
+    # An accent arc behind the headline, mirrored per poster, so two statements
+    # in a row do not read as the same image twice.
+    mirror = p.get("panel", "right") == "left"
+    body.append(
+        f'<circle cx="{240 if mirror else 880}" cy="352" r="250" fill="{BRASS}" opacity=".05"/>'
+    )
     head, y = head_block(p["lines"])
     body.append(head)
     sub, y = sub_block(p["sub"], y + 16)
@@ -348,7 +354,8 @@ def layout_statement(p):
 
     panel, panel_h = points_panel(PANEL_TOP, p["points"])
     body.append(panel)
-    body.append(accountability_card(640, PANEL_TOP, panel_h))
+    # The house card moves to whichever end the panel left free.
+    body.append(accountability_card(640 if not mirror else 72, PANEL_TOP, panel_h))
 
     body.append(text(M, QUOTE_BASELINE, f"\u201c{p['quote']}\u201d", 27, CREAM,
                      weight=700, italic=True))
@@ -457,12 +464,89 @@ def layout_stat(p):
     return svg_doc(p["title"], p["desc"], "".join(body))
 
 
+def _gate_rail_vertical(p):
+    """The gates down the left margin, the argument beside them.
+
+    Six posters share the gate idea, so the rail cannot always run the same way
+    or the set starts to look like one image repeated with new words.
+    """
+    gates = p["gates"]
+    current = p.get("current", 0)
+    body = [dark_backdrop(), logo("light"), pill(M + 2, 157, p["eyebrow"])]
+
+    rail_x = M + 26
+    top, step = 322, 96
+    last_y = top + step * (len(gates) - 1)
+    body.append(
+        f'<path d="M{rail_x} {top}v{last_y - top}" stroke="{CREAM}" '
+        f'stroke-opacity=".16" stroke-width="4"/>'
+    )
+    body.append(
+        f'<path d="M{rail_x} {top}v{step * current}" stroke="{BRASS_LIGHT}" stroke-width="4"/>'
+    )
+    for index, label in enumerate(gates):
+        cy = top + step * index
+        done = index <= current
+        radius = 17 if index == current else 10
+        body.append(
+            f'<circle cx="{rail_x}" cy="{cy}" r="{radius}" '
+            f'fill="{BRASS if index == current else (FOREST_MID if done else "#0e2f28")}" '
+            f'stroke="{BRASS_LIGHT if done else CREAM}" '
+            f'stroke-opacity="{1 if done else 0.28}" stroke-width="3"/>'
+        )
+        body.append(
+            text(
+                rail_x + 30,
+                cy + 6,
+                label,
+                15,
+                CREAM if index == current else "#8fa79b",
+                weight=700,
+                family=SANS,
+                spacing=1.2,
+            )
+        )
+
+    column = rail_x + 190
+    size = round(min(46, 620 / (max(len(line) for line, _c in p["lines"]) * 0.53)))
+    y = top + 6
+    for value, colour in p["lines"]:
+        body.append(
+            text(column, y, value, size, CREAM if colour == "cream" else BRASS_LIGHT,
+                 weight=700, spacing=-size * 0.026)
+        )
+        y += size * 1.2
+    y += 16
+    for line in p["sub"]:
+        body.append(text(column, y, line, 18, "#c3d2c9", weight=400, family=SANS))
+        y += 27
+
+    card_top = last_y + 74
+    body.append(rect(M, card_top, CONTENT_W, 146, "#ffffff", rx=26, opacity=0.06))
+    body.append(rect(M, card_top, CONTENT_W, 146, "none", rx=26, stroke=CREAM,
+                     stroke_w=1, opacity=0.16))
+    body.append(f'<circle cx="{M + 62}" cy="{card_top + 73}" r="24" fill="{BRASS}" opacity=".16"/>')
+    body.append(icon("lock", M + 62, card_top + 73, colour=BRASS_LIGHT))
+    body.append(text(M + 110, card_top + 60, p["gate_title"], 21, CREAM, weight=700, family=SANS))
+    body.append(text(M + 110, card_top + 92, p["gate_body"], 16, "#c3d2c9", weight=400, family=SANS))
+
+    body.append(text(M + 4, card_top + 214, f"\u201c{p['quote']}\u201d", 25, BRASS_LIGHT,
+                     weight=700, italic=True))
+    body.append(cta(M, card_top + 254, p["cta"], h=CTA_HEIGHT))
+    body.append(footer(p["footer"]))
+    return svg_doc(p["title"], p["desc"], "".join(body))
+
+
 def layout_gate(p):
     """A build read as a sequence of gates, one of them always the one in front.
 
-    Composition is a horizontal rail rather than a stacked column, so a reader
-    scrolling a status feed sees something other than another block of type.
+    Composition is a rail rather than a stacked column, so a reader scrolling a
+    status feed sees something other than another block of type. The rail runs
+    horizontally or down the margin depending on the poster.
     """
+    if p.get("rail") == "v":
+        return _gate_rail_vertical(p)
+
     body = [
         dark_backdrop(),
         f'<circle cx="150" cy="330" r="230" fill="{BRASS}" opacity=".06"/>',
@@ -1070,7 +1154,7 @@ POSTERS = [
         footer="INDEPENDENT BUILD MANAGEMENT.",
     ),
 
-    dict(slug="the-first-question", layout="statement",
+    dict(slug="the-first-question", layout="statement", panel="right",
          eyebrow="BEFORE YOU PAY ANYONE",
          title="Ask what happens when the money is finished and the work is not.",
          desc="YaVaKa defines the finish line before the first payment, so a build cannot quietly outrun its budget.",
@@ -1093,7 +1177,7 @@ POSTERS = [
               "decides and records, the group chat becomes the site office."],
          callout=("Put one person on it", "Accountable, named, on the ground"),
          cta="PUT SOMEONE ON SITE", footer="A WITNESS BEATS A WITNESS CHAT."),
-    dict(slug="cash-with-no-paper", layout="statement",
+    dict(slug="cash-with-no-paper", layout="statement", panel="left",
          eyebrow="THE RECEIPT RULE",
          title="If it left your account and left no paper, it did not happen.",
          desc="YaVaKa treats a payment without a receipt or approved stage as an open question, not a settled cost.",
@@ -1116,7 +1200,7 @@ POSTERS = [
               "to the cost, and nobody agreed to a third."],
          callout=("Every variation in writing", "Priced, approved, recorded"),
          cta="CONTROL VARIATIONS", footer="CHANGE ORDERS, OR NOTHING."),
-    dict(slug="three-contractors-one-standard", layout="statement",
+    dict(slug="three-contractors-one-standard", layout="statement", panel="left",
          eyebrow="MULTIPLE TRADES",
          title="Five trades, five standards, one site. Somebody has to hold the line.",
          desc="YaVaKa coordinates separate trades against one specification so quality does not depend on who arrived first.",
@@ -1139,7 +1223,7 @@ POSTERS = [
               "everyone can read ends the argument before it starts."],
          callout=("One record, many readers", "Owners, family and contractor"),
          cta="SHARE THE RECORD", footer="ONE RECORD. FEWER ARGUMENTS."),
-    dict(slug="the-photo-that-proves-nothing", layout="statement",
+    dict(slug="the-photo-that-proves-nothing", layout="statement", panel="right",
          eyebrow="EVIDENCE, NOT IMPRESSIONS",
          title="A photo proves a wall exists. It does not prove the wall is right.",
          desc="Progress photos are useful, but they do not show specification, quantity, approval or cost.",
@@ -1152,7 +1236,7 @@ POSTERS = [
                  ("receipt", "COST", "Receipt per payment")],
          quote="Reassurance is not evidence.",
          cta="ASK FOR RECORDS", footer="RECORDS DECIDE."),
-    dict(slug="the-stage-nobody-signed", layout="statement",
+    dict(slug="the-stage-nobody-signed", layout="statement", panel="left",
          eyebrow="STAGE GATES",
          title="The stage nobody signed off is the stage everybody argues about.",
          desc="YaVaKa requires an explicit approval per stage before the next one is funded.",
@@ -1175,7 +1259,7 @@ POSTERS = [
               "Hold a defined retention and they remain an obligation."],
          callout=("Retention, agreed up front", "Protects the snag list"),
          cta="AGREE RETENTION", footer="KEEP THE LAST GATE CLOSED."),
-    dict(slug="distance-is-not-permission", layout="statement",
+    dict(slug="distance-is-not-permission", layout="statement", panel="left",
          eyebrow="FOR THOSE ABROAD",
          title="Distance is not permission for anyone to spend your money quietly.",
          desc="Being far away should never mean being uninformed. YaVaKa keeps the record visible from anywhere.",
@@ -1188,7 +1272,7 @@ POSTERS = [
                  ("chat", "REACH", "Updates that arrive")],
          quote="Being far away is not the same as being uninformed.",
          cta="SEE EVERYTHING", footer="DISTANCE IS NOT PERMISSION."),
-    dict(slug="whose-gate-is-this", layout="gate",
+    dict(slug="whose-gate-is-this", layout="gate", rail="v",
          eyebrow="COUNCIL & STATUTORY GATES",
          title="Nobody can name the gate their build is waiting on.",
          desc="YaVaKa maps the 19-stage Zimbabwe build sequence and names each statutory gate, its authority and what it blocks.",
@@ -1200,7 +1284,7 @@ POSTERS = [
          gate_title="COUNCIL PLANS",
          gate_body="Blocks superstructure. Chased, not waited on.",
          cta="NAME EVERY GATE", footer="GATES MAPPED IN ORDER."),
-    dict(slug="stage-gate-discipline", layout="gate",
+    dict(slug="stage-gate-discipline", layout="gate", rail="h",
          eyebrow="FOR THE MANAGER ON THE GROUND",
          title="A stage is not finished because it looks finished.",
          desc="Each stage closes only when its check, its certificate and its cost are all recorded against it.",
@@ -1212,7 +1296,7 @@ POSTERS = [
          gate_title="WALLING APPROVED",
          gate_body="Measured, checked and costed before ring beam.",
          cta="CLOSE THE STAGE", footer="ONE STAGE. ONE SIGNATURE."),
-    dict(slug="funding-not-feelings", layout="gate",
+    dict(slug="funding-not-feelings", layout="gate", rail="v",
          eyebrow="MONEY AGAINST STAGES",
          title="Money should follow a gate, not a feeling.",
          desc="YaVaKa ties each release of funds to a stage that has actually been approved on site.",
@@ -1224,7 +1308,7 @@ POSTERS = [
          gate_title="SUPERSTRUCTURE FUNDED",
          gate_body="Balance moves only when the gate opens.",
          cta="FUND THE STAGE", footer="MONEY FOLLOWS PROGRESS."),
-    dict(slug="first-day-on-site", layout="gate",
+    dict(slug="first-day-on-site", layout="gate", rail="h",
          eyebrow="STARTING TOMORROW",
          title="Most builds go wrong before the first brick is laid.",
          desc="Budget, programme, approvals and a signed scope are all set before work starts on a YaVaKa-managed build.",
@@ -1236,7 +1320,7 @@ POSTERS = [
          gate_title="PRICE AGAINST QUANTITIES",
          gate_body="Measured work, market rates, nothing rounded.",
          cta="SET IT UP RIGHT", footer="DECIDED BEFORE DAY ONE."),
-    dict(slug="the-quiet-variation", layout="gate",
+    dict(slug="the-quiet-variation", layout="gate", rail="v",
          eyebrow="VARIATIONS",
          title="The expensive change is the one nobody wrote down.",
          desc="Every variation on a YaVaKa build is written, priced and approved before the work happens.",
@@ -1248,7 +1332,7 @@ POSTERS = [
          gate_title="WRITTEN AND APPROVED",
          gate_body="Priced before it is built, not after.",
          cta="PRICE EVERY CHANGE", footer="NOTHING CHANGES FOR FREE."),
-    dict(slug="nobody-chases-for-you", layout="gate",
+    dict(slug="nobody-chases-for-you", layout="gate", rail="h",
          eyebrow="CHASING, DONE FOR YOU",
          title="Chasing is the job. You should not be the one doing it.",
          desc="YaVaKa tracks each gate, chases the responsible party and records the outcome on the project.",

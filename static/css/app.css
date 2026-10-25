@@ -3402,6 +3402,9 @@ html:not([data-theme="dark"]) .feature-icon {
 
 /* ---------- Country-aware phone input ---------- */
 
+/* One control, not two: the dial code lives inside the field shell, divided by
+   a hairline, so it reads as a single place to put a number. */
+
 .phone-field {
   display: flex;
   flex-direction: column;
@@ -3414,45 +3417,109 @@ html:not([data-theme="dark"]) .feature-icon {
   color: var(--ink-soft);
 }
 
-.phone-field-row {
+.phone-shell {
   display: flex;
-  gap: 8px;
   align-items: stretch;
+  min-width: 0;
+  border: 1px solid var(--field-border, rgba(15, 93, 70, 0.22));
+  border-radius: 11px;
+  background: var(--field-bg, #fff);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-/* The dial code never needs to grow; the number box takes the rest. */
-.phone-field-code {
+.phone-shell:hover {
+  border-color: var(--field-border-strong, rgba(15, 93, 70, 0.34));
+}
+
+.phone-shell:focus-within {
+  border-color: var(--forest-600, #147054);
+  box-shadow: 0 0 0 3px rgba(20, 112, 84, 0.16);
+}
+
+/* The dial block: a chevron, the code, and nothing else compete for the eye. */
+.phone-dial {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   flex: 0 0 auto;
-  width: 11.5rem;
-  min-width: 0;
-  padding-right: 30px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23526359' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
+  border-right: 1px solid var(--hairline, rgba(15, 93, 70, 0.12));
+  background: linear-gradient(180deg, rgba(244, 246, 243, 0.9), rgba(238, 241, 236, 0.9));
+  border-radius: 10px 0 0 10px;
+}
+
+.phone-dial-select {
   appearance: none;
   -webkit-appearance: none;
-  font-variant-numeric: tabular-nums;
+  border: 0;
+  background: transparent;
+  height: 100%;
+  min-height: 44px;
+  padding: 0 26px 0 14px;
+  margin: 0;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--ink, #16211c);
+  cursor: pointer;
+  border-radius: 10px 0 0 10px;
 }
 
-.phone-field-number {
+.phone-dial-select:focus-visible {
+  outline: 2px solid var(--forest-600, #147054);
+  outline-offset: -3px;
+}
+
+.phone-dial-chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.62rem;
+  line-height: 1;
+  color: var(--ink-faint, #5c6862);
+  pointer-events: none;
+}
+
+.phone-number {
   flex: 1 1 auto;
   min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0 14px;
+  min-height: 44px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink, #16211c);
+  border-radius: 0 10px 10px 0;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
-@media (max-width: 480px) {
-  .phone-field-row {
-    flex-direction: column;
-  }
-
-  .phone-field-code {
-    width: 100%;
-  }
+.phone-number:focus {
+  outline: none;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .phone-field-code,
-  .phone-field-number {
-    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+.phone-number::placeholder {
+  color: var(--ink-faint, #5c6862);
+  opacity: 0.75;
+}
+
+/* A long list of codes is only bearable when it is grouped. */
+.phone-dial-select optgroup {
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--surface, #fff);
+}
+
+.phone-dial-select option {
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface, #fff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-shell {
+    transition: none;
   }
 }
 

@@ -2,8 +2,12 @@
   <a class="doc-preview" href="{{ url_for('documents.serve', attachment_id=file.id) }}" target="_blank" rel="noopener">
     {% if file.mime_type.startswith('image/') %}
       <img src="{{ url_for('documents.serve', attachment_id=file.id) }}" alt="{{ file.original_name }}" loading="lazy" />
+    {% elif file.mime_type.startswith('video/') %}
+      <span class="doc-pdf doc-pdf--video">{{ icon('play', 26) }}<small>VIDEO</small></span>
+    {% elif file.mime_type.startswith('audio/') %}
+      <span class="doc-pdf doc-pdf--audio">{{ icon('activity', 26) }}<small>AUDIO</small></span>
     {% else %}
-      <span class="doc-pdf">{{ icon('folder', 28) }}<small>PDF</small></span>
+      <span class="doc-pdf">{{ icon('folder', 28) }}<small>{{ (file.original_name.rsplit('.', 1)[-1] if '.' in file.original_name else 'FILE')|upper|truncate(6, True, '') }}</small></span>
     {% endif %}
     <span class="doc-kind">{{ kinds.get(file.kind, file.kind|title) }}</span>
   </a>
@@ -15,7 +19,7 @@
     {% if file.transaction_description %}<p class="mini-meta">{{ icon('receipt', 11) }} {{ file.transaction_description }}</p>{% endif %}
   </div>
   <div class="doc-actions">
-    <a class="btn btn-ghost btn-xs" href="{{ url_for('documents.serve', attachment_id=file.id, download=1) }}">{{ icon('download', 13) }} Download</a>
+    <a class="btn btn-ghost btn-xs" href="{{ url_for('documents.serve', attachment_id=file.id, download=1) }}" data-download="{{ file.original_name }}">{{ icon('download', 13) }} Download</a>
     <form method="post" action="{{ url_for('documents.delete', attachment_id=file.id) }}" data-ajax data-confirm="Remove this file from the project?">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <button class="icon-btn icon-btn-danger" type="submit" aria-label="Delete">{{ icon('trash', 14) }}</button>

@@ -1,53 +1,157 @@
 {# Country-aware phone input.
 
-   Rendered as a dial-code selector plus a local-number box. phone-field.js
-   combines them into +<code><number> on submit, which is what the server's
-   normalize_phone() already understands. With JS off the field still submits a
-   plain number, and Zimbabwean 0-prefixed numbers are still normalised.
+   The dial code is a block sitting inside the same field as the number, so the
+   two read as one control rather than two boxes. Only the code is shown -
+   +263, not "Zimbabwe +263" - because the number is what a person is scanning
+   for; the regions in the open list keep a long list navigable.
+
+   phone-field.js combines the two halves into +<code><number> on submit, which
+   is what the server's normalize_phone() already understands. With JS off the
+   field still submits a plain number.
 #}
-{% macro phone_field(name, value='', required=False, label='', hint='', id='') %}
+{% macro phone_field(name, value='', required=False, label='', hint='', id='') -%}
 <div class="phone-field" data-phone-field>
   {% if label %}<span class="phone-field-label">{{ label }}</span>{% endif %}
-  <div class="phone-field-row">
-    <select class="input phone-field-code" data-phone-code
-            aria-label="Country dialling code">
-      <option value="263" data-placeholder="77 123 4567">🇿🇼 Zimbabwe +263</option>
-      <option value="27" data-placeholder="82 123 4567">🇿🇦 South Africa +27</option>
-      <option value="260" data-placeholder="97 123 4567">🇿🇲 Zambia +260</option>
-      <option value="267" data-placeholder="71 123 456">🇧🇼 Botswana +267</option>
-      <option value="258" data-placeholder="82 123 4567">🇲🇿 Mozambique +258</option>
-      <option value="265" data-placeholder="99 123 4567">🇲🇼 Malawi +265</option>
-      <option value="255" data-placeholder="71 123 4567">🇹🇿 Tanzania +255</option>
-      <option value="254" data-placeholder="71 123 4567">🇰🇪 Kenya +254</option>
-      <option value="234" data-placeholder="80 123 4567">🇳🇬 Nigeria +234</option>
-      <option value="233" data-placeholder="24 123 4567">🇬🇭 Ghana +233</option>
-      <option value="44" data-placeholder="7700 900123">🇬🇧 United Kingdom +44</option>
-      <option value="353" data-placeholder="85 123 4567">🇮🇪 Ireland +353</option>
-      <option value="1" data-placeholder="202 555 0143">🇺🇸 United States +1</option>
-      <option value="1" data-placeholder="416 555 0142">🇨🇦 Canada +1</option>
-      <option value="61" data-placeholder="412 345 678">🇦🇺 Australia +61</option>
-      <option value="64" data-placeholder="21 123 4567">🇳🇿 New Zealand +64</option>
-      <option value="971" data-placeholder="50 123 4567">🇦🇪 UAE +971</option>
-      <option value="966" data-placeholder="50 123 4567">🇸🇦 Saudi Arabia +966</option>
-      <option value="974" data-placeholder="3312 3456">🇶🇦 Qatar +974</option>
-      <option value="49" data-placeholder="1512 3456789">🇩🇪 Germany +49</option>
-      <option value="31" data-placeholder="6 12345678">🇳🇱 Netherlands +31</option>
-      <option value="32" data-placeholder="470 12 34 56">🇧🇪 Belgium +32</option>
-      <option value="351" data-placeholder="912 345 678">🇵🇹 Portugal +351</option>
-      <option value="34" data-placeholder="612 34 56 78">🇪🇸 Spain +34</option>
-      <option value="39" data-placeholder="312 345 6789">🇮🇹 Italy +39</option>
-      <option value="33" data-placeholder="6 12 34 56 78">🇫🇷 France +33</option>
-      <option value="41" data-placeholder="78 123 45 67">🇨🇭 Switzerland +41</option>
-      <option value="46" data-placeholder="70 123 45 67">🇸🇪 Sweden +46</option>
-      <option value="47" data-placeholder="412 34 567">🇳🇴 Norway +47</option>
-      <option value="45" data-placeholder="20 12 34 56">🇩🇰 Denmark +45</option>
-      <option value="86" data-placeholder="131 2345 6789">🇨🇳 China +86</option>
-      <option value="91" data-placeholder="81234 56789">🇮🇳 India +91</option>
-      <option value="90" data-placeholder="532 123 4567">🇹🇷 Türkiye +90</option>
-      <option value="92" data-placeholder="300 1234567">🇵🇰 Pakistan +92</option>
-      <option value="880" data-placeholder="1712 345678">🇧🇩 Bangladesh +880</option>
-    </select>
-    <input class="input phone-field-number"
+  <div class="phone-shell">
+    <span class="phone-dial">
+      <select class="phone-dial-select" data-phone-code
+              aria-label="Country dialling code" title="Country dialling code">
+        <optgroup label="Africa">
+          <option value="263" data-placeholder="77 123 4567">+263</option>
+          <option value="27" data-placeholder="82 123 4567">+27</option>
+          <option value="260" data-placeholder="97 123 4567">+260</option>
+          <option value="267" data-placeholder="71 123 456">+267</option>
+          <option value="258" data-placeholder="82 123 4567">+258</option>
+          <option value="265" data-placeholder="99 123 4567">+265</option>
+          <option value="255" data-placeholder="71 123 4567">+255</option>
+          <option value="254" data-placeholder="71 123 4567">+254</option>
+          <option value="234" data-placeholder="80 123 4567">+234</option>
+          <option value="233" data-placeholder="24 123 4567">+233</option>
+          <option value="256" data-placeholder="77 123 4567">+256</option>
+          <option value="264" data-placeholder="81 123 4567">+264</option>
+          <option value="268" data-placeholder="76 123 456">+268</option>
+          <option value="266" data-placeholder="58 123 456">+266</option>
+          <option value="250" data-placeholder="78 812 3456">+250</option>
+          <option value="257" data-placeholder="79 123 456">+257</option>
+          <option value="261" data-placeholder="32 123 456">+261</option>
+          <option value="230" data-placeholder="5251 2345">+230</option>
+          <option value="20" data-placeholder="100 123 4567">+20</option>
+          <option value="212" data-placeholder="612 345678">+212</option>
+          <option value="221" data-placeholder="77 123 4567">+221</option>
+          <option value="225" data-placeholder="07 12 34 5678">+225</option>
+          <option value="237" data-placeholder="6 71 23 45 67">+237</option>
+          <option value="243" data-placeholder="99 123 4567">+243</option>
+        </optgroup>
+        <optgroup label="Europe">
+          <option value="44" data-placeholder="7700 900123">+44</option>
+          <option value="353" data-placeholder="85 123 4567">+353</option>
+          <option value="49" data-placeholder="1512 3456789">+49</option>
+          <option value="31" data-placeholder="6 12345678">+31</option>
+          <option value="32" data-placeholder="470 12 34 56">+32</option>
+          <option value="351" data-placeholder="912 345 678">+351</option>
+          <option value="34" data-placeholder="612 34 56 78">+34</option>
+          <option value="39" data-placeholder="312 345 6789">+39</option>
+          <option value="33" data-placeholder="6 12 34 56 78">+33</option>
+          <option value="41" data-placeholder="78 123 45 67">+41</option>
+          <option value="46" data-placeholder="70 123 45 67">+46</option>
+          <option value="47" data-placeholder="412 34 567">+47</option>
+          <option value="45" data-placeholder="20 12 34 56">+45</option>
+          <option value="48" data-placeholder="512 345 678">+48</option>
+          <option value="43" data-placeholder="664 123456">+43</option>
+          <option value="30" data-placeholder="691 234 5678">+30</option>
+          <option value="36" data-placeholder="20 123 4567">+36</option>
+          <option value="40" data-placeholder="712 345 678">+40</option>
+          <option value="420" data-placeholder="601 123 456">+420</option>
+          <option value="358" data-placeholder="41 2345678">+358</option>
+          <option value="370" data-placeholder="612 34567">+370</option>
+          <option value="371" data-placeholder="21 234 567">+371</option>
+          <option value="372" data-placeholder="5123 4567">+372</option>
+          <option value="357" data-placeholder="96 123456">+357</option>
+          <option value="356" data-placeholder="7912 3456">+356</option>
+          <option value="352" data-placeholder="621 123 456">+352</option>
+          <option value="354" data-placeholder="611 1234">+354</option>
+          <option value="385" data-placeholder="91 234 5678">+385</option>
+          <option value="381" data-placeholder="60 1234567">+381</option>
+          <option value="387" data-placeholder="61 123 456">+387</option>
+          <option value="389" data-placeholder="70 123 456">+389</option>
+          <option value="355" data-placeholder="69 212 3456">+355</option>
+          <option value="7" data-placeholder="912 345 67 89">+7</option>
+        </optgroup>
+        <optgroup label="Middle East">
+          <option value="971" data-placeholder="50 123 4567">+971</option>
+          <option value="966" data-placeholder="50 123 4567">+966</option>
+          <option value="974" data-placeholder="3312 3456">+974</option>
+          <option value="965" data-placeholder="500 12345">+965</option>
+          <option value="968" data-placeholder="9212 3456">+968</option>
+          <option value="973" data-placeholder="3612 3456">+973</option>
+          <option value="962" data-placeholder="7 9012 3456">+962</option>
+          <option value="961" data-placeholder="71 234 567">+961</option>
+          <option value="964" data-placeholder="790 123 4567">+964</option>
+          <option value="98" data-placeholder="912 345 6789">+98</option>
+          <option value="90" data-placeholder="532 123 4567">+90</option>
+          <option value="972" data-placeholder="50 123 4567">+972</option>
+        </optgroup>
+        <optgroup label="Americas">
+          <option value="1" data-placeholder="202 555 0143">+1</option>
+          <option value="52" data-placeholder="55 1234 5678">+52</option>
+          <option value="55" data-placeholder="11 91234 5678">+55</option>
+          <option value="54" data-placeholder="11 2345 6789">+54</option>
+          <option value="56" data-placeholder="9 6123 4567">+56</option>
+          <option value="57" data-placeholder="301 234 5678">+57</option>
+          <option value="51" data-placeholder="912 345 678">+51</option>
+          <option value="58" data-placeholder="412 123 4567">+58</option>
+          <option value="593" data-placeholder="99 123 4567">+593</option>
+          <option value="591" data-placeholder="712 34567">+591</option>
+          <option value="595" data-placeholder="981 123 456">+595</option>
+          <option value="598" data-placeholder="94 123 456">+598</option>
+          <option value="506" data-placeholder="8312 3456">+506</option>
+          <option value="507" data-placeholder="6123 4567">+507</option>
+          <option value="504" data-placeholder="9123 4567">+504</option>
+          <option value="502" data-placeholder="5123 4567">+502</option>
+          <option value="503" data-placeholder="7012 3456">+503</option>
+          <option value="505" data-placeholder="8123 4567">+505</option>
+          <option value="509" data-placeholder="34 12 3456">+509</option>
+        </optgroup>
+        <optgroup label="Asia Pacific">
+          <option value="61" data-placeholder="412 345 678">+61</option>
+          <option value="64" data-placeholder="21 123 4567">+64</option>
+          <option value="86" data-placeholder="131 2345 6789">+86</option>
+          <option value="91" data-placeholder="81234 56789">+91</option>
+          <option value="92" data-placeholder="300 1234567">+92</option>
+          <option value="880" data-placeholder="1712 345678">+880</option>
+          <option value="94" data-placeholder="71 234 5678">+94</option>
+          <option value="977" data-placeholder="984 123 4567">+977</option>
+          <option value="975" data-placeholder="17 123 456">+975</option>
+          <option value="95" data-placeholder="9 123 45678">+95</option>
+          <option value="66" data-placeholder="81 234 5678">+66</option>
+          <option value="84" data-placeholder="91 234 56 78">+84</option>
+          <option value="62" data-placeholder="812 3456 7890">+62</option>
+          <option value="60" data-placeholder="12 345 6789">+60</option>
+          <option value="65" data-placeholder="8123 4567">+65</option>
+          <option value="63" data-placeholder="917 123 4567">+63</option>
+          <option value="82" data-placeholder="10 1234 5678">+82</option>
+          <option value="81" data-placeholder="90 1234 5678">+81</option>
+          <option value="852" data-placeholder="5123 4567">+852</option>
+          <option value="853" data-placeholder="6612 3456">+853</option>
+          <option value="886" data-placeholder="912 345 678">+886</option>
+          <option value="850" data-placeholder="191 2345 6789">+850</option>
+          <option value="976" data-placeholder="8812 3456">+976</option>
+          <option value="998" data-placeholder="90 123 4567">+998</option>
+          <option value="996" data-placeholder="700 123 456">+996</option>
+          <option value="992" data-placeholder="90 123 4567">+992</option>
+          <option value="993" data-placeholder="61 234 567">+993</option>
+          <option value="994" data-placeholder="40 123 45 67">+994</option>
+          <option value="995" data-placeholder="551 234 567">+995</option>
+          <option value="374" data-placeholder="77 123456">+374</option>
+          <option value="373" data-placeholder="69 123 456">+373</option>
+          <option value="679" data-placeholder="701 2345">+679</option>
+          <option value="675" data-placeholder="701 23456">+675</option>
+          <option value="677" data-placeholder="74 21234">+677</option>
+        </optgroup>
+      </select>
+      <span class="phone-dial-chevron" aria-hidden="true">&#9662;</span>
+    </span>
+    <input class="phone-number"
            type="tel" name="{{ name }}" value="{{ value }}"
            {% if id %}id="{{ id }}"{% endif %}
            data-phone-number inputmode="tel" autocomplete="tel"
@@ -56,4 +160,4 @@
   </div>
   {% if hint %}<p class="field-hint">{{ hint }}</p>{% endif %}
 </div>
-{% endmacro %}
+{%- endmacro %}

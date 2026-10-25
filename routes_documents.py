@@ -1,15 +1,16 @@
 """Document vault: receipts, statutory approvals, photos and handover files."""
 
 from pathlib import Path
+from urllib.parse import quote
 
-from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, send_from_directory, url_for
+from flask import Blueprint, abort, current_app, flash, g, make_response, redirect, render_template, request, url_for
 
 from auth import accessible_projects, can_manage_project, login_required, require_project
 from db import execute, log_event, new_id, now_iso, query
 from notifications import queue_manager_update
 from paging import offset, page_number, page_size, page_window
 from stages import STAGE_GROUPS, stage_by_key
-from storage import UploadError, delete_upload, save_upload
+from storage import UploadError, delete_upload, read_attachment, save_upload
 import web
 
 bp = Blueprint("documents", __name__)
@@ -19,6 +20,31 @@ KINDS = {
     "document": "Document",
     "photo": "Site photo",
 }
+
+
+def _serve_attachment(attachment, *, as_download: bool):
+    """Send the stored bytes with the type they were filed under.
+
+    Reading from the row rather than the filesystem is what makes a file still
+    open after a redeploy, and it means one code path for a preview, a download
+    and a WhatsApp link.
+    """
+    data = read_attachment(attachment)
+    if data is None:
+        abort(404)
+
+    name = attachment["original_name"] or attachment["filename"] or "file"
+    response = make_response(data)
+    response.headers["Content-Type"] = attachment["mime_type"] or "application/octet-stream"
+    response.headers["Content-Length"] = str(len(data))
+    disposition = "attachment" if as_download else "inline"
+    response.headers["Content-Disposition"] = (
+        f"{disposition}; filename*=UTF-8''{quote(name)}"
+    )
+    # A stored file never changes; the name is unique per upload.
+    response.headers["Cache-Control"] = "private, max-age=604800"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @bp.get("/app/documents")
@@ -135,8 +161,9 @@ def upload():
     attachment_id = new_id()
     execute(
         """INSERT INTO attachments
-             (id, project_id, transaction_id, uploader_id, kind, filename, original_name, mime_type, size, stage_key, created_at)
-           VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             (id, project_id, transaction_id, uploader_id, kind, filename, original_name,
+              mime_type, size, stage_key, created_at, data, category)
+           VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             attachment_id,
             project["id"],
@@ -148,6 +175,8 @@ def upload():
             saved["size"],
             stage_key,
             now_iso(),
+            saved["data"],
+            saved["category"],
         ),
     )
 
@@ -213,16 +242,8 @@ def serve(attachment_id):
     if not can_manage_project(g.user, project):
         abort(404)
 
-    directory = Path(current_app.config["UPLOAD_FOLDER"])
-    download = request.args.get("download") == "1"
-
-    return send_from_directory(
-        directory,
-        attachment["filename"],
-        mimetype=attachment["mime_type"],
-        as_attachment=download,
-        download_name=attachment["original_name"] if download else None,
-    )
+    as_download = request.args.get("download") == "1"
+    return _serve_attachment(attachment, as_download=as_download)
 
 
 @bp.get("/d/<token>")
@@ -244,14 +265,7 @@ def download(token):
     if not attachment:
         abort(404)
 
-    directory = Path(current_app.config["UPLOAD_FOLDER"])
-    return send_from_directory(
-        directory,
-        attachment["filename"],
-        mimetype=attachment["mime_type"],
-        as_attachment=True,
-        download_name=attachment["original_name"],
-    )
+    return _serve_attachment(attachment, as_download=True)
 
 
 @bp.post("/app/documents/<attachment_id>/delete")

@@ -103,7 +103,9 @@ CREATE TABLE IF NOT EXISTS attachments (
   mime_type TEXT NOT NULL,
   size INTEGER NOT NULL,
   stage_key TEXT,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  data BLOB,
+  category TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_att_project ON attachments(project_id);
 CREATE INDEX IF NOT EXISTS idx_att_tx ON attachments(transaction_id);
@@ -298,6 +300,8 @@ ALTER TABLE attachments ADD COLUMN IF NOT EXISTS stage_key TEXT;
 ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS claimed_at TEXT;
 ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS file_url TEXT;
 ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS file_name TEXT;
+ALTER TABLE attachments ADD COLUMN IF NOT EXISTS data BYTEA;
+ALTER TABLE attachments ADD COLUMN IF NOT EXISTS category TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_at TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_by TEXT REFERENCES users(id);
@@ -857,6 +861,16 @@ def run_migrations(connection):
                 "ALTER TABLE users ADD COLUMN palette TEXT NOT NULL DEFAULT 'forest'"
             )
         connection.execute("PRAGMA user_version = 20")
+
+    if version < 21:
+        # File bytes live in the row, not on a container disk that a redeploy
+        # wipes. A receipt has to still open next month.
+        existing = {row[1] for row in connection.execute("PRAGMA table_info(attachments)")}
+        if "data" not in existing:
+            connection.execute("ALTER TABLE attachments ADD COLUMN data BLOB")
+        if "category" not in existing:
+            connection.execute("ALTER TABLE attachments ADD COLUMN category TEXT")
+        connection.execute("PRAGMA user_version = 21")
 
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.

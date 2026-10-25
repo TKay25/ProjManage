@@ -557,5 +557,5 @@
     }
   }
 
-  window.vakaModal = { open: openModal, close: closeAll };
+  window.vakaModal = { open: openModal, close: closeAll, patch, showError, closeModal };
 })();
