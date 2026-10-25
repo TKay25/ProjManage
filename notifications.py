@@ -435,7 +435,9 @@ def send_email_async(recipient: str, subject: str, body: str) -> bool:
     return True
 
 
-def queue_manager_update(project_id, manager_id, manager_name, headline, detail, link=None) -> int:
+def queue_manager_update(
+    project_id, manager_id, manager_name, headline, detail, link=None, file_name=None
+) -> int:
     """Queue an update only when it was posted by this project's assigned manager."""
     project = query(
         """SELECT p.id, p.name, p.code, p.manager_id,
@@ -499,8 +501,9 @@ def queue_manager_update(project_id, manager_id, manager_name, headline, detail,
     for channel, recipient in channels:
         execute(
             """INSERT INTO notification_outbox
-                 (id, event_key, project_id, channel, recipient, subject, body, status, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
+                 (id, event_key, project_id, channel, recipient, subject, body,
+                  file_url, file_name, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
             (
                 new_id(),
                 event_key,
@@ -509,6 +512,9 @@ def queue_manager_update(project_id, manager_id, manager_name, headline, detail,
                 recipient,
                 subject if channel == "email" else None,
                 body,
+                # Only WhatsApp can attach a file, and only inside 24 hours.
+                link if channel == "whatsapp" else None,
+                file_name if channel == "whatsapp" else None,
                 timestamp,
             ),
         )

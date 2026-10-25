@@ -164,6 +164,7 @@ def upload():
         "Project file uploaded",
         saved["original_name"],
         link=downloads.absolute_url(attachment_id),
+        file_name=saved["original_name"],
     )
 
     if web.wants_json():

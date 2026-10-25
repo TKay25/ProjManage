@@ -5060,3 +5060,175 @@ class PostgresParity(VakaTestCase):
         self.assertEqual(_stored_language({}), DEFAULT_LANGUAGE_FOR_TEST)
         self.assertEqual(_stored_language({"language": "sn"}), "sn")
         self.assertEqual(_stored_language({"language": None}), DEFAULT_LANGUAGE_FOR_TEST)
+
+
+class WhatsAppDocumentAttachments(VakaTestCase):
+    """Inside Meta's 24-hour window a document is attached; outside it a
+    template carries the link instead."""
+
+    def _app(self):
+        return create_app(
+            isolated_config(
+                DATABASE=str(Path(_TEMP_DIR) / "wa-doc.db"),
+                UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "wa-doc-uploads"),
+                SEED_DEMO=True,
+                WHATSAPP_TOKEN="token",
+                WHATSAPP_PHONE_NUMBER_ID="709678028897732",
+            )
+        )
+
+    def _mark_inbound(self, app, phone):
+        from db import execute, new_id, now_iso, query
+
+        with app.app_context():
+            contact = query(
+                "SELECT * FROM whatsapp_contacts WHERE phone = ?", (phone,), one=True
+            )
+            if not contact:
+                contact_id = new_id()
+                execute(
+                    """INSERT INTO whatsapp_contacts
+                         (id, phone, name, language, created_at)
+                       VALUES (?, ?, 'Client', 'en', ?)""",
+                    (contact_id, phone, now_iso()),
+                )
+            else:
+                contact_id = contact["id"]
+            execute(
+                """INSERT INTO whatsapp_messages
+                     (id, contact_id, direction, body, intent, status, created_at)
+                   VALUES (?, ?, 'IN', 'hi', 'help', 'received', ?)""",
+                (new_id(), contact_id, now_iso()),
+            )
+
+    def test_document_payload_shape(self):
+        from unittest import mock
+
+        import whatsapp
+
+        app = self._app()
+        captured = {}
+
+        def fake(to, content):
+            captured["content"] = content
+            return {"status": "sent"}
+
+        with app.app_context():
+            with mock.patch.object(whatsapp, "_send_whatsapp_payload", fake):
+                whatsapp.send_whatsapp_document(
+                    "263771234567",
+                    "https://yavaka.onrender.com/d/abc",
+                    "invoice.pdf",
+                    "Your invoice",
+                )
+
+        content = captured["content"]
+        self.assertEqual(content["type"], "document")
+        self.assertEqual(content["document"]["link"], "https://yavaka.onrender.com/d/abc")
+        self.assertEqual(content["document"]["filename"], "invoice.pdf")
+        self.assertEqual(content["document"]["caption"], "Your invoice")
+
+    def test_document_without_a_link_fails_loudly(self):
+        import whatsapp
+
+        app = self._app()
+        with app.app_context():
+            result = whatsapp.send_whatsapp_document("263771234567", "", "x.pdf")
+        self.assertEqual(result["status"], "failed")
+
+    def test_window_detection(self):
+        import notifications
+
+        app = self._app()
+        phone = "263779001234"
+        with app.app_context():
+            self.assertFalse(notifications._within_service_window(phone))
+        self._mark_inbound(app, phone)
+        with app.app_context():
+            self.assertTrue(notifications._within_service_window(phone))
+
+    def test_inside_the_window_the_file_is_attached(self):
+        from unittest import mock
+
+        import notifications
+
+        app = self._app()
+        phone = "263779005678"
+        self._mark_inbound(app, phone)
+
+        delivery = {
+            "channel": "whatsapp",
+            "recipient": phone,
+            "subject": None,
+            "body": "Update body",
+            "file_url": "https://yavaka.onrender.com/d/xyz",
+            "file_name": "receipt.pdf",
+        }
+        with app.app_context():
+            with mock.patch.object(
+                notifications, "send_whatsapp_document",
+                return_value={"status": "sent"},
+            ) as attached:
+                with mock.patch.object(notifications, "send_whatsapp_project_update") as templated:
+                    result = notifications._deliver(delivery)
+
+        self.assertEqual(result["status"], "sent")
+        attached.assert_called_once()
+        templated.assert_not_called()
+
+    def test_outside_the_window_the_template_carries_the_link(self):
+        from unittest import mock
+
+        import notifications
+
+        app = self._app()
+        delivery = {
+            "channel": "whatsapp",
+            "recipient": "263779009999",
+            "subject": None,
+            "body": "Update body with a link",
+            "file_url": "https://yavaka.onrender.com/d/xyz",
+            "file_name": "receipt.pdf",
+        }
+        with app.app_context():
+            with mock.patch.object(notifications, "send_whatsapp_document") as attached:
+                with mock.patch.object(
+                    notifications, "send_whatsapp_project_update",
+                    return_value={"status": "sent"},
+                ) as templated:
+                    result = notifications._deliver(delivery)
+
+        self.assertEqual(result["status"], "sent")
+        attached.assert_not_called()
+        templated.assert_called_once()
+
+    def test_attachment_failure_falls_back_to_the_template(self):
+        from unittest import mock
+
+        import notifications
+
+        app = self._app()
+        phone = "263779007890"
+        self._mark_inbound(app, phone)
+
+        delivery = {
+            "channel": "whatsapp",
+            "recipient": phone,
+            "subject": None,
+            "body": "Update body",
+            "file_url": "https://yavaka.onrender.com/d/xyz",
+            "file_name": "receipt.pdf",
+        }
+        with app.app_context():
+            with mock.patch.object(
+                notifications, "send_whatsapp_document",
+                return_value={"status": "failed", "error": "media rejected"},
+            ):
+                with mock.patch.object(
+                    notifications, "send_whatsapp_project_update",
+                    return_value={"status": "sent"},
+                ) as templated:
+                    result = notifications._deliver(delivery)
+
+        self.assertEqual(result["status"], "sent")
+        templated.assert_called_once()
