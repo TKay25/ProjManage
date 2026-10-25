@@ -2245,10 +2245,12 @@ class ShellChrome(VakaTestCase):
         self.login()
         page = self.client.get("/app").get_data(as_text=True)
 
-        bell = re.search(r"<a[^>]*class=\"icon-btn topbar-alert\"[^>]*>", page)
+        # The bell is a disclosure button now: it opens the panel in place
+        # rather than throwing away the page you were reading.
+        bell = re.search(r"<summary[^>]*class=\"icon-btn topbar-alert[^\"]*\"[^>]*>", page)
         self.assertIsNotNone(bell)
-        self.assertIn('href="/app/updates"', bell.group(0))
         self.assertIn("Updates", bell.group(0))
+        self.assertIn('class="notif-foot" href="/app/updates"', page)
         # Attention still has its own entry point in the sidebar.
         self.assertIn('href="/app/attention"', page)
 
@@ -2545,6 +2547,195 @@ class UpdateNotifications(VakaTestCase):
 
         self.assertIn('href="/app/updates"', page)
         self.assertIn("Latest updates", page)
+
+
+class AssistantWindow(VakaTestCase):
+    """The floating assistant answers from the same rows the pages render."""
+
+    def _ask(self, question, client=None):
+        client = client or self.client
+        return client.post(
+            "/api/assistant/ask",
+            json={"question": question},
+            headers={"X-CSRF-Token": self.csrf()},
+        )
+
+    def test_the_window_is_on_the_site_and_in_the_app(self):
+        self.login()
+        for path in ("/app", "/app/money"):
+            with self.subTest(path=path):
+                page = self.client.get(path).get_data(as_text=True)
+                self.assertIn("data-aide", page)
+                self.assertIn("YaVaKa assistant", page)
+                self.assertIn("js/assistant.js", page)
+
+    def test_the_window_is_not_on_the_auth_pages(self):
+        for path in ("/login", "/register"):
+            with self.subTest(path=path):
+                page = self.client.get(path).get_data(as_text=True)
+                self.assertNotIn("data-aide", page)
+
+    def test_asking_needs_a_session_and_a_csrf_token(self):
+        # CSRF is verified before the session, so a bare post is refused outright.
+        self.assertEqual(
+            self.client.post("/api/assistant/ask", json={"question": "balance"}).status_code,
+            400,
+        )
+        # With a valid token but no session it falls through to the login redirect.
+        self.assertEqual(self._ask("balance").status_code, 302)
+
+        self.login()
+        self.assertEqual(
+            self.client.post("/api/assistant/ask", json={"question": "balance"}).status_code,
+            400,
+        )
+
+    def test_the_balance_matches_the_ledger_page(self):
+        import queries
+
+        self.login()
+        payload = self._ask("What is my balance?").get_json()
+        self.assertTrue(payload["ok"])
+
+        with self.app.app_context():
+            from db import query
+
+            owner = query(
+                "SELECT id FROM users WHERE email = 'client@yavaka.co.zw'", one=True
+            )
+            ids = [
+                row["id"]
+                for row in query(
+                    "SELECT id FROM projects WHERE owner_id = ?", (owner["id"],)
+                )
+            ]
+            expected = queries.totals_for_projects(ids)
+
+        self.assertIn(f"${expected['balance'] / 100:,.2f}", payload["reply"])
+        self.assertEqual(payload["links"][0][1], "/app/money")
+
+    def test_a_manager_hears_about_clients_and_a_client_does_not(self):
+        self.login()  # client
+        own = self._ask("How are my clients doing?").get_json()
+        self.assertIn("do not manage", own["reply"])
+
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        self.login(email="manager@yavaka.co.zw")
+        manage = self._ask("How are my clients doing?").get_json()
+        self.assertIn("/app/whatsapp", [href for _label, href in manage["links"]])
+
+    def test_an_unrecognised_question_still_answers(self):
+        self.login()
+        response = self._ask("do my goats need planning permission")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("did not follow", response.get_json()["reply"])
+
+    def test_counts_agree_with_their_nouns(self):
+        self.login()
+        reply = self._ask("What needs attention?").get_json()["reply"]
+
+        # These are noun phrases, not bare nouns, so a trailing "s" is wrong.
+        for broken in ("waitings", "without a receipts", "1 approvals", "1 payments"):
+            with self.subTest(broken=broken):
+                self.assertNotIn(broken, reply)
+
+    def test_money_is_never_recorded_from_the_window(self):
+        self.login()
+        payload = self._ask("I paid 500").get_json()
+        # detect_intent reads an amount; the assistant must still refuse and
+        # send the person to the ledger rather than write a transaction.
+        self.assertIn("/app/money", [href for _label, href in payload["links"]])
+        with self.app.app_context():
+            from db import query
+
+            self.assertFalse(
+                query(
+                    "SELECT 1 AS hit FROM transactions WHERE amount_cents = 50000",
+                    one=True,
+                )
+            )
+
+    def test_a_blank_question_is_refused(self):
+        self.login()
+        self.assertEqual(
+            self.client.post(
+                "/api/assistant/ask",
+                json={"question": "   "},
+                headers={"X-CSRF-Token": self.csrf()},
+            ).status_code,
+            400,
+        )
+
+
+class NotificationBellPanel(VakaTestCase):
+    """The bell opens what changed; it does not throw the page away."""
+
+    def _raise_update(self, action="expense.recorded", detail="Cement delivery — spent"):
+        from db import log_event, query
+
+        with self.app.app_context():
+            project = query("SELECT id FROM projects WHERE code = 'YVK-0001'", one=True)
+            manager = query(
+                "SELECT id FROM users WHERE email = 'manager@yavaka.co.zw'", one=True
+            )
+            log_event(manager["id"], project["id"], action, detail)
+
+    def test_the_bell_is_a_disclosure_not_a_plain_link(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+
+        # A <details>/<summary> pair is what makes the panel open in place.
+        self.assertIn("data-notif", page)
+        self.assertIn('class="icon-btn topbar-alert', page)
+        self.assertNotIn(
+            '<a class="icon-btn topbar-alert" href="/app/updates"',
+            page,
+            "the bell must not navigate straight to the inbox",
+        )
+        # The inbox is still reachable, from the foot of the panel.
+        self.assertIn('class="notif-foot" href="/app/updates"', page)
+
+    def test_each_row_links_to_its_own_record(self):
+        self._raise_update("document.uploaded", "site-week-12.jpg")
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+
+        self.assertIn("notif-row", page)
+        # A document upload belongs in the vault, not the generic project page.
+        self.assertIn("/app/documents?project=", page)
+
+    def test_unread_state_survives_the_panel(self):
+        from db import query
+
+        self._raise_update()
+        self.login()
+
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertIn("is-unread", page)
+        self.assertIn("notif-head-count", page)
+
+        with self.app.app_context():
+            owner = query(
+                "SELECT id FROM users WHERE email = 'client@yavaka.co.zw'", one=True
+            )
+            import updates
+
+            # Rendering the panel must not acknowledge anything.
+            self.assertGreaterEqual(updates.unread_count(owner["id"]), 1)
+
+    def test_an_empty_inbox_explains_itself(self):
+        self.login()
+        from db import execute, query
+
+        with self.app.app_context():
+            owner = query(
+                "SELECT id FROM users WHERE email = 'client@yavaka.co.zw'", one=True
+            )
+            execute("DELETE FROM notifications WHERE user_id = ?", (owner["id"],))
+
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertIn("notif-empty", page)
+        self.assertNotIn("notif-head-count", page)
 
 
 class UpdateCatalogue(unittest.TestCase):
@@ -5331,6 +5522,50 @@ class PosterBrand(VakaTestCase):
         ):
             with self.subTest(slug=required):
                 self.assertIn(required, slugs)
+
+    def test_the_set_reaches_fifty_with_no_repeated_slug(self):
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path.cwd() / "tools"))
+        import make_posters
+
+        slugs = [poster["slug"] for poster in make_posters.POSTERS]
+        self.assertEqual(len(slugs), 50)
+        self.assertEqual(len(set(slugs)), len(slugs), "a slug is used twice")
+
+        rendered = sorted(Path("static/posters").glob("yavaka-*.svg"))
+        self.assertEqual(len(rendered), 50)
+        for path in rendered:
+            with self.subTest(poster=path.name):
+                self.assertIn("yavaka.onrender.com", path.read_text(encoding="utf-8"))
+
+    def test_every_layout_draws_and_its_required_keys_are_present(self):
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path.cwd() / "tools"))
+        import make_posters
+
+        self.assertEqual(
+            sorted(make_posters.LAYOUTS),
+            ["gate", "ledger", "quote", "stat", "statement", "twotone"],
+        )
+        for poster in make_posters.POSTERS:
+            with self.subTest(slug=poster["slug"]):
+                layout = make_posters.LAYOUTS[poster["layout"]]
+                markup = layout(poster)
+                self.assertGreater(len(markup), 2000)
+                # Cream type on a dark backdrop is the family signature; a
+                # layout that forgets its backdrop renders invisible text.
+                if poster["layout"] in {"statement", "stat", "gate"}:
+                    self.assertIn("url(#sky)", markup)
+                if poster["layout"] == "ledger":
+                    self.assertEqual(len(poster["entries"]), 4)
+                if poster["layout"] == "gate":
+                    self.assertGreaterEqual(len(poster["gates"]), 4)
+                    self.assertLess(poster["current"], len(poster["gates"]))
+
 
 
 class DesignSystemPolish(VakaTestCase):

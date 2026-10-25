@@ -287,6 +287,10 @@ def feed(user_id: str, kind: str = "all", limit: int = 25, offset_rows: int = 0)
         row["notification_tone"] = stored
         if stored:
             row["tone"] = stored
+        # Rows written before hrefs existed still need somewhere to land.
+        if not row.get("href"):
+            row["href"] = _href(row["action"], row["project_id"])
+        row["is_unread"] = not row.get("read_at")
     return rows
 
 

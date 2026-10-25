@@ -207,11 +207,11 @@ ICON_PATHS = {
 BRASS_GLYPHS = {"wallet", "receipt", "clock", "camera"}
 
 
-def icon(glyph, cx, cy):
+def icon(glyph, cx, cy, colour=None):
     """Draws a glyph from the 24x24 set centred on (cx, cy)."""
-    colour = BRASS_DIM if glyph in BRASS_GLYPHS else FOREST
+    stroke = colour or (BRASS_DIM if glyph in BRASS_GLYPHS else FOREST)
     path = ICON_PATHS[glyph].replace("{s}", BRASS_DIM)
-    return (f'<g transform="translate({cx - 12} {cy - 12})" fill="none" stroke="{colour}" '
+    return (f'<g transform="translate({cx - 12} {cy - 12})" fill="none" stroke="{stroke}" '
             f'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">{path}</g>')
 
 
@@ -457,11 +457,144 @@ def layout_stat(p):
     return svg_doc(p["title"], p["desc"], "".join(body))
 
 
+def layout_gate(p):
+    """A build read as a sequence of gates, one of them always the one in front.
+
+    Composition is a horizontal rail rather than a stacked column, so a reader
+    scrolling a status feed sees something other than another block of type.
+    """
+    body = [
+        dark_backdrop(),
+        f'<circle cx="150" cy="330" r="230" fill="{BRASS}" opacity=".06"/>',
+        logo("light"),
+        pill(M + 2, 157, p["eyebrow"]),
+    ]
+    head, y = head_block(p["lines"], start=306, base=56)
+    body.append(head)
+    sub, y = sub_block(p["sub"], y + 10)
+    body.append(sub)
+
+    gates = p["gates"]
+    current = p.get("current", 0)
+    rail_y = 646
+    left, right = M + 26, W - M - 26
+    step = (right - left) / (len(gates) - 1)
+    body.append(f'<path d="M{left} {rail_y}h{right - left}" stroke="{CREAM}" '
+                f'stroke-opacity=".16" stroke-width="4"/>')
+    body.append(f'<path d="M{left} {rail_y}h{step * current}" stroke="{BRASS_LIGHT}" '
+                f'stroke-width="4"/>')
+    for index, label in enumerate(gates):
+        cx = left + step * index
+        done = index <= current
+        body.append(
+            f'<circle cx="{cx}" cy="{rail_y}" r="{19 if index == current else 13}" '
+            f'fill="{BRASS if index == current else (FOREST_MID if done else "#0e2f28")}" '
+            f'stroke="{BRASS_LIGHT if done else CREAM}" '
+            f'stroke-opacity="{1 if done else 0.28}" stroke-width="3"/>'
+        )
+        if done and index != current:
+            body.append(f'<circle cx="{cx}" cy="{rail_y}" r="5" fill="{BRASS_LIGHT}"/>')
+        anchor = "start" if index == 0 else ("end" if index == len(gates) - 1 else "middle")
+        body.append(
+            text(cx, rail_y + 62, label, 14,
+                 CREAM if index == current else "#9fb3a8",
+                 weight=700, family=SANS, anchor=anchor, spacing=1.2)
+        )
+
+    body.append(rect(M, 790, CONTENT_W, 152, "#ffffff", rx=26, opacity=0.06))
+    body.append(rect(M, 790, CONTENT_W, 152, "none", rx=26, stroke=CREAM,
+                     stroke_w=1, opacity=0.16))
+    body.append(f'<circle cx="{M + 62}" cy="866" r="24" fill="{BRASS}" opacity=".16"/>')
+    body.append(icon("lock", M + 62, 866, colour=BRASS_LIGHT))
+    body.append(text(M + 110, 852, p["gate_title"], 22, CREAM, weight=700, family=SANS))
+    body.append(text(M + 110, 886, p["gate_body"], 17, "#c3d2c9", weight=400, family=SANS))
+
+    body.append(text(M + 4, 1040, f"\u201c{p['quote']}\u201d", 25, BRASS_LIGHT,
+                     weight=700, italic=True))
+    body.append(cta(M, 1090, p["cta"], h=CTA_HEIGHT))
+    body.append(footer(p["footer"]))
+    return svg_doc(p["title"], p["desc"], "".join(body))
+
+
+def layout_ledger(p):
+    """The receipt itself as the hero: money in, money out, proof against each.
+
+    A torn paper slip replaces the usual card panel, because "there is a receipt
+    for this" is the whole argument and the object should say it before the copy.
+    """
+    slip_x, slip_w = M, CONTENT_W
+    slip_top = 470
+    slip_bottom = 990
+    tooth, depth = 22, 20
+
+    teeth = []
+    x = slip_x
+    while x + tooth <= slip_x + slip_w:
+        teeth.append(f"L{x + tooth / 2} {slip_bottom + depth}")
+        teeth.append(f"L{x + tooth} {slip_bottom}")
+        x += tooth
+    torn = (
+        f'<path d="M{slip_x} {slip_bottom}{"".join(teeth)}'
+        f'L{slip_x + slip_w} {slip_bottom}L{slip_x + slip_w} {slip_bottom - depth}'
+        f'L{slip_x} {slip_bottom - depth}Z" fill="{CREAM}"/>'
+    )
+
+    body = [
+        rect(0, 0, W, H, "url(#paper)"),
+        f'<path d="M0 0h1080v412c-208 74-372 46-556 2S198 358 0 432Z" fill="{FOREST_MID}"/>',
+        f'<circle cx="908" cy="122" r="164" fill="{BRASS}" opacity=".12"/>',
+        logo("light"),
+        text(M + 6, 178, p["eyebrow"], 15, BRASS_LIGHT, weight=700,
+             family=SANS, spacing=3.2),
+        f'<ellipse cx="{W / 2}" cy="{slip_bottom + 52}" rx="286" ry="16" '
+        f'fill="{INK}" opacity=".05"/>',
+        rect(slip_x, slip_top, slip_w, slip_bottom - slip_top, CREAM, rx=26),
+        rect(slip_x, slip_top, slip_w, 96, SAND_DEEP, rx=26),
+        rect(slip_x, slip_top + 62, slip_w, 34, SAND_DEEP),
+        f'<circle cx="{slip_x + 62}" cy="{slip_top + 48}" r="21" fill="#f2ece0"/>',
+        icon("receipt", slip_x + 62, slip_top + 48),
+        text(slip_x + 106, slip_top + 44, p["slip_head"], 17, INK,
+             weight=700, family=SANS, spacing=1.6),
+        text(slip_x + 106, slip_top + 70, p["slip_sub"], 15, INK_SOFT,
+             weight=400, family=SANS),
+    ]
+
+    head, y = head_block(p["lines"], start=316, base=46)
+    body.append(head)
+
+    row_y = slip_top + 150
+    for label, value, glyph in p["entries"]:
+        body.append(f'<circle cx="{slip_x + 62}" cy="{row_y - 8}" r="19" fill="#f2ece0"/>')
+        body.append(icon(glyph, slip_x + 62, row_y - 8))
+        body.append(text(slip_x + 104, row_y, label, 18, INK_SOFT,
+                         weight=400, family=SANS))
+        body.append(text(slip_x + slip_w - 52, row_y, value, 20, INK,
+                         weight=700, family=SANS, anchor="end"))
+        body.append(f'<path d="M{slip_x + 48} {row_y + 26}h{slip_w - 96}" '
+                    f'stroke="#ded4c2" stroke-width="2" stroke-dasharray="7 9"/>')
+        row_y += 74
+
+    body.append(f'<path d="M{slip_x + 48} {row_y - 30}h{slip_w - 96}" '
+                f'stroke="{INK}" stroke-width="3"/>')
+    body.append(text(slip_x + 48, row_y + 6, p["total_label"], 17, INK,
+                     weight=700, family=SANS, spacing=1.4))
+    body.append(text(slip_x + slip_w - 52, row_y + 8, p["total_value"], 30, FOREST,
+                     weight=700, family=SANS, anchor="end"))
+    body.append(torn)
+
+    body.append(cta(M, 1050, p["cta"], fill=FOREST, color=CREAM,
+                    arrow=BRASS_LIGHT, h=66))
+    body.append(footer(p["footer"], dark=False))
+    return svg_doc(p["title"], p["desc"], "".join(body))
+
+
 LAYOUTS = {
     "statement": layout_statement,
     "twotone": layout_twotone,
     "quote": layout_quote,
     "stat": layout_stat,
+    "gate": layout_gate,
+    "ledger": layout_ledger,
 }
 
 
@@ -1055,6 +1188,131 @@ POSTERS = [
                  ("chat", "REACH", "Updates that arrive")],
          quote="Being far away is not the same as being uninformed.",
          cta="SEE EVERYTHING", footer="DISTANCE IS NOT PERMISSION."),
+    dict(slug="whose-gate-is-this", layout="gate",
+         eyebrow="COUNCIL & STATUTORY GATES",
+         title="Nobody can name the gate their build is waiting on.",
+         desc="YaVaKa maps the 19-stage Zimbabwe build sequence and names each statutory gate, its authority and what it blocks.",
+         lines=[("Every build waits", "cream"), ("on a gate.", "brass")],
+         sub=["Council plans, cession, EMA, ZINWA, ZESA, inspections.",
+              "Each one has an authority, a document and a stage it holds up."],
+         gates=["Title", "Council", "Footings", "Walling", "Roof", "Handover"],
+         current=2, quote="If nobody can name it, nobody can chase it.",
+         gate_title="COUNCIL PLANS",
+         gate_body="Blocks superstructure. Chased, not waited on.",
+         cta="NAME EVERY GATE", footer="GATES MAPPED IN ORDER."),
+    dict(slug="stage-gate-discipline", layout="gate",
+         eyebrow="FOR THE MANAGER ON THE GROUND",
+         title="A stage is not finished because it looks finished.",
+         desc="Each stage closes only when its check, its certificate and its cost are all recorded against it.",
+         lines=[("Finished", "cream"), ("is a signature.", "brass")],
+         sub=["Looking done and being signed off are two different events.",
+              "Close one stage at a time and the snag list stops growing."],
+         gates=["Set out", "Found", "Slab", "Walls", "Ring beam", "Roof"],
+         current=3, quote="The site stops arguing once the stages are closed.",
+         gate_title="WALLING APPROVED",
+         gate_body="Measured, checked and costed before ring beam.",
+         cta="CLOSE THE STAGE", footer="ONE STAGE. ONE SIGNATURE."),
+    dict(slug="funding-not-feelings", layout="gate",
+         eyebrow="MONEY AGAINST STAGES",
+         title="Money should follow a gate, not a feeling.",
+         desc="YaVaKa ties each release of funds to a stage that has actually been approved on site.",
+         lines=[("Release on a gate.", "cream"), ("Never on a mood.", "brass")],
+         sub=["\"Almost there\" is not a milestone. A signed stage is.",
+              "Each deposit lands against the stage it is paying for."],
+         gates=["Deposit", "Substructure", "Superstructure", "Roof", "Finishes", "Snag"],
+         current=2, quote="Funded stages finish. Unfunded intentions drift.",
+         gate_title="SUPERSTRUCTURE FUNDED",
+         gate_body="Balance moves only when the gate opens.",
+         cta="FUND THE STAGE", footer="MONEY FOLLOWS PROGRESS."),
+    dict(slug="first-day-on-site", layout="gate",
+         eyebrow="STARTING TOMORROW",
+         title="Most builds go wrong before the first brick is laid.",
+         desc="Budget, programme, approvals and a signed scope are all set before work starts on a YaVaKa-managed build.",
+         lines=[("The build is decided", "cream"), ("before it starts.", "brass")],
+         sub=["Scope, price, programme and approvals all exist up front.",
+              "Changing them afterwards is where the money disappears."],
+         gates=["Scope", "Price", "Approvals", "Mobilise", "Found", "Build"],
+         current=1, quote="Set it up properly once and the rest is just sequencing.",
+         gate_title="PRICE AGAINST QUANTITIES",
+         gate_body="Measured work, market rates, nothing rounded.",
+         cta="SET IT UP RIGHT", footer="DECIDED BEFORE DAY ONE."),
+    dict(slug="the-quiet-variation", layout="gate",
+         eyebrow="VARIATIONS",
+         title="The expensive change is the one nobody wrote down.",
+         desc="Every variation on a YaVaKa build is written, priced and approved before the work happens.",
+         lines=[("No verbal extras.", "cream"), ("No surprise invoice.", "brass")],
+         sub=["A variation on a phone call is a favour, and favours have no cap.",
+              "Written and priced first, then built, then paid."],
+         gates=["Request", "Measure", "Price", "Approve", "Build", "Settle"],
+         current=3, quote="A change you did not price is a price you did not choose.",
+         gate_title="WRITTEN AND APPROVED",
+         gate_body="Priced before it is built, not after.",
+         cta="PRICE EVERY CHANGE", footer="NOTHING CHANGES FOR FREE."),
+    dict(slug="nobody-chases-for-you", layout="gate",
+         eyebrow="CHASING, DONE FOR YOU",
+         title="Chasing is the job. You should not be the one doing it.",
+         desc="YaVaKa tracks each gate, chases the responsible party and records the outcome on the project.",
+         lines=[("Somebody should be", "cream"), ("chasing this.", "brass")],
+         sub=["A stalled gate is a full-time job: calls, letters, offices, queues.",
+              "That is what a build manager on the ground is for."],
+         gates=["Identify", "Submit", "Chase", "Inspect", "Approve", "Next"],
+         current=2, quote="Distance makes chasing impossible. That is the point of us.",
+         gate_title="SUBMITTED, THEN FOLLOWED UP",
+         gate_body="Every submission has an owner and a date.",
+         cta="HAND OVER THE CHASING", footer="CHASING IS THE JOB."),
+
+    dict(slug="what-the-money-bought", layout="ledger",
+         eyebrow="THE LEDGER, IN ONE SLIP",
+         title="A balance tells you nothing. The lines tell you everything.",
+         desc="YaVaKa shows every deposit, every payment, and the receipt that sits against each one.",
+         lines=[("A balance tells you", "cream"), ("nothing.", "brass")],
+         slip_head="BUILD LEDGER",
+         slip_sub="Greendale Family Home · YVK-0001",
+         entries=[("Deposits received", "$18,400", "wallet"),
+                  ("Superstructure paid", "$7,120", "check"),
+                  ("Roofing materials", "$1,240", "receipt"),
+                  ("Retention held", "$900", "lock")],
+         total_label="AVAILABLE BALANCE", total_value="$9,140",
+         cta="OPEN THE LEDGER", footer="LINES, NOT A BALANCE."),
+    dict(slug="the-receipt-is-the-argument", layout="ledger",
+         eyebrow="PROOF FILED, NOT PROMISED",
+         title="You should not have to ask for a photograph of a receipt.",
+         desc="Every expense can carry its receipt, filed against the stage and the cost it paid for.",
+         lines=[("Not a photo", "cream"), ("in a chat.", "brass")],
+         slip_head="EXPENSE · ROOFING STAGE",
+         slip_sub="Filed against the build, not the camera roll",
+         entries=[("IBR sheets", "$640", "receipt"),
+                  ("Purloins", "$310", "receipt"),
+                  ("Labour, 4 days", "$220", "clock"),
+                  ("Transport", "$70", "wallet")],
+         total_label="RECEIPTED TOTAL", total_value="$1,240",
+         cta="SEE THE RECEIPTS", footer="PROOF IS ATTACHED."),
+    dict(slug="the-money-that-vanished", layout="ledger",
+         eyebrow="WHERE THE BALANCE GOES",
+         title="\"The money is finished\" is not an explanation.",
+         desc="A running ledger shows exactly which stages consumed which funds, and what remains for the next gate.",
+         lines=[("Where did the", "cream"), ("balance go?", "brass")],
+         slip_head="FUNDING vs SPEND",
+         slip_sub="Sent from the UK · three tranches",
+         entries=[("Tranche 1 · deposit", "$9,000", "wallet"),
+                  ("Tranche 2 · structure", "$6,000", "wallet"),
+                  ("Tranche 3 · roofing", "$4,000", "wallet"),
+                  ("Spent to date", "$15,910", "receipt")],
+         total_label="LEFT FOR FINISHES", total_value="$3,090",
+         cta="TRACE EVERY DOLLAR", footer="MONEY THAT CAN BE TRACED."),
+    dict(slug="why-the-quote-was-low", layout="ledger",
+         eyebrow="THE QUOTE, LINE BY LINE",
+         title="The low quote was never low. It was incomplete.",
+         desc="Pricing against a bill of quantities shows what a quote left out before the work begins.",
+         lines=[("The cheap quote", "cream"), ("left things out.", "brass")],
+         slip_head="BILL OF QUANTITIES",
+         slip_sub="Priced from measured work",
+         entries=[("Excavation", "included", "check"),
+                  ("Concrete, footings", "included", "check"),
+                  ("Council fees", "not included", "clock"),
+                  ("Sewer connection", "not included", "clock")],
+         total_label="REAL COST vs THE QUOTE", total_value="+18%",
+         cta="SEE THE FULL BILL", footer="PRICE THE WORK, NOT A NUMBER."),
 ]
 
 

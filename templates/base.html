@@ -53,11 +53,16 @@
     {% include "partials/modal_register.html" %}
   {% endif %}
 
+  {% if request.endpoint not in ['auth.register', 'auth.login'] %}
+    {% include "partials/assistant_widget.html" %}
+  {% endif %}
+
   <script src="{{ asset_url('js/app.js') }}" defer></script>
 <script src="{{ asset_url('js/phone-field.js') }}" defer></script>
   <script src="{{ asset_url('js/site-nav.js') }}" defer></script>
   <script src="{{ asset_url('js/nav.js') }}" defer></script>
   <script src="{{ asset_url('js/modal.js') }}" defer></script>
+  <script src="{{ asset_url('js/assistant.js') }}" defer></script>
   {% include "partials/page_loader.html" %}
   {% block scripts %}{% endblock %}
 </body>

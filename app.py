@@ -14,6 +14,7 @@ from flask import Flask, g, render_template, request, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
+import assistant
 import db
 import seed
 from config import Config
@@ -228,6 +229,7 @@ def create_app(config_object=Config):
 
     from routes_agreements import DEFAULT_TERMS, bp as agreements_bp
     from routes_admin import bp as admin_bp
+    from routes_assistant import bp as assistant_bp
     from routes_attention import bp as attention_bp
     from routes_auth import bp as auth_bp
     from routes_dashboard import bp as dashboard_bp
@@ -264,6 +266,7 @@ def create_app(config_object=Config):
         search_bp,
         digest_bp,
         admin_bp,
+        assistant_bp,
     ):
         app.register_blueprint(blueprint)
 
@@ -348,8 +351,11 @@ def create_app(config_object=Config):
             else {"total": 0, "blocked": 0, "approvals": 0, "receipts": 0, "agreements": 0}
         )
         unread_updates = updates.unread_count(user["id"]) if user else 0
-        return {
-            "user": user,
+        # The bell opens a panel of what changed, so the newest few rows are
+        # rendered server-side and each one carries its own destination. Tapping
+        # a row goes to that record; the inbox itself is still a real page.
+        recent_updates = updates.feed(user["id"], limit=6) if user else []
+        return {            "user": user,
             "current_path": request.path,
             # Copy addresses whoever is signed in: a client with a manager reads
             # about what they receive, everyone else about what they record.
@@ -361,6 +367,9 @@ def create_app(config_object=Config):
             "sidebar_workspaces": workspaces_for(user),
             "attention": attention,
             "unread_updates": unread_updates,
+            "recent_updates": recent_updates,
+            # Chips under the assistant composer, phrased for the role.
+            "aide_suggestions": assistant.suggestions_for(user) if user else (),
             # Also used by the standalone print documents, which cannot read
             # localStorage, so the server must know the choice.
             "palette": (

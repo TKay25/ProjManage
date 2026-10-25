@@ -340,3 +340,32 @@
     navigate(url, { push: false, scrollY: event.state?.scrollY || 0 });
   });
 })();
+
+/* The bell panel is a native <details>, so it opens and closes without
+   JavaScript. This only adds the two things the element cannot know: a click
+   anywhere else, and Escape, should both dismiss it. */
+(() => {
+  const bell = document.querySelector("[data-notif]");
+  if (!bell) return;
+
+  const close = () => {
+    if (bell.open) bell.open = false;
+  };
+
+  document.addEventListener("click", (event) => {
+    if (bell.open && !bell.contains(event.target)) close();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && bell.open) {
+      close();
+      bell.querySelector("summary")?.focus();
+    }
+  });
+
+  // A row leads to its own record, so the panel must not stay open behind
+  // the page we are leaving.
+  bell.addEventListener("click", (event) => {
+    if (event.target.closest(".notif-row, .notif-foot")) close();
+  });
+})();

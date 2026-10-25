@@ -6278,3 +6278,497 @@ td.align-right,
     transform: none;
   }
 }
+
+/* ===================================================================
+   Notification bell panel
+   The bell opens what changed instead of navigating away, so checking
+   for news never costs you the page you were reading.
+   =================================================================== */
+
+.notif {
+  position: relative;
+}
+
+.notif > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.notif > summary::-webkit-details-marker {
+  display: none;
+}
+
+.notif > summary::marker {
+  content: "";
+}
+
+.notif[open] > summary {
+  background: var(--brass-50, #fbf6ec);
+  color: var(--forest-700, #0f5d46);
+}
+
+/* A quiet pulse on the badge so a returning user notices it without
+   the topbar shouting. Layout properties are untouched. */
+.topbar-alert.is-unread .topbar-alert-count {
+  box-shadow: 0 0 0 0 rgba(154, 62, 42, 0.45);
+  animation: notif-pulse 2.4s ease-out 2;
+}
+
+@keyframes notif-pulse {
+  60% {
+    box-shadow: 0 0 0 5px rgba(154, 62, 42, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(154, 62, 42, 0);
+  }
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 40;
+  width: min(360px, calc(100vw - 32px));
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--hairline, rgba(15, 93, 70, 0.12));
+  background: var(--surface, #fff);
+  box-shadow:
+    0 1px 2px rgba(16, 32, 26, 0.06),
+    0 18px 44px -20px rgba(16, 32, 26, 0.4);
+  animation: notif-drop 140ms ease-out;
+}
+
+@keyframes notif-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.notif-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint, #5c6862);
+}
+
+.notif-head-count {
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--brick-700, #8a3524);
+}
+
+.notif-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(56vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notif-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 120ms ease;
+}
+
+.notif-row:hover,
+.notif-row:focus-visible {
+  background: var(--surface-sunken, #f4f2ee);
+}
+
+.notif-row.is-unread .notif-title {
+  font-weight: 650;
+}
+
+.notif-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--surface-sunken, #f4f2ee);
+  color: var(--forest-700, #0f5d46);
+}
+
+.notif-icon[data-tone="danger"] {
+  background: #fbeceb;
+  color: var(--brick-700, #8a3524);
+}
+
+.notif-icon[data-tone="warning"] {
+  background: #fdf3e3;
+  color: #8a5a12;
+}
+
+.notif-icon[data-tone="success"] {
+  background: #e8f3ee;
+  color: var(--forest-700, #0f5d46);
+}
+
+.notif-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notif-title {
+  font-size: 0.85rem;
+  line-height: 1.32;
+  color: var(--ink, #16211c);
+}
+
+.notif-meta {
+  font-size: 0.72rem;
+  color: var(--ink-faint, #5c6862);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.notif-empty {
+  margin: 0;
+  padding: 6px 10px 12px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-faint, #5c6862);
+}
+
+.notif-foot {
+  display: block;
+  margin-top: 4px;
+  padding: 9px 10px;
+  border-top: 1px solid var(--hairline, rgba(15, 93, 70, 0.1));
+  border-radius: 0 0 10px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--forest-700, #0f5d46);
+}
+
+.notif-foot:hover,
+.notif-foot:focus-visible {
+  background: var(--surface-sunken, #f4f2ee);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-panel {
+    animation: none;
+  }
+
+  .topbar-alert.is-unread .topbar-alert-count {
+    animation: none;
+  }
+}
+
+
+/* ===================================================================
+   Floating assistant
+   A launcher that opens into a small window. It sits above everything
+   and never moves the page, so it costs no layout work when closed.
+   =================================================================== */
+
+.aide {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 60;
+  print-color-adjust: exact;
+}
+
+.aide > summary {
+  list-style: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.aide > summary::-webkit-details-marker {
+  display: none;
+}
+
+.aide > summary::marker {
+  content: "";
+}
+
+.aide-launcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 50px;
+  padding: 0 20px 0 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #147054, var(--forest-800, #0c3b31));
+  color: #fffdf8;
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 10px 26px -10px rgba(9, 44, 36, 0.6);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.aide-launcher:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 14px 32px -12px rgba(9, 44, 36, 0.65);
+}
+
+.aide-launcher:active {
+  transform: translateY(1px);
+}
+
+.aide-launcher-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.aide[open] > .aide-launcher {
+  display: none;
+}
+
+.aide-window {
+  display: flex;
+  flex-direction: column;
+  width: min(368px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 120px));
+  border-radius: 18px;
+  border: 1px solid var(--hairline, rgba(15, 93, 70, 0.14));
+  background: var(--surface, #fff);
+  box-shadow:
+    0 2px 6px rgba(16, 32, 26, 0.06),
+    0 28px 60px -26px rgba(16, 32, 26, 0.5);
+  overflow: hidden;
+  animation: aide-in 160ms ease-out;
+}
+
+@keyframes aide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+
+.aide-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  background: linear-gradient(180deg, #f7faf8, #fff);
+  border-bottom: 1px solid var(--hairline, rgba(15, 93, 70, 0.1));
+}
+
+.aide-mark {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.aide-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.aide-title strong {
+  font-size: 0.86rem;
+  color: var(--ink, #16211c);
+}
+
+.aide-title span {
+  font-size: 0.72rem;
+  color: var(--ink-faint, #5c6862);
+}
+
+.aide-close {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-faint, #5c6862);
+  cursor: pointer;
+}
+
+.aide-close:hover {
+  background: var(--surface-sunken, #f1f1ee);
+  color: var(--ink, #16211c);
+}
+
+.aide-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+  min-height: 90px;
+}
+
+.aide-said {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 13px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  max-width: 92%;
+}
+
+.aide-said--bot {
+  align-self: flex-start;
+  background: var(--surface-sunken, #f4f2ee);
+  color: var(--ink, #16211c);
+  border-bottom-left-radius: 5px;
+}
+
+.aide-said--me {
+  align-self: flex-end;
+  background: var(--forest-700, #0f5d46);
+  color: #fffdf8;
+  border-bottom-right-radius: 5px;
+}
+
+.aide-said--pending {
+  opacity: 0.6;
+}
+
+.aide-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.aide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 93, 70, 0.2);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--forest-700, #0f5d46);
+  background: #fff;
+}
+
+.aide-link:hover {
+  background: #f1f7f3;
+}
+
+.aide-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 10px;
+}
+
+.aide-chip {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px dashed rgba(15, 93, 70, 0.28);
+  background: transparent;
+  color: var(--ink-soft, #46584f);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.aide-chip:hover {
+  border-style: solid;
+  background: #f4f8f5;
+  color: var(--forest-700, #0f5d46);
+}
+
+.aide-compose {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--hairline, rgba(15, 93, 70, 0.1));
+  background: #fff;
+}
+
+.aide-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 93, 70, 0.18);
+  background: var(--surface-sunken, #f7f7f5);
+  font-size: 0.83rem;
+  color: var(--ink, #16211c);
+}
+
+.aide-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aide-send {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--forest-700, #0f5d46);
+  color: #fffdf8;
+  cursor: pointer;
+}
+
+.aide-send:disabled {
+  background: #b9c4be;
+  cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .aide {
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .aide-launcher {
+    height: 46px;
+    padding: 0 16px 0 13px;
+  }
+
+  .aide-window {
+    max-height: min(460px, calc(100vh - 130px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aide-window {
+    animation: none;
+  }
+
+  .aide-launcher {
+    transition: none;
+  }
+}
