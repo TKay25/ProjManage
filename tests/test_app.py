@@ -4662,3 +4662,22 @@ class WhatsAppChannelReporting(unittest.TestCase):
             )
         self.assertIn("VERIFICATION WILL FAIL", " ".join(logs.output))
 
+
+    def test_missing_variables_are_named_not_valued(self):
+        body = self._health(
+            WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="",
+            WHATSAPP_VERIFY_TOKEN="", WHATSAPP_APP_SECRET="",
+        )
+        self.assertIn("WHATSAPP_TOKEN", body["whatsapp_missing"])
+        # The phone id is present, so it must not be reported as missing.
+        self.assertNotIn("WHATSAPP_PHONE_NUMBER_ID", body["whatsapp_missing"])
+        # And no secret may leak into the payload.
+        self.assertNotIn("709678028897732", str(body["whatsapp_missing"]))
+
+    def test_nothing_missing_when_fully_configured(self):
+        body = self._health(
+            WHATSAPP_PHONE_NUMBER_ID="709678028897732", WHATSAPP_TOKEN="t",
+            WHATSAPP_VERIFY_TOKEN="v", WHATSAPP_APP_SECRET="s",
+        )
+        self.assertEqual(body["whatsapp_missing"], [])
+

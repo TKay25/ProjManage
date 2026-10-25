@@ -101,6 +101,9 @@ def health():
             "durable": is_postgres() or not _ephemeral_host(),
             "email": _email_channel(),
             "whatsapp": _whatsapp_channel(),
+            # Which variables are still empty. Names only, never values, so a
+            # half-configured channel can be finished without reading logs.
+            "whatsapp_missing": _whatsapp_missing(),
             "uploads": uploads,
             "uptime_s": round(time.time() - STARTED_AT),
         }
@@ -114,6 +117,20 @@ def _whatsapp_channel() -> str:
     if token and phone_id:
         return "live"
     return "partial" if (token or phone_id) else "simulator"
+
+
+def _whatsapp_missing() -> list[str]:
+    """Empty WhatsApp settings, by name. Values are never exposed."""
+    return [
+        name
+        for name in (
+            "WHATSAPP_TOKEN",
+            "WHATSAPP_PHONE_NUMBER_ID",
+            "WHATSAPP_VERIFY_TOKEN",
+            "WHATSAPP_APP_SECRET",
+        )
+        if not current_app.config.get(name)
+    ]
 
 
 def _email_channel() -> str:
