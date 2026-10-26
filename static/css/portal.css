@@ -3763,6 +3763,35 @@ button.card-trigger {
   }
 }
 
+/* The install button only appears once the browser offers the prompt, and its
+   label is wider than a phone's topbar can spare. The icon alone still
+   installs, and the full label is still in Settings. */
+@media (max-width: 760px) {
+  .topbar .install-btn span {
+    display: none;
+  }
+
+  .topbar .install-btn {
+    padding: 0 9px;
+  }
+}
+
+/* Narrow phones: tighten the row before dropping anything from it. */
+@media (max-width: 420px) {
+  .topbar {
+    gap: 6px;
+    padding: 0 12px;
+  }
+}
+
+/* Below this the wordmark and the full set of controls no longer fit on one
+   row (they need 347px), so the logo mark carries the brand alone. */
+@media (max-width: 359px) {
+  .topbar-brand span {
+    display: none;
+  }
+}
+
 @media (max-width: 760px) {
   .kpi-grid:not(.kpi-grid--3) {
     grid-template-columns: repeat(2, 1fr);
@@ -4027,6 +4056,29 @@ button.card-trigger {
   border-top: 1px solid var(--line);
   font-size: 0.68rem;
   color: var(--ink-faint);
+}
+
+/* A 56px print margin is a third of a phone screen. Narrow the sheet so the
+   document itself fits, and let the toolbar wrap instead of pushing the page
+   wider than the window. */
+@media (max-width: 640px) {
+  .print-body {
+    padding-bottom: 20px;
+  }
+
+  .print-sheet {
+    margin: 12px 10px;
+    padding: 22px 16px;
+  }
+
+  .print-head {
+    gap: 14px;
+  }
+
+  .print-toolbar {
+    flex-wrap: wrap;
+    padding: 12px 14px;
+  }
 }
 
 @media print {

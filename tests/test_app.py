@@ -6021,6 +6021,37 @@ class MobileLayout(VakaTestCase):
         self.assertIn('name="viewport"', page)
         self.assertIn("width=device-width", page)
 
+    def test_the_install_button_cannot_widen_a_phone_topbar(self):
+        """The browser only offers the prompt a while after sign-in.
+
+        When it does, the topbar grows a labelled "Install app" button. At that
+        point the row was 457px wide inside a 390px window, so the whole page
+        sat wider than the screen and had to be pinched back out to read. The
+        label is dropped on a phone and the icon stays, so the control still
+        installs.
+        """
+        css = Path("static/css/portal.css").read_text(encoding="utf-8")
+        block = css.split(".topbar .install-btn span {", 1)[1][:60]
+        self.assertIn("display: none", block)
+
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        button = page.split('class="btn btn-ghost btn-sm install-btn"', 1)[1][:220]
+        # Icon-only on a phone means the label text has to stay reachable for
+        # screen readers, which it is not once the span is hidden.
+        self.assertIn('aria-label="Install app"', button)
+
+    def test_the_project_pack_tables_scroll_inside_their_own_box(self):
+        """Five money columns cannot fit a phone.
+
+        Unwrapped, the pack table measured 425px in a 390px window, which put
+        the whole document sideways. Each table now sits in its own scroller.
+        """
+        template = Path("templates/app/project_pack.html").read_text(encoding="utf-8")
+        self.assertEqual(template.count('<div class="pack-table-wrap">'), 2)
+        self.assertEqual(template.count('<table class="table">'), 2)
+        self.assertIn(".pack-table-wrap { overflow-x: auto;", template)
+
 
 class DesignSystemPolish(VakaTestCase):
     """The refinements that make the UI feel finished are pinned down here."""

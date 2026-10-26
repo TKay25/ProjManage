@@ -64,7 +64,8 @@
         <span class="theme-icon-dark">{{ icon('moon', 17) }}</span>
         <span class="theme-icon-system">{{ icon('monitor', 17) }}</span>
       </button>
-      <button class="btn btn-ghost btn-sm install-btn" type="button" id="install-btn" hidden>
+      <button class="btn btn-ghost btn-sm install-btn" type="button" id="install-btn" hidden
+              aria-label="Install app" title="Install app">
         {{ icon('download', 16) }}<span>Install app</span>
       </button>
       <a class="avatar avatar-sm" href="{{ url_for('settings.index') }}" style="background:{{ user.avatar_color }}" aria-label="Your profile">
