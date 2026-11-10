@@ -4090,6 +4090,10 @@ class ColourContrast(VakaTestCase):
             head, body = block.group(1), block.group(2)
             if selector not in head:
                 continue
+            # The landing-page override restores the light palette on purpose;
+            # its tokens describe a pale canvas, not the dark workspace.
+            if "body:not(.app)" in head:
+                continue
             for name, value in re.findall(r"(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{6})", body):
                 tokens[name] = value
         return tokens
@@ -4255,7 +4259,9 @@ class ColourContrast(VakaTestCase):
         from pathlib import Path
 
         css = Path("static/css/app.css").read_text(encoding="utf-8")
-        dark = "#052018"  # --forest-950, the darkest band behind white text
+        # --forest-950, the darkest band behind white text, read from the sheet
+        # so a palette change cannot leave this check measuring an old colour.
+        dark = re.search(r"--forest-950:\s*(#[0-9a-fA-F]{6})", css).group(1)
         base = [int(dark[i : i + 2], 16) for i in (1, 3, 5)]
 
         alphas = re.findall(
@@ -5864,7 +5870,7 @@ class PosterBrand(VakaTestCase):
         poster = make_posters.logo("light")
 
         # Same tile, roof line and three bar colours as ui.logo_mark().
-        for token in ("#0F5D46", "#F7F4EF", "#C8963E", "#E3B968"):
+        for token in ("#24395F", "#F5F7FA", "#BA7044", "#CC8C64"):
             with self.subTest(token=token):
                 self.assertIn(token, site)
                 self.assertIn(token, poster)

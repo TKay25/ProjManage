@@ -110,7 +110,7 @@ def _seed_demo():
     manager_id = new_id()
 
     for user_id, name, email, role, phone, country, colour in [
-        (client_id, "Rudo Chikafu", "client@yavaka.co.zw", "client", "263771234567", "United Kingdom", "#0F5D46"),
+        (client_id, "Rudo Chikafu", "client@yavaka.co.zw", "client", "263771234567", "United Kingdom", "#24395F"),
         (manager_id, "Tendai Moyo", "manager@yavaka.co.zw", "manager", "263772555001", "Zimbabwe", "#8F6524"),
     ]:
         execute(

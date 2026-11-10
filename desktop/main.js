@@ -179,7 +179,7 @@ function createWindow() {
     height: 900,
     minWidth: 920,
     minHeight: 620,
-    backgroundColor: "#F7F4EF",
+    backgroundColor: "#F5F7FA",
     title: "YaVaKa",
     autoHideMenuBar: false,
     webPreferences: {

@@ -52,7 +52,7 @@
   height: 100%;
   width: 40%;
   border-radius: 0 3px 3px 0;
-  background: linear-gradient(90deg, var(--forest-600), var(--brass-400));
+  background: var(--forest-500);
 }
 
 /* Animating only while a navigation is running keeps an idle page idle — a
@@ -80,7 +80,7 @@
   align-items: center;
   justify-content: center;
   gap: 18px;
-  background: rgba(7, 30, 22, 0.5);
+  background: rgba(var(--shadow-rgb), 0.5);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   opacity: 0;
@@ -89,7 +89,7 @@
 }
 
 body.app .page-loader {
-  background: rgba(7, 30, 22, 0.5);
+  background: rgba(var(--shadow-rgb), 0.5);
 }
 
 .page-loader.is-visible {
@@ -144,7 +144,7 @@ body.app .page-loader {
   45%, 100% { stroke-dashoffset: 0; opacity: 1; }
 }
 
-/* A single gold-to-green line tracing the perimeter of the mark. The dash is
+/* A single ember-to-indigo line tracing the perimeter of the mark. The dash is
    one fifth of the path, and the offset animates linearly so the segment
    travels smoothly around every corner rather than stepping. */
 .loader-trace {
@@ -174,12 +174,12 @@ body.app .page-loader {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #eaf6f0;
+  color: #eef3ff;
 }
 
 .loader-sub {
   font-size: 0.72rem;
-  color: rgba(234, 246, 240, 0.62);
+  color: rgba(238, 243, 255, 0.62);
   margin-top: -10px;
 }
 

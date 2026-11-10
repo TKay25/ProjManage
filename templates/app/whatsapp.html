@@ -27,7 +27,7 @@
         {% for contact in contacts %}
           <li>
             <a class="contact {{ 'is-active' if selected and contact.id == selected.id }}" href="{{ url_for('whatsapp.index', contact=contact.id) }}">
-              <span class="avatar avatar-sm" style="background:#0F5D46">{{ contact.name|initials }}</span>
+              <span class="avatar avatar-sm" style="background:var(--forest-700)">{{ contact.name|initials }}</span>
               <span class="contact-text">
                 <span class="contact-name">{{ contact.name }}</span>
                 <span class="contact-meta">{{ display_phone(contact.phone) }}{% if contact.project_name %} · {{ contact.project_name }}{% endif %}</span>
@@ -45,7 +45,7 @@
 
   <section class="card wa-chat">
     <div class="wa-chat-head">
-      <span class="avatar avatar-sm" style="background:#0F5D46">{{ (selected.name if selected else 'YaVaKa')|initials }}</span>
+      <span class="avatar avatar-sm" style="background:var(--forest-700)">{{ (selected.name if selected else 'YaVaKa')|initials }}</span>
       <div>
         <p class="wa-chat-name">{{ selected.name if selected else 'YaVaKa assistant' }}</p>
         <p class="mini-meta">

@@ -18,17 +18,17 @@ W, H = 1080, 1350
 M = 72
 CONTENT_W = W - (M * 2)
 
-FOREST_DEEP = "#07231f"
-FOREST = "#0f5d46"
-FOREST_MID = "#0c3b31"
-CREAM = "#fffdf8"
-SAND = "#f7f4ef"
-SAND_DEEP = "#ece6da"
-BRASS = "#c8963e"
-BRASS_LIGHT = "#e2b967"
-BRASS_DIM = "#a97926"
-INK = "#183e32"
-INK_SOFT = "#526359"
+FOREST_DEEP = "#0a0f1c"
+FOREST = "#24395f"
+FOREST_MID = "#1a2b4a"
+CREAM = "#ffffff"
+SAND = "#f5f7fa"
+SAND_DEEP = "#eceff4"
+BRASS = "#a55f36"
+BRASS_LIGHT = "#ba7044"
+BRASS_DIM = "#8c4f2b"
+INK = "#0f1626"
+INK_SOFT = "#3e4a60"
 
 SERIF = "Georgia, 'Times New Roman', serif"
 SANS = "Arial, Helvetica, sans-serif"
@@ -125,16 +125,16 @@ def logo(tone="light"):
     mark = "".join(
         [
             f'<rect x="{x0}" y="{y0}" width="{size}" height="{size}" '
-            f'rx="{round(15 * scale, 2)}" fill="#0F5D46"/>',
+            f'rx="{round(15 * scale, 2)}" fill="#24395F"/>',
             f'<path d="M{px(12)} {py(32)} L{px(32)} {py(15)} L{px(52)} {py(32)}" '
-            f'fill="none" stroke="#F7F4EF" stroke-width="{round(4.2 * scale, 2)}" '
+            f'fill="none" stroke="#F5F7FA" stroke-width="{round(4.2 * scale, 2)}" '
             'stroke-linecap="round" stroke-linejoin="round"/>',
             f'<rect x="{px(17)}" y="{py(34)}" width="{round(5.5 * scale, 2)}" '
-            f'height="{round(15 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#C8963E"/>',
+            f'height="{round(15 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#BA7044"/>',
             f'<rect x="{px(26.5)}" y="{py(29)}" width="{round(5.5 * scale, 2)}" '
-            f'height="{round(20 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#E3B968"/>',
+            f'height="{round(20 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#CC8C64"/>',
             f'<rect x="{px(36)}" y="{py(24)}" width="{round(5.5 * scale, 2)}" '
-            f'height="{round(25 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#C8963E"/>',
+            f'height="{round(25 * scale, 2)}" rx="{round(2.4 * scale, 2)}" fill="#BA7044"/>',
         ]
     )
 

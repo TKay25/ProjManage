@@ -9,107 +9,116 @@
    measure against, and each surface here is chosen to keep it valid.
    ============================================================ */
 
-/* ---------- Laterite & Ivory: warm earth, terracotta, ochre ---------- */
+/* ---------- Clay & Copper: warm earth, terracotta, ember ---------- */
 
 [data-palette="laterite"] {
-  --forest-950: #43190f;
-  --forest-900: #5e2415;
-  --forest-800: #7a3520;
-  --forest-700: #9a4527;
-  --forest-600: #a9502f;
-  --forest-500: #bc6242;
-  --forest-400: #c97c5e;
-  --forest-300: #d9a184;
-  --forest-200: #e7c4b2;
-  --forest-100: #f3e1d8;
-  --forest-50: #fbf1ec;
+  --forest-950: #24120d;
+  --forest-900: #331a12;
+  --forest-800: #48251a;
+  --forest-700: #633323;
+  --forest-600: #7b4230;
+  --forest-500: #95573f;
+  --forest-400: #ad7459;
+  --forest-300: #c99b82;
+  --forest-200: #e0c3b2;
+  --forest-100: #eedcd0;
+  --forest-50: #f8f0ea;
 
-  --brass-700: #7e5a16;
-  --brass-600: #9a6e1c;
-  --brass-500: #b98a2e;
-  --brass-400: #cfa24b;
-  --brass-300: #debe7c;
-  --brass-100: #f6ead2;
+  --brass-700: #8a5a2b;
+  --brass-600: #9f6b38;
+  --brass-500: #b5814c;
+  --brass-400: #c99a68;
+  --brass-300: #dcb994;
+  --brass-100: #f3e7d8;
 
-  --sand-50: #fdfbf7;
-  --sand-100: #f8f2ea;
-  --sand-200: #f0e6d9;
-  --sand-300: #e4d5c2;
-  --sand-400: #d2bfa6;
+  --sand-50: #fcfaf7;
+  --sand-100: #f8f3ed;
+  --sand-200: #f1e9df;
+  --sand-300: #e4d7c9;
+  --sand-400: #cdbba8;
 
-  --line: rgba(154, 69, 39, 0.14);
-  --line-strong: rgba(154, 69, 39, 0.26);
-  --amber-soft: #fdf1e2;
-  --success: #2f6b3f;
-  --success-soft: #e6f2e8;
+  --brand-rgb: 123, 66, 48;
+  --accent-rgb: 181, 129, 76;
+
+  --line: rgba(99, 51, 35, 0.12);
+  --line-strong: rgba(99, 51, 35, 0.22);
+  --amber-soft: #f8efe4;
+  --success: #15803d;
+  --success-soft: #dcfce7;
 }
 
-/* ---------- Granite & Verdigris: architectural, cool, engineered ---------- */
+/* ---------- Graphite & Mint: architectural, cool, engineered ---------- */
 
 [data-palette="granite"] {
-  --forest-950: #141a1d;
-  --forest-900: #1d2529;
-  --forest-800: #2b353a;
-  --forest-700: #354248;
-  --forest-600: #43525a;
-  --forest-500: #596b74;
-  --forest-400: #7a8d96;
-  --forest-300: #a3b2b9;
-  --forest-200: #c6d2d7;
-  --forest-100: #e2eaec;
-  --forest-50: #f0f4f5;
+  --forest-950: #0a0f12;
+  --forest-900: #11181d;
+  --forest-800: #1b262c;
+  --forest-700: #2a3a42;
+  --forest-600: #3c525c;
+  --forest-500: #526a75;
+  --forest-400: #6e8894;
+  --forest-300: #9bb0b9;
+  --forest-200: #c3d2d8;
+  --forest-100: #e1eaed;
+  --forest-50: #f1f6f7;
 
-  --brass-700: #2f6154;
-  --brass-600: #397666;
-  --brass-500: #4e8a7b;
-  --brass-400: #6ba394;
-  --brass-300: #93bfb3;
-  --brass-100: #dcebe6;
+  --brass-700: #3f6f63;
+  --brass-600: #4f8174;
+  --brass-500: #659588;
+  --brass-400: #86ada2;
+  --brass-300: #a9c7bf;
+  --brass-100: #e3efeb;
 
-  --sand-50: #fbfbfb;
-  --sand-100: #f4f6f6;
-  --sand-200: #e9eded;
-  --sand-300: #d7dedf;
-  --sand-400: #bcc7c9;
+  --sand-50: #fbfcfd;
+  --sand-100: #f5f8f9;
+  --sand-200: #ebf1f2;
+  --sand-300: #dae4e6;
+  --sand-400: #c0cfd3;
 
-  --line: rgba(43, 53, 58, 0.14);
-  --line-strong: rgba(43, 53, 58, 0.26);
-  --amber-soft: #eef4f1;
-  --success: #397666;
-  --success-soft: #e2efeb;
+  --brand-rgb: 60, 82, 92;
+  --accent-rgb: 101, 149, 136;
+
+  --line: rgba(42, 58, 66, 0.14);
+  --line-strong: rgba(42, 58, 66, 0.26);
+  --amber-soft: #eef7f4;
+  --success: #3f6f63;
+  --success-soft: #e3efeb;
 }
 
-/* ---------- Msasa & Clay: the most "Zimbabwe", deepest contrast ---------- */
+/* ---------- Espresso & Sand: the deepest, warmest set ---------- */
 
 [data-palette="msasa"] {
-  --forest-950: #1c1610;
-  --forest-900: #2a2118;
-  --forest-800: #3b2e23;
-  --forest-700: #4d3c2d;
-  --forest-600: #634c39;
-  --forest-500: #7d614a;
-  --forest-400: #9d8168;
-  --forest-300: #c0a892;
-  --forest-200: #dccbb9;
-  --forest-100: #ede2d7;
-  --forest-50: #f8f2eb;
+  --forest-950: #17110c;
+  --forest-900: #241a12;
+  --forest-800: #35261a;
+  --forest-700: #4a3524;
+  --forest-600: #6b4b33;
+  --forest-500: #8a6446;
+  --forest-400: #a98363;
+  --forest-300: #c7a98c;
+  --forest-200: #dfcbb7;
+  --forest-100: #efe3d6;
+  --forest-50: #f9f3ec;
 
-  --brass-700: #8a4522;
-  --brass-600: #a55629;
-  --brass-500: #c0764a;
-  --brass-400: #cf9068;
-  --brass-300: #e0b192;
-  --brass-100: #f7e5d8;
+  --brass-700: #7d5620;
+  --brass-600: #93682a;
+  --brass-500: #ac7f3d;
+  --brass-400: #c39a63;
+  --brass-300: #d4b58d;
+  --brass-100: #f1e5d3;
 
-  --sand-50: #fdfaf6;
-  --sand-100: #f7f0e8;
-  --sand-200: #eee3d7;
-  --sand-300: #e0d1c0;
-  --sand-400: #cbb6a0;
+  --sand-50: #fcfaf6;
+  --sand-100: #f8f3eb;
+  --sand-200: #f0e7da;
+  --sand-300: #e3d6c4;
+  --sand-400: #cdbba3;
 
-  --line: rgba(77, 60, 45, 0.16);
-  --line-strong: rgba(77, 60, 45, 0.28);
+  --brand-rgb: 107, 75, 51;
+  --accent-rgb: 172, 127, 61;
+
+  --line: rgba(74, 53, 36, 0.14);
+  --line-strong: rgba(74, 53, 36, 0.26);
   --amber-soft: #fbf0e4;
-  --success: #4a6b3e;
-  --success-soft: #e9f0e3;
+  --success: #3f6212;
+  --success-soft: #ecfccb;
 }

@@ -43,7 +43,7 @@
       context.lineWidth = 2.1;
       context.lineCap = "round";
       context.lineJoin = "round";
-      context.strokeStyle = "#10261e";
+      context.strokeStyle = "#0F1626";
 
       if (snapshot) {
         const image = new Image();

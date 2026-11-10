@@ -26,7 +26,7 @@
     document.body.appendChild(probe);
     const colour = getComputedStyle(probe).getPropertyValue("--forest-700").trim();
     probe.remove();
-    return colour || "#0F5D46";
+    return colour || "#24395F";
   };
 
   // A stored choice beats the server render, so a device keeps its preference

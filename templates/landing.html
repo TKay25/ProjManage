@@ -6,7 +6,7 @@
 <section class="hero">
   <div class="container hero-inner">
     <div class="hero-copy">
-      <p class="eyebrow">{{ icon('globe', 14) }} Independent build management · Zimbabwe</p>
+      <p class="hero-pill"><span class="hero-pill-dot"></span> Independent build management · Zimbabwe</p>
       <h1 class="hero-title">
         You can't be on site.<br />
         <span class="accent">We can.</span>
@@ -32,24 +32,42 @@
         <li>{{ icon('wallet', 16) }} We approve or make payments</li>
         <li>{{ icon('globe', 16) }} You see it live, anywhere</li>
       </ul>
+
+      <dl class="hero-stats">
+        <div><dt>19</dt><dd>Gated build stages</dd></div>
+        <div><dt>1</dt><dd>Shared money ledger</dd></div>
+        <div><dt>0</dt><dd>Payments without proof</dd></div>
+      </dl>
     </div>
 
     <div class="hero-visual" aria-hidden="true">
-      <div class="hero-glow"></div>
-
       <div class="mock-project">
         <div class="mock-project-head">
+          <span class="mock-window"><span></span><span></span><span></span></span>
+          <span class="badge badge-live">Live</span>
+        </div>
+
+        <div class="mock-title-row">
           <div>
             <p class="mock-label">Project</p>
             <p class="mock-title">Greendale Family Home</p>
+            <p class="mock-sub">Harare · managed build</p>
           </div>
-          <span class="badge badge-live">On site</span>
         </div>
 
-        <div class="mock-balance">
-          <p class="mock-label">Available balance</p>
-          <p class="mock-amount">$30,980<span>.00</span></p>
-          <p class="mock-sub">of $60,000 funded</p>
+        <div class="mock-kpis">
+          <div class="mock-kpi">
+            <p class="mock-label">Funded</p>
+            <p class="mock-kpi-value">$60,000</p>
+          </div>
+          <div class="mock-kpi">
+            <p class="mock-label">Spent</p>
+            <p class="mock-kpi-value">$29,020</p>
+          </div>
+          <div class="mock-kpi mock-kpi--accent">
+            <p class="mock-label">Available</p>
+            <p class="mock-kpi-value">$30,980</p>
+          </div>
         </div>
 
         <div class="mock-progress">
@@ -100,7 +118,7 @@
   </div>
 
   <div class="container authority-strip">
-    <p class="authority-label">Know the approval gate before the next stage begins</p>
+    <p class="authority-label">Approval gates we plan for</p>
     <div class="authority-list">
       <span>Deeds Registry</span>
       <span>City of Harare</span>
@@ -114,53 +132,64 @@
 </section>
 
 <section class="section problem-band" id="problem" data-reveal>
-  <div class="container">
-    <div class="section-head">
+  <div class="container problem-layout">
+    <div class="problem-intro">
       <p class="eyebrow">The honest part</p>
-      <h2>Building from abroad isn't a distance problem.<br />It's a trust problem.</h2>
+      <h2>Building from abroad isn't a distance problem. It's a trust problem.</h2>
       <p class="lead">
         Almost every diaspora build stalls the same way. The money is real, the
         intentions are good, and nobody with authority is standing on the site.
       </p>
+      <p class="problem-turn">
+        None of that is a paperwork problem. It's a <strong>presence</strong> problem.
+        <span>Somebody has to stand on that site, hold the money and take the calls. That somebody is us.</span>
+      </p>
     </div>
 
-    <div class="pain-grid">
-      <article class="pain-card" data-reveal>
-        <span class="pain-num">01</span>
-        <h3>The money finished. The house didn't.</h3>
-        <p>Tranche two cleared, the site went quiet, and no one could say exactly what the money touched.</p>
-      </article>
-      <article class="pain-card" data-reveal>
-        <span class="pain-num">02</span>
-        <h3>The photos always look good.</h3>
-        <p>A camera can make a weak mix look like progress. Nobody was checking the specification, the quantities or the curing.</p>
-      </article>
-      <article class="pain-card" data-reveal>
-        <span class="pain-num">03</span>
-        <h3>Your relative means well. He isn't an engineer.</h3>
-        <p>Family can watch a site. Reading a bill of quantities, testing concrete and holding retention is a different job.</p>
-      </article>
-      <article class="pain-card" data-reveal>
-        <span class="pain-num">04</span>
-        <h3>Then comes the diaspora price.</h3>
-        <p>The moment a contractor hears the client is abroad, the same cement costs a third more. Nobody is negotiating for you.</p>
-      </article>
-      <article class="pain-card" data-reveal>
-        <span class="pain-num">05</span>
-        <h3>The argument you cannot win.</h3>
-        <p>Delays, "extras", a threat to down tools. You argue on WhatsApp across time zones, and he can simply wait you out.</p>
-      </article>
-      <article class="pain-card" data-reveal>
-        <span class="pain-num">06</span>
-        <h3>Approvals nobody warned you about.</h3>
-        <p>Title, cession, council plans, EMA, ZINWA, ZESA. One missed gate stops the entire build while it is explained to you.</p>
-      </article>
-    </div>
-
-    <p class="problem-turn">
-      None of that is a paperwork problem. It's a <strong>presence</strong> problem.
-      <span>Somebody has to stand on that site, hold the money and take the calls. That somebody is us.</span>
-    </p>
+    <ol class="problem-list">
+      <li class="problem-item" data-reveal>
+        <span class="problem-num">01</span>
+        <div>
+          <h3>The money finished. The house didn't.</h3>
+          <p>Tranche two cleared, the site went quiet, and no one could say exactly what the money touched.</p>
+        </div>
+      </li>
+      <li class="problem-item" data-reveal>
+        <span class="problem-num">02</span>
+        <div>
+          <h3>The photos always look good.</h3>
+          <p>A camera can make a weak mix look like progress. Nobody was checking the specification, the quantities or the curing.</p>
+        </div>
+      </li>
+      <li class="problem-item" data-reveal>
+        <span class="problem-num">03</span>
+        <div>
+          <h3>Your relative means well. He isn't an engineer.</h3>
+          <p>Family can watch a site. Reading a bill of quantities, testing concrete and holding retention is a different job.</p>
+        </div>
+      </li>
+      <li class="problem-item" data-reveal>
+        <span class="problem-num">04</span>
+        <div>
+          <h3>Then comes the diaspora price.</h3>
+          <p>The moment a contractor hears the client is abroad, the same cement costs a third more. Nobody is negotiating for you.</p>
+        </div>
+      </li>
+      <li class="problem-item" data-reveal>
+        <span class="problem-num">05</span>
+        <div>
+          <h3>The argument you cannot win.</h3>
+          <p>Delays, "extras", a threat to down tools. You argue on WhatsApp across time zones, and he can simply wait you out.</p>
+        </div>
+      </li>
+      <li class="problem-item" data-reveal>
+        <span class="problem-num">06</span>
+        <div>
+          <h3>Approvals nobody warned you about.</h3>
+          <p>Title, cession, council plans, EMA, ZINWA, ZESA. One missed gate stops the entire build while it is explained to you.</p>
+        </div>
+      </li>
+    </ol>
   </div>
 </section>
 
@@ -177,11 +206,16 @@
       </p>
     </div>
 
-    <div class="grid grid-4 value-grid">
-      <article class="feature-card" data-reveal>
+    <div class="bento">
+      <article class="feature-card feature-card--lead" data-reveal>
         <span class="feature-icon">{{ icon('shield', 22) }}</span>
         <h3>We choose the builder.</h3>
         <p>We check who has actually delivered, price the work against a real bill of quantities, and put the agreement in writing before a single bag of cement lands.</p>
+        <ul class="feature-points">
+          <li>{{ icon('check', 15) }} Contractor history verified</li>
+          <li>{{ icon('check', 15) }} Priced against a real bill of quantities</li>
+          <li>{{ icon('check', 15) }} Signed before work starts</li>
+        </ul>
       </article>
       <article class="feature-card" data-reveal>
         <span class="feature-icon">{{ icon('wallet', 22) }}</span>
@@ -199,6 +233,23 @@
         <p>Approvals, quotes, invoices, receipts, site photos and signed agreements sit against the build and the stage they belong to.</p>
       </article>
     </div>
+  </div>
+</section>
+
+<section class="quote-band" data-reveal>
+  <div class="container quote-inner">
+    <figure class="quote-figure">
+      <blockquote class="quote-statement">
+        “I stopped asking for photos of the receipt. <span>I could see it.</span>”
+      </blockquote>
+      <figcaption class="quote-by">
+        <span class="quote-avatar" aria-hidden="true">RC</span>
+        <span>
+          <strong>Building a family home in Greendale</strong>
+          <small>Client based in the United Kingdom</small>
+        </span>
+      </figcaption>
+    </figure>
   </div>
 </section>
 

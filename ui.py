@@ -102,16 +102,16 @@ def logo_mark(size: int = 40, css_class: str = "") -> Markup:
     return Markup(
         f'<svg class="logo-mark {css_class}" width="{size}" height="{size}" viewBox="0 0 64 64" '
         'role="img" aria-label="YaVaKa">'
-        '<rect width="64" height="64" rx="15" fill="var(--forest-700, #0F5D46)"/>'
+        '<rect width="64" height="64" rx="15" fill="var(--forest-700, #24395F)"/>'
         '<path class="logo-roof" d="M12 32 32 15l20 17" fill="none" '
-        'stroke="var(--sand-100, #F7F4EF)" stroke-width="4.2" '
+        'stroke="var(--sand-100, #F5F7FA)" stroke-width="4.2" '
         'stroke-linecap="round" stroke-linejoin="round"/>'
         '<rect class="logo-bar logo-bar-1" x="17" y="34" width="5.5" height="15" rx="2.4" '
-        'fill="var(--brass-500, #C8963E)"/>'
+        'fill="var(--brass-500, #BA7044)"/>'
         '<rect class="logo-bar logo-bar-2" x="26.5" y="29" width="5.5" height="20" rx="2.4" '
-        'fill="var(--brass-400, #E3B968)"/>'
+        'fill="var(--brass-400, #CC8C64)"/>'
         '<rect class="logo-bar logo-bar-3" x="36" y="24" width="5.5" height="25" rx="2.4" '
-        'fill="var(--brass-500, #C8963E)"/>'
+        'fill="var(--brass-500, #BA7044)"/>'
         "</svg>"
     )
 

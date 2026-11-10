@@ -12,45 +12,48 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* Surfaces read as slate-green rather than pure black, so the
-     forest/brass accents keep their warmth. */
-  --sand-50: #0e1512;
-  --sand-100: #121a16;
-  --sand-200: #17211c;
-  --sand-300: #1f2b25;
-  --sand-400: #2b3a32;
+  /* Surfaces read as midnight navy rather than pure black, so the
+     navy/copper accents keep their depth. */
+  --sand-50: #0b1120;
+  --sand-100: #0f1729;
+  --sand-200: #151f35;
+  --sand-300: #1d2942;
+  --sand-400: #2a3852;
 
-  --ink: #e8efeb;
-  --ink-soft: #a9b8b1;
-  --ink-faint: #7e8f88;
-  --line: rgba(180, 220, 200, 0.12);
-  --line-strong: rgba(180, 220, 200, 0.22);
+  --ink: #e8eef7;
+  --ink-soft: #a7b4c8;
+  --ink-faint: #7d8ba1;
+  --line: rgba(148, 163, 184, 0.14);
+  --line-strong: rgba(148, 163, 184, 0.24);
 
   /* Accents lifted for contrast against dark surfaces. */
-  --forest-950: #04120d;
-  --forest-900: #071d16;
-  --forest-800: #0b2c22;
-  --forest-700: #16745a;
-  --forest-600: #2a8a6c;
-  --forest-500: #3aa383;
-  --forest-400: #58b898;
-  --forest-300: #82cfb2;
-  --forest-200: #a9ddc9;
-  --forest-100: #1b3a2f;
-  --forest-50: #14261f;
+  --forest-950: #070b14;
+  --forest-900: #0b1120;
+  --forest-800: #131f36;
+  --forest-700: #3c5c94;
+  --forest-600: #2f4a7a;
+  --forest-500: #5b7bb0;
+  --forest-400: #8aa5cc;
+  --forest-300: #b9cbe3;
+  --forest-200: #dce6f2;
+  --forest-100: #1b2a44;
+  --forest-50: #162138;
 
-  --brass-700: #d9ab5d;
-  --brass-600: #e6c489;
-  --brass-500: #c8963e;
-  --brass-400: #d9ab5d;
-  --brass-300: #e6c489;
-  --brass-100: #2e2718;
+  --brass-700: #deb095;
+  --brass-600: #cc8c64;
+  --brass-500: #ba7044;
+  --brass-400: #cc8c64;
+  --brass-300: #deb095;
+  --brass-100: #2a1d15;
 
-  --brick: #e2826f;
-  --brick-soft: #33201c;
-  --amber-soft: #2e2718;
-  --success: #58b898;
-  --success-soft: #16302a;
+  --brand-rgb: 91, 123, 176;
+  --accent-rgb: 204, 140, 100;
+
+  --brick: #f87171;
+  --brick-soft: #3a1a1a;
+  --amber-soft: #33251a;
+  --success: #34d399;
+  --success-soft: #0f2e26;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 34px -22px rgba(0, 0, 0, 0.7);
@@ -109,14 +112,14 @@
 
 [data-theme="dark"] .btn-outline:hover,
 [data-theme="dark"] .btn-ghost:hover {
-  background: rgba(180, 220, 200, 0.08);
+  background: rgba(148, 163, 184, 0.08);
 }
 
 /* Print previews stay white: they exist to be printed on paper. */
 [data-theme="dark"] .print-sheet,
 [data-theme="dark"] .print-body {
   background: #fff;
-  color: #14201b;
+  color: #0B1220;
 }
 
 [data-theme="dark"] .input,
@@ -141,12 +144,12 @@
 }
 
 [data-theme="dark"] .nav-link.is-active {
-  background: rgba(58, 163, 131, 0.16);
+  background: rgba(var(--brand-rgb), 0.16);
   color: var(--forest-200);
 }
 
 [data-theme="dark"] .nav-link:hover {
-  background: rgba(180, 220, 200, 0.06);
+  background: rgba(148, 163, 184, 0.06);
 }
 
 /* Chips, badges and tints */
@@ -168,7 +171,7 @@
 [data-theme="dark"] .chip.is-active,
 [data-theme="dark"] .segment.is-active {
   background: var(--forest-700);
-  color: #eaf6f0;
+  color: #eef3ff;
 }
 
 [data-theme="dark"] .badge-success { background: var(--success-soft); color: var(--forest-200); }
@@ -176,7 +179,7 @@
 [data-theme="dark"] .badge-danger { background: var(--brick-soft); color: var(--brick); }
 
 [data-theme="dark"] .stage-files li {
-  background: rgba(180, 220, 200, 0.06);
+  background: rgba(148, 163, 184, 0.06);
 }
 
 [data-theme="dark"] .signature-block,
@@ -200,7 +203,7 @@
    card. `.kpi-value` was the worst offender. */
 [data-theme="dark"] .kpi-value,
 [data-theme="dark"] .panel-amount,
-[data-theme="dark"] .mock-amount,
+[data-theme="dark"] .mock-kpi-value,
 [data-theme="dark"] .signature-name,
 [data-theme="dark"] .stage-group,
 [data-theme="dark"] .all-clear,
@@ -224,7 +227,13 @@
 [data-theme="dark"] body.app .btn-light:hover,
 [data-theme="dark"] .segment.is-active,
 [data-theme="dark"] .nav-link.is-active {
-  color: #eaf6f0;
+  color: #eef3ff;
+}
+
+/* In dark mode the 500–700 ramp is deliberately light enough to read as
+   text, so filled buttons drop back to the 700–900 range for white copy. */
+[data-theme="dark"] .btn-primary {
+  background: var(--forest-700);
 }
 
 [data-theme="dark"] .btn-primary:hover {
@@ -236,7 +245,7 @@
 [data-theme="dark"] .demo-box code,
 [data-theme="dark"] .demo-box-title {
   color: var(--brass-300);
-  background: rgba(200, 150, 62, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 [data-theme="dark"] .notice-success {
@@ -252,7 +261,7 @@
 /* Tables and lists read better with a hairline, not a bright stripe. */
 [data-theme="dark"] .table tbody tr:hover,
 [data-theme="dark"] .ledger-row:hover {
-  background: rgba(180, 220, 200, 0.05);
+  background: rgba(148, 163, 184, 0.05);
 }
 
 [data-theme="dark"] .table th,
@@ -268,28 +277,53 @@
 
 
 [data-theme="dark"] .modal::backdrop {
-  background: rgba(2, 8, 6, 0.7);
+  background: rgba(2, 5, 16, 0.72);
 }
 
 /* Public pages keep their light identity for now: the marketing site is
    deliberately bright, so only the signed-in workspace follows the toggle. */
+/* The marketing site is deliberately bright in both themes, so the whole
+   light palette is restored here: surfaces, ink, brand ramps and the signal
+   colours. Only the signed-in workspace follows the dark toggle. */
 [data-theme="dark"] body:not(.app) {
-  --sand-50: #fcfaf7;
-  --sand-100: #f7f4ef;
-  --sand-200: #efe9df;
-  --sand-300: #e2d9ca;
-  --sand-400: #cfc3ae;
-  --ink: #14201b;
-  --ink-soft: #4e5f58;
-  --ink-faint: #5c6862;
-  --line: rgba(15, 93, 70, 0.12);
-  --line-strong: rgba(15, 93, 70, 0.22);
-  /* The bright site never shows a dark panel, so its soft greens stay pale.
-     Without this a callout is a dark slab carrying dark ink. The deepest
-     greens still read as dark, so the vision card is unaffected. */
-  --forest-50: #eef7f2;
-  --forest-100: #d9ece3;
-  --forest-900: #0a3327;
+  --sand-50: #fafbfc;
+  --sand-100: #f5f7fa;
+  --sand-200: #eceff4;
+  --sand-300: #dde3ec;
+  --sand-400: #bac5d5;
+  --ink: #0f1626;
+  --ink-soft: #3e4a60;
+  --ink-faint: #5a667c;
+  --line: rgba(15, 22, 38, 0.08);
+  --line-strong: rgba(15, 22, 38, 0.16);
+
+  --forest-950: #0a0f1c;
+  --forest-900: #111a2e;
+  --forest-800: #1a2b4a;
+  --forest-700: #24395f;
+  --forest-600: #2f4a7a;
+  --forest-500: #3c5c94;
+  --forest-400: #5b7bb0;
+  --forest-300: #8aa5cc;
+  --forest-200: #b9cbe3;
+  --forest-100: #dce6f2;
+  --forest-50: #eef3f9;
+
+  --brass-700: #8c4f2b;
+  --brass-600: #a55f36;
+  --brass-500: #ba7044;
+  --brass-400: #cc8c64;
+  --brass-300: #deb095;
+  --brass-100: #f4e6db;
+
+  --brick: #b91c1c;
+  --brick-soft: #fee2e2;
+  --amber-soft: #fbf3ea;
+  --success: #047857;
+  --success-soft: #d9f0e6;
+
+  --brand-rgb: 47, 74, 122;
+  --accent-rgb: 165, 95, 54;
   color-scheme: light;
 }
 
@@ -364,7 +398,7 @@ select,
   padding-right: 38px;
   cursor: pointer;
   text-overflow: ellipsis;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%230f5d46' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%232F2A8F' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
   background-position: right 13px center !important;
   background-size: 14px 14px !important;
@@ -382,25 +416,35 @@ select:disabled,
 }
 
 select option {
-  color: #14201b;
+  color: #0B1220;
   background: #fff;
 }
 
 [data-theme="dark"] select,
 [data-theme="dark"] .select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a9ddc9' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23A5B4FC' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
   background-position: right 13px center !important;
   background-size: 14px 14px !important;
 }
 
 [data-theme="dark"] select option {
-  background: #17211c;
-  color: #e8efeb;
+  background: #151f35;
+  color: #e8eef7;
 }
 
 [data-theme="dark"] .page-tagline {
   color: var(--forest-300);
+}
+
+/* The percentage sits inside an SVG, so it carries `fill`, not `color`. */
+[data-theme="dark"] .ring-text {
+  fill: var(--forest-200);
+}
+
+[data-theme="dark"] .palette-option {
+  background: var(--sand-200);
+  border-color: var(--line);
 }
 
 /* ---------- Auth dialogs ---------- */
@@ -563,17 +607,17 @@ dialog.modal--auth-register {
 
 @media (prefers-contrast: more) {
   :root {
-    --line: rgba(15, 93, 70, 0.34);
-    --line-strong: rgba(15, 93, 70, 0.56);
-    --ink-soft: #39473f;
-    --ink-faint: #56655d;
+    --line: rgba(var(--brand-rgb), 0.34);
+    --line-strong: rgba(var(--brand-rgb), 0.56);
+    --ink-soft: #2f3b4f;
+    --ink-faint: #46536a;
   }
 
   [data-theme="dark"] {
-    --line: rgba(190, 225, 210, 0.34);
-    --line-strong: rgba(190, 225, 210, 0.56);
-    --ink-soft: #cfdcd7;
-    --ink-faint: #a9bab3;
+    --line: rgba(148, 163, 184, 0.34);
+    --line-strong: rgba(148, 163, 184, 0.56);
+    --ink-soft: #bfcbdb;
+    --ink-faint: #9aa8bc;
   }
 
   :focus-visible {
@@ -616,7 +660,7 @@ dialog.modal--auth-register {
    darker brass it uses in light mode. */
 [data-theme="dark"] body:not(.app) .callout .icon,
 [data-theme="dark"] body:not(.app) .side-note .icon {
-  color: #a97b2f;
+  color: #8c4f2b;
 }
 
 [data-theme="dark"] .badge-soft,
@@ -652,10 +696,65 @@ dialog.modal--auth-register {
    dark ink - the app-level override above assumes a dark button. */
 [data-theme="dark"] body:not(.app) .btn-light {
   background: var(--sand-50);
-  color: #0a3327;
+  color: #111a2e;
 }
 
 [data-theme="dark"] body:not(.app) .btn-light:hover {
   background: #fff;
-  color: #04120d;
+  color: #0a0f1c;
+}
+
+/* ---------- Public site: components dark mode re-inks ----------
+   These selectors lift accent text for the dark workspace. On the marketing
+   site's light canvas the same lift would paint pale ink onto white, so the
+   landing page gets the light-mode shade back. */
+
+[data-theme="dark"] body:not(.app) .btn-outline,
+[data-theme="dark"] body:not(.app) .btn-outline:hover,
+[data-theme="dark"] body:not(.app) .btn-ghost,
+[data-theme="dark"] body:not(.app) .btn-ghost:hover,
+[data-theme="dark"] body:not(.app) .chip:hover,
+[data-theme="dark"] body:not(.app) .segment:hover,
+[data-theme="dark"] body:not(.app) .side-project:hover,
+[data-theme="dark"] body:not(.app) .link-quiet:hover,
+[data-theme="dark"] body:not(.app) a:hover,
+[data-theme="dark"] body:not(.app) .mock-kpi-value,
+[data-theme="dark"] body:not(.app) .panel-amount,
+[data-theme="dark"] body:not(.app) .signature-name,
+[data-theme="dark"] body:not(.app) .stage-group,
+[data-theme="dark"] body:not(.app) .all-clear {
+  color: var(--forest-800);
+}
+
+[data-theme="dark"] body:not(.app) .btn-outline {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+[data-theme="dark"] body:not(.app) .mock-kpi--accent .mock-kpi-value {
+  color: #fff;
+}
+
+[data-theme="dark"] body:not(.app) .feature-icon,
+[data-theme="dark"] body:not(.app) .agreement-icon,
+[data-theme="dark"] body:not(.app) .project-new-icon,
+[data-theme="dark"] body:not(.app) .ledger-in,
+[data-theme="dark"] body:not(.app) .update-icon--success {
+  color: var(--forest-600);
+}
+
+[data-theme="dark"] body:not(.app) .float-avatar,
+[data-theme="dark"] body:not(.app) .checklist-item.is-done .checklist-mark {
+  color: var(--success);
+}
+
+[data-theme="dark"] body:not(.app) .badge-soft,
+[data-theme="dark"] body:not(.app) .badge-success,
+[data-theme="dark"] body:not(.app) .health-flag--success,
+[data-theme="dark"] body:not(.app) .nav-count--live {
+  color: var(--forest-700);
+}
+
+[data-theme="dark"] body:not(.app) code,
+[data-theme="dark"] body:not(.app) .demo-box-title {
+  color: var(--brass-700);
 }

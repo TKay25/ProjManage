@@ -43,7 +43,7 @@
           <label class="field">
             <span class="field-label">Avatar colour</span>
             <select class="select" name="avatar_color">
-              {% for value, label in [('#0F5D46', 'Forest'), ('#8F6524', 'Brass'), ('#2A7A5E', 'Emerald'), ('#A9573C', 'Brick'), ('#3E6B8A', 'Slate'), ('#6B5B95', 'Plum')] %}
+              {% for value, label in [('#24395F', 'Navy'), ('#8C4F2B', 'Copper'), ('#3F6F63', 'Sage'), ('#8A3A3A', 'Brick'), ('#4A6A9E', 'Slate'), ('#6B5B8A', 'Plum')] %}
                 <option value="{{ value }}" {% if user.avatar_color == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
@@ -102,10 +102,10 @@
           <span class="field-label">Colour palette</span>
           <div class="palette-picker" role="radiogroup" aria-label="Colour palette">
             {% for key, label, note in [
-              ('forest', 'Forest & Brass', 'The original green and brass'),
-              ('laterite', 'Laterite & Ivory', 'Warm earth and terracotta'),
-              ('granite', 'Granite & Verdigris', 'Cool slate and oxidised copper'),
-              ('msasa', 'Msasa & Clay', 'Deep msasa and clay')
+              ('forest', 'Midnight & Copper', 'Deep navy with muted copper'),
+              ('laterite', 'Clay & Copper', 'Warm terracotta and copper'),
+              ('granite', 'Graphite & Mint', 'Cool graphite with fresh mint'),
+              ('msasa', 'Espresso & Sand', 'Deep espresso and warm sand')
             ] %}
               <label class="palette-option palette-option--{{ key }}">
                 <input class="sr-only" type="radio" name="palette" value="{{ key }}"

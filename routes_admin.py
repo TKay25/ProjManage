@@ -229,7 +229,7 @@ def invite_staff():
 
     execute(
         """INSERT INTO users (id, name, email, password_hash, role, phone, country, avatar_color, created_at)
-           VALUES (?, ?, ?, ?, ?, NULL, 'Zimbabwe', '#0F5D46', ?)""",
+           VALUES (?, ?, ?, ?, ?, NULL, 'Zimbabwe', '#24395F', ?)""",
         (new_id(), name[:90], email, auth.hash_password(password), role, now_iso()),
     )
     log_event(g.user["id"], None, "user.created", f"{name} created as {ROLES[role]}")

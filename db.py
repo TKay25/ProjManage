@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'client',
   phone TEXT,
   country TEXT,
-  avatar_color TEXT NOT NULL DEFAULT '#0F5D46',
+  avatar_color TEXT NOT NULL DEFAULT '#24395F',
   density TEXT NOT NULL DEFAULT 'comfortable',
   page_size INTEGER NOT NULL DEFAULT 25,
   session_epoch INTEGER NOT NULL DEFAULT 0,
