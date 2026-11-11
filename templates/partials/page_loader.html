@@ -1,16 +1,9 @@
 {# Page transition overlay. Rendered into every page so the logo markup lives in
-   one place: nav.js only toggles it, and the bar/roof animation is driven by
-   transitions.css. #}
+   one place: nav.js only toggles it, and the roof/wall/base animation is driven
+   by transitions.css. #}
 <div class="page-progress" aria-hidden="true"></div>
 <div class="page-loader" role="status" aria-live="polite" aria-label="Loading page">
   <div class="loader-mark">
-    {# One line travelling smoothly around the mark. pathLength normalises the
-       perimeter to 100 so the dash can be a percentage. #}
-    <svg class="loader-trace" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-      <rect x="2" y="2" width="96" height="96" rx="19" pathLength="100"
-            fill="none" stroke="var(--forest-500)" stroke-width="2.6"
-            stroke-linecap="round" stroke-dasharray="24 76" />
-    </svg>
     {{ logo_mark(56) }}
   </div>
   <p class="loader-text">Loading</p>

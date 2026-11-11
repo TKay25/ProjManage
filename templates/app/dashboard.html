@@ -140,6 +140,7 @@
           <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">Open ledger {{ icon('arrow-right', 14) }}</a>
         </div>
 
+        {% if totals.funded or totals.spent %}
         <div class="chart">
           <div class="chart-legend">
             <span><i class="dot dot-funded"></i> Received</span>
@@ -168,6 +169,14 @@
           <div><span class="muted small">Spent</span><strong>{{ totals.spent|money_compact }}</strong></div>
           <div><span class="muted small">Remaining</span><strong class="{{ 'neg' if totals.balance < 0 else 'pos' }}">{{ totals.balance|money_compact }}</strong></div>
         </div>
+        {% else %}
+        <div class="empty empty--flush">
+          <span class="empty-icon">{{ icon('trending-up', 26) }}</span>
+          <h3>No money has moved yet</h3>
+          <p>Record the first funds received—then each payment you make—and this chart draws the month-by-month cash flow for {{ project.name }}.</p>
+          <a class="btn btn-primary" href="{{ url_for('money.index', project=project.id) }}#record">{{ icon('plus', 16) }} Record money</a>
+        </div>
+        {% endif %}
       </div>
 
       <div class="card">

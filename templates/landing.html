@@ -1,6 +1,54 @@
 ﻿{% extends "base.html" %}
+{% set faqs = [
+  {"q": "Do you build the house, or only manage the build?",
+   "a": "Both. Most clients ask YaVaKa to manage a contractor they have chosen, or one we recommend: we vet the builder, price the work and hold the payments. If you would rather not deal with a contractor at all, we can deliver the build ourselves."},
+  {"q": "Where in Zimbabwe do you work?",
+   "a": "Harare and the surrounding towns first, with site visits arranged for builds elsewhere in Zimbabwe. Where a build sits outside our regular routes we agree how often we inspect before you commit."},
+  {"q": "How do payments work if I am abroad?",
+   "a": "You either keep custody of the funds and we approve each release against verified progress, or you place the funds with us and we make the payment to the contractor ourselves. Either way every payment is tied to a stage and carries its receipt."},
+  {"q": "I already have a builder. Can you still help?",
+   "a": "Yes. We start by putting the scope, price and payment schedule in writing, then manage the contractor against that agreement. Nothing changes on site until the paperwork matches what you have actually agreed."},
+  {"q": "How do I see what is happening on site?",
+   "a": "Each stage carries photographs, approvals and the money spent against it, and updates land in the same record as they happen. You can read it on any device, and WhatsApp can send and answer questions from the same project record."},
+  {"q": "What does management cost?",
+   "a": "A fixed management fee, quoted and agreed before the first payment moves. We take nothing from contractors or suppliers, so the only person we answer to is you."}
+] %}
 {% block title %}YaVaKa — independent build management for Zimbabweans abroad{% endblock %}
 {% block body_class %}landing public{% endblock %}
+
+{% block head_extra %}
+  {# The hero photograph is the largest paint; start it before the CSS lands. #}
+  <link rel="preload" as="image" href="{{ url_for('static', filename='img/hero/structure.jpg') }}" fetchpriority="high" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "name": "YaVaKa",
+    "description": "Independent build management for Zimbabweans abroad: contractor vetting, payments approved against proof, and one shared record of the build.",
+    "url": "{{ request.url_root.rstrip('/') }}/",
+    "image": "{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='img/og-card.png') }}",
+    "logo": "{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='icons/icon-512.png') }}",
+    "areaServed": { "@type": "Country", "name": "Zimbabwe" },
+    "address": { "@type": "PostalAddress", "addressCountry": "ZW" },
+    "serviceType": "Construction project management"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {% for item in faqs %}
+      {
+        "@type": "Question",
+        "name": {{ item.q|tojson }},
+        "acceptedAnswer": { "@type": "Answer", "text": {{ item.a|tojson }} }
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+  </script>
+{% endblock %}
 
 {% block content %}
 <section class="hero" data-hero-gallery>
@@ -846,6 +894,31 @@
           <li>Suppliers and contractors held to a documented standard.</li>
         </ul>
       </article>
+    </div>
+  </div>
+</section>
+
+<section class="section section-sand" id="faq" data-reveal>
+  <div class="container faq-layout">
+    <div class="faq-intro">
+      <p class="eyebrow">Questions clients ask</p>
+      <h2>The things you would ask on the phone.</h2>
+      <p class="lead">
+        If something is not covered here, ask the assistant in the corner or
+        send us the question directly — we answer before you commit to anything.
+      </p>
+    </div>
+
+    <div class="faq-list">
+      {% for item in faqs %}
+        <details class="faq-item" {% if loop.first %}open{% endif %}>
+          <summary class="faq-question">
+            <span>{{ item.q }}</span>
+            <span class="faq-sign" aria-hidden="true"></span>
+          </summary>
+          <p class="faq-answer">{{ item.a }}</p>
+        </details>
+      {% endfor %}
     </div>
   </div>
 </section>

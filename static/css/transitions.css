@@ -107,7 +107,6 @@ body.app .page-loader {
 
 .loader-mark .logo-mark {
   animation: loader-beat 1.5s ease-in-out infinite;
-  border-radius: 18px;
 }
 
 @keyframes loader-beat {
@@ -140,31 +139,6 @@ body.app .page-loader {
 @keyframes loader-base {
   0% { transform: scaleX(0.12); opacity: 0.4; }
   45%, 100% { transform: scaleX(1); opacity: 1; }
-}
-
-/* A single ember-to-indigo line tracing the perimeter of the mark. The dash is
-   one fifth of the path, and the offset animates linearly so the segment
-   travels smoothly around every corner rather than stepping. */
-.loader-trace {
-  position: absolute;
-  top: -8px;
-  left: -8px;
-  /* The mark is a fixed 76px, so the frame is a fixed 92px square. Explicit
-     width and height keep the viewBox from collapsing to its intrinsic ratio. */
-  width: 92px;
-  height: 92px;
-  /* The global `svg { max-width: 100% }` would clamp this to the parent's 76px. */
-  max-width: none;
-  overflow: visible;
-}
-
-.loader-trace rect {
-  animation: loader-trace-run 2.6s linear infinite;
-}
-
-@keyframes loader-trace-run {
-  from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -100; }
 }
 
 .loader-text {

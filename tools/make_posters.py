@@ -108,8 +108,8 @@ def logo(tone="light"):
     """The same mark the web app draws in ui.logo_mark().
 
     Geometry is copied from that 64-unit viewBox and scaled, so the poster and
-    the site cannot drift apart: forest tile, copper roof pitch, pale walls and
-    a copper foundation line.
+    the site cannot drift apart: copper roof pitch, walls in the text colour and
+    a copper foundation line. No tile — the mark sits straight on the poster.
     """
     face = CREAM if tone == "light" else INK
     sub = "#d2ded7" if tone == "light" else "#6b7a70"
@@ -124,13 +124,11 @@ def logo(tone="light"):
 
     mark = "".join(
         [
-            f'<rect x="{x0}" y="{y0}" width="{size}" height="{size}" '
-            f'rx="{round(16 * scale, 2)}" fill="#24395F"/>',
             f'<path d="M{px(14)} {py(30)} L{px(32)} {py(14.5)} L{px(50)} {py(30)}" '
             f'fill="none" stroke="#CC8C64" stroke-width="{round(5.2 * scale, 2)}" '
             'stroke-linecap="round" stroke-linejoin="round"/>',
             f'<path d="M{px(15)} {py(31)} V{py(46)} M{px(49)} {py(31)} V{py(46)}" '
-            f'fill="none" stroke="#F5F7FA" stroke-width="{round(4.4 * scale, 2)}" '
+            f'fill="none" stroke="{face}" stroke-width="{round(4.4 * scale, 2)}" '
             'stroke-linecap="round"/>',
             f'<rect x="{px(10)}" y="{py(49.6)}" width="{round(44 * scale, 2)}" '
             f'height="{round(4.4 * scale, 2)}" rx="{round(2.2 * scale, 2)}" fill="#BA7044"/>',

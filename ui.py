@@ -31,6 +31,7 @@ ICONS = {
     "plus": '<path d="M12 5v14M5 12h14"/>',
     "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
     "arrow-left": '<path d="M19 12H5M11 18l-6-6 6-6"/>',
+    "arrow-up": '<path d="M12 19V5M6 11l6-6 6 6"/>',
     "check": '<path d="M20 6 9 17l-5-5"/>',
     "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     "alert": '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
@@ -95,21 +96,19 @@ def icon(name: str, size: int = 20, css_class: str = "") -> Markup:
 
 
 def logo_mark(size: int = 40, css_class: str = "") -> Markup:
-    # The roof is the brand's "V": copper pitch over pale walls, standing on a
-    # copper foundation — the build and the record it stands on.
+    # The roof is the brand's "V": copper pitch over walls, standing on a copper
+    # foundation — the build and the record it stands on. The tile is gone, so
+    # the walls take the surrounding ink colour and the mark sits on any surface.
     # The roof/wall/base classes are inert everywhere except the loader, where
     # they drive the build-up animation (see transitions.css).
-    # Colours come from the palette tokens (with the brand values as fallbacks)
-    # so the mark recolours with the rest of the page, including print.
     return Markup(
-        f'<svg class="logo-mark {css_class}" width="{size}" height="{size}" viewBox="0 0 64 64" '
+        f'<svg class="logo-mark {css_class}" width="{size}" height="{size}" viewBox="7 9 50 50" '
         'role="img" aria-label="YaVaKa">'
-        '<rect width="64" height="64" rx="16" fill="var(--forest-700, #24395F)"/>'
         '<path class="logo-roof" d="M14 30 32 14.5 50 30" fill="none" pathLength="100" '
         'stroke="var(--brass-400, #CC8C64)" stroke-width="5.2" '
         'stroke-linecap="round" stroke-linejoin="round"/>'
         '<path class="logo-wall" d="M15 31v15M49 31v15" fill="none" pathLength="100" '
-        'stroke="var(--sand-100, #F5F7FA)" stroke-width="4.4" stroke-linecap="round"/>'
+        'stroke="currentColor" stroke-width="4.4" stroke-linecap="round"/>'
         '<rect class="logo-base" x="10" y="49.6" width="44" height="4.4" rx="2.2" '
         'fill="var(--brass-500, #BA7044)"/>'
         "</svg>"

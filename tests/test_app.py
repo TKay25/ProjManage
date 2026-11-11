@@ -5869,15 +5869,27 @@ class PosterBrand(VakaTestCase):
         site = ui.logo_mark(54)
         poster = make_posters.logo("light")
 
-        # Same tile, roof pitch, walls and foundation colours as ui.logo_mark().
-        for token in ("#24395F", "#F5F7FA", "#BA7044", "#CC8C64"):
+        # The copper — roof pitch and foundation — is the same on both.
+        for token in ("#CC8C64", "#BA7044"):
             with self.subTest(token=token):
                 self.assertIn(token, site)
                 self.assertIn(token, poster)
 
-        # One tile and one foundation bar, on both.
-        self.assertEqual(poster.count("<rect"), 2)  # tile + foundation
-        self.assertEqual(site.count("<rect"), 2)
+        # Both draw the bare glyph: roof pitch, two walls, one foundation bar.
+        self.assertEqual(poster.count("<rect"), 1)
+        self.assertEqual(site.count("<rect"), 1)
+        self.assertEqual(poster.count("<path"), 2)
+        self.assertEqual(site.count("<path"), 2)
+
+        # No tile on either. The poster walls are white on the dark panel; the
+        # site walls inherit the surrounding ink so the mark works on any surface.
+        self.assertNotIn("<rect width=", site)
+        self.assertIn('stroke="#ffffff"', poster)
+        self.assertIn("currentColor", site)
+
+        # The site mark keeps taking its copper from the palette.
+        self.assertIn("var(--brass-500", site)
+        self.assertIn("var(--brass-400", site)
 
     def test_poster_set_covers_running_builds_and_managers(self):
         import sys
@@ -6269,8 +6281,15 @@ class PaletteSystem(VakaTestCase):
         import ui
 
         markup = str(ui.logo_mark(40))
-        self.assertIn("var(--forest-700", markup)
+        # Copper comes from the palette tokens; the walls take the page ink so
+        # the mark sits on white, on sand and on photography without a tile.
         self.assertIn("var(--brass-500", markup)
+        self.assertIn("var(--brass-400", markup)
+        self.assertIn("currentColor", markup)
+
+        css = Path("static/css/app.css").read_text(encoding="utf-8")
+        self.assertIn(".logo-mark {", css)
+        self.assertIn("color: var(--forest-800);", css)
 
     def test_app_shell_exposes_the_palette_attribute(self):
         source = Path("templates/base.html").read_text(encoding="utf-8")

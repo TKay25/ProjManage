@@ -388,10 +388,20 @@ p {
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* The mark has no tile: the walls take the surrounding ink colour, so it reads
+   on white, on sand and on photography. */
 .logo-mark {
   flex: none;
-  border-radius: 15px;
-  box-shadow: 0 4px 14px -6px rgba(var(--brand-rgb), 0.5);
+  color: var(--forest-800);
+}
+
+.brand--light .logo-mark,
+.site-footer .logo-mark,
+.auth-brand .logo-mark,
+.final-brand .logo-mark,
+.aide-mark .logo-mark,
+.loader-mark .logo-mark {
+  color: #fff;
 }
 
 /* ---------- Buttons ---------- */
@@ -2545,6 +2555,158 @@ p {
   flex: none;
 }
 
+/* ---------- Back to top ---------- */
+
+.to-top {
+  position: fixed;
+  right: 24px;
+  /* Clear of the assistant launcher, which owns the very corner. */
+  bottom: 92px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--forest-800);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s,
+    border-color 0.16s ease, color 0.16s ease;
+}
+
+.to-top.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.to-top:hover {
+  border-color: var(--forest-400);
+  color: var(--forest-700);
+}
+
+/* The assistant launcher owns the bottom-right corner; sit above it. */
+@media (max-width: 640px) {
+  .to-top {
+    right: 16px;
+    bottom: 152px;
+  }
+}
+
+/* ---------- Questions ---------- */
+
+.faq-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 28px 72px;
+  align-items: start;
+}
+
+.faq-intro {
+  position: sticky;
+  top: calc(var(--header-h) + 32px);
+}
+
+.faq-intro h2 {
+  margin-bottom: 14px;
+}
+
+.faq-intro .lead {
+  color: var(--ink-soft);
+  font-size: var(--text-base);
+}
+
+.faq-list {
+  border-top: 1px solid var(--line-strong);
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--line);
+}
+
+.faq-question {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 2px;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 650;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq-question::-webkit-details-marker {
+  display: none;
+}
+
+.faq-question:hover {
+  color: var(--forest-700);
+}
+
+/* A plus that becomes a minus: two hairlines, one rotated by the open state. */
+.faq-sign {
+  position: relative;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+}
+
+.faq-sign::before,
+.faq-sign::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 12px;
+  height: 1.5px;
+  background: var(--brass-600);
+  border-radius: 1px;
+  transition: transform 0.18s ease;
+}
+
+.faq-sign::after {
+  transform: rotate(90deg);
+}
+
+.faq-item[open] .faq-sign::after {
+  transform: rotate(0deg);
+}
+
+.faq-answer {
+  padding: 0 64px 22px 2px;
+  font-size: var(--text-sm);
+  line-height: 1.68;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
+  .faq-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .faq-intro {
+    position: static;
+  }
+
+  .faq-answer {
+    padding-right: 24px;
+  }
+}
+
 /* ---------- Pull quote ---------- */
 
 .quote-band {
@@ -3389,7 +3551,7 @@ p {
 
 /* The mark's navy tile would otherwise sink into the photography. */
 .final-brand .logo-mark {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2), 0 12px 30px -14px rgba(0, 0, 0, 0.9);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.55));
 }
 
 .final-card .band-photo-scrim {

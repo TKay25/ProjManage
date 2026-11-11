@@ -10,6 +10,7 @@
   const toggle = header.querySelector(".site-menu-toggle");
   const menu = header.querySelector("#site-menu");
   const links = Array.from(header.querySelectorAll(".site-nav-link[data-spy]"));
+  const toTop = document.querySelector("[data-to-top]");
 
   /* ---------- Scroll state ---------- */
   let ticking = false;
@@ -24,6 +25,9 @@
       document.documentElement.scrollHeight - window.innerHeight;
     const progress = scrollable > 0 ? Math.min(window.scrollY / scrollable, 1) : 0;
     header.style.setProperty("--scroll-progress", progress.toFixed(4));
+
+    // After a screenful, offer the way back up.
+    toTop?.classList.toggle("is-visible", window.scrollY > window.innerHeight);
 
     ticking = false;
   };
@@ -128,5 +132,14 @@
     if (!menu || menu.hidden) return;
     if (header.contains(event.target)) return;
     closeMenu();
+  });
+
+  /* ---------- Back to top ---------- */
+  toTop?.addEventListener("click", () => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    // Return the keyboard to the top of the page, not to a button now off-screen.
+    document.getElementById("main")?.setAttribute("tabindex", "-1");
+    document.getElementById("main")?.focus({ preventScroll: true });
   });
 })();
