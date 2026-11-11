@@ -58,7 +58,7 @@
   <div class="hero-media" aria-hidden="true">
     <figure class="hero-media-slide is-active" id="hero-shot-structure">
       <img src="{{ url_for('static', filename='img/hero/structure.jpg') }}"
-           alt="" width="1800" height="1201" fetchpriority="high" decoding="async" />
+           alt="" width="1800" height="1200" fetchpriority="high" decoding="async" />
     </figure>
     <figure class="hero-media-slide" id="hero-shot-interior">
       <img src="{{ url_for('static', filename='img/hero/interior.jpg') }}"
@@ -76,6 +76,7 @@
   <div class="hero-scrim" aria-hidden="true"></div>
 
   <div class="container hero-inner">
+    <div class="hero-grid">
     <div class="hero-copy">
       <p class="hero-pill"><span class="hero-pill-dot"></span> Independent build management · Zimbabwe</p>
 
@@ -150,62 +151,8 @@
         <div><dt>0</dt><dd>Payments without proof</dd></div>
       </dl>
     </div>
-  </div>
 
-  <div class="container hero-bar">
-    <div class="hero-jumps" role="tablist" aria-label="Browse the build as it happens">
-      <button class="hero-jump is-active" type="button" role="tab" aria-selected="true"
-              aria-controls="hero-shot-structure" data-hero-go="0">
-        <span class="hero-jump-label">The brickwork</span>
-        <span class="hero-jump-fill" aria-hidden="true"></span>
-      </button>
-      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
-              aria-controls="hero-shot-interior" data-hero-go="1">
-        <span class="hero-jump-label">The interior</span>
-        <span class="hero-jump-fill" aria-hidden="true"></span>
-      </button>
-      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
-              aria-controls="hero-shot-kitchen" data-hero-go="2">
-        <span class="hero-jump-label">The kitchen</span>
-        <span class="hero-jump-fill" aria-hidden="true"></span>
-      </button>
-      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
-              aria-controls="hero-shot-firstfix" data-hero-go="3">
-        <span class="hero-jump-label">The first fix</span>
-        <span class="hero-jump-fill" aria-hidden="true"></span>
-      </button>
-    </div>
-
-    <div class="hero-arrows">
-      <button class="hero-shot-arrow" type="button" data-hero-prev aria-label="Previous photo">
-        {{ icon('arrow-left', 16) }}
-      </button>
-      <span class="hero-count" data-hero-count aria-hidden="true">01 / 04</span>
-      <button class="hero-shot-arrow" type="button" data-hero-next aria-label="Next photo">
-        {{ icon('arrow-right', 16) }}
-      </button>
-    </div>
-    <span class="sr-only" role="status" aria-live="polite" data-hero-status></span>
-  </div>
-</section>
-
-<section class="section section-tight live-band" id="live">
-  <div class="container live-layout">
-    <div class="live-copy">
-      <p class="eyebrow">A live look</p>
-      <h2>The build, the money and the proof — on one screen.</h2>
-      <p class="lead">
-        This is the record your contractor, your manager and your family all read
-        from. Nothing is retold in a group chat; it is written down as it happens.
-      </p>
-      <ul class="check-list">
-        <li>{{ icon('check', 17) }}<span>Every payment carries its receipt</span></li>
-        <li>{{ icon('check', 17) }}<span>Every stage carries its approval gate</span></li>
-        <li>{{ icon('check', 17) }}<span>Every update lands in the same record</span></li>
-      </ul>
-    </div>
-
-    <div class="hero-visual">
+    <div class="hero-visual hero-visual--hero">
       <div class="hero-slider" data-hero-slider aria-roledescription="carousel" aria-label="A live look at a YaVaKa build">
         <div class="hero-tabs" role="tablist" aria-label="Choose a view">
           <button class="hero-tab is-active" type="button" role="tab" aria-selected="true"
@@ -382,6 +329,80 @@
         </div>
       </div>
     </div>
+    </div>
+  </div>
+
+  <div class="container hero-bar">
+    <div class="hero-jumps" role="tablist" aria-label="Browse the build as it happens">
+      <button class="hero-jump is-active" type="button" role="tab" aria-selected="true"
+              aria-controls="hero-shot-structure" data-hero-go="0">
+        <span class="hero-jump-label">The roof</span>
+        <span class="hero-jump-fill" aria-hidden="true"></span>
+      </button>
+      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
+              aria-controls="hero-shot-interior" data-hero-go="1">
+        <span class="hero-jump-label">The interior</span>
+        <span class="hero-jump-fill" aria-hidden="true"></span>
+      </button>
+      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
+              aria-controls="hero-shot-kitchen" data-hero-go="2">
+        <span class="hero-jump-label">The kitchen</span>
+        <span class="hero-jump-fill" aria-hidden="true"></span>
+      </button>
+      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
+              aria-controls="hero-shot-firstfix" data-hero-go="3">
+        <span class="hero-jump-label">The first fix</span>
+        <span class="hero-jump-fill" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="hero-arrows">
+      <button class="hero-shot-arrow" type="button" data-hero-prev aria-label="Previous photo">
+        {{ icon('arrow-left', 16) }}
+      </button>
+      <span class="hero-count" data-hero-count aria-hidden="true">01 / 04</span>
+      <button class="hero-shot-arrow" type="button" data-hero-next aria-label="Next photo">
+        {{ icon('arrow-right', 16) }}
+      </button>
+    </div>
+    <span class="sr-only" role="status" aria-live="polite" data-hero-status></span>
+  </div>
+</section>
+
+<section class="section section-tight live-band" id="live">
+  <div class="container live-layout live-layout--proof">
+    <div class="live-copy">
+      <p class="eyebrow">A live look</p>
+      <h2>The build, the money and the proof — on one screen.</h2>
+      <p class="lead">
+        This is the record your contractor, your manager and your family all read
+        from. Nothing is retold in a group chat; it is written down as it happens.
+      </p>
+    </div>
+
+    <ul class="proof-list">
+      <li>
+        <span class="proof-icon">{{ icon('receipt', 18) }}</span>
+        <div>
+          <p class="proof-title">Every payment carries its receipt</p>
+          <p class="proof-note">Bank reference, invoice and the stage it belongs to.</p>
+        </div>
+      </li>
+      <li>
+        <span class="proof-icon">{{ icon('shield', 18) }}</span>
+        <div>
+          <p class="proof-title">Every stage carries its approval gate</p>
+          <p class="proof-note">Nothing moves on until the work has been inspected.</p>
+        </div>
+      </li>
+      <li>
+        <span class="proof-icon">{{ icon('message', 18) }}</span>
+        <div>
+          <p class="proof-title">Every update lands in the same record</p>
+          <p class="proof-note">WhatsApp, email and the site photographs agree.</p>
+        </div>
+      </li>
+    </ul>
   </div>
 </section>
 

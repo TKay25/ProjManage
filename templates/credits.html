@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Photography credits — YaVaKa{% endblock %}
+{% block description %}The photography used on the YaVaKa site, with the photographer and licence for each image.{% endblock %}
+{% block body_class %}public{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container narrow">
+    <p class="eyebrow">Photography credits</p>
+    <h1>Where the pictures come from.</h1>
+    <p class="lead">
+      Site photography is stored locally so the page works offline. Images under a
+      Creative Commons licence are credited here with the photographer and licence;
+      thank you to everyone who publishes their work for reuse.
+    </p>
+
+    <ul class="credit-list">
+      {% for item in credits %}
+        <li class="credit-item">
+          <p class="credit-title">{{ item.title }}</p>
+          <p class="credit-meta">
+            {{ item.author }} · {{ item.licence }} ·
+            <a href="{{ item.source }}" target="_blank" rel="noopener noreferrer">source</a>
+          </p>
+          {% if item.note %}<p class="credit-note">{{ item.note }}</p>{% endif %}
+        </li>
+      {% endfor %}
+      <li class="credit-item">
+        <p class="credit-title">Residential build and interior photography</p>
+        <p class="credit-meta">
+          Unsplash · Unsplash Licence ·
+          <a href="https://unsplash.com/license" target="_blank" rel="noopener noreferrer">licence</a>
+        </p>
+        <p class="credit-note">
+          Used under the Unsplash Licence, which allows commercial use without
+          attribution. Credited here as a courtesy.
+        </p>
+      </li>
+    </ul>
+
+    <p class="micro-note">
+      {{ icon('mail', 14) }} Spotted an image that is credited incorrectly?
+      <a href="mailto:hello@yavaka.co.zw">Tell us</a> and we will fix it.
+    </p>
+  </div>
+</section>
+{% endblock %}

@@ -19,6 +19,26 @@ def landing():
     return render_template("landing.html", suppliers=SUPPLIERS[:4])
 
 
+# Photography used on the site. Images under a Creative Commons licence are
+# credited here — the licence needs it, and the page keeps the provenance with
+# the build in case an image is ever replaced.
+PHOTO_CREDITS = [
+    {
+        "file": "img/hero/structure.jpg",
+        "title": "Construction in Harare",
+        "author": "Dariusmutamba",
+        "licence": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Construction_in_harare_01.jpg",
+        "note": "Steel roof trusses craned onto a brick building in Harare.",
+    },
+]
+
+
+@bp.get("/credits")
+def credits():
+    return render_template("credits.html", credits=PHOTO_CREDITS)
+
+
 @bp.get("/suppliers")
 def suppliers_directory():
     category = request.args.get("category", "").strip()
