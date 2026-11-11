@@ -3,30 +3,93 @@
 {% block body_class %}landing public{% endblock %}
 
 {% block content %}
-<section class="hero">
+<section class="hero" data-hero-gallery>
+  {# Houses as they are actually built. Photography from Unsplash (free
+     licence), stored locally so the page stays offline-capable and the CSP
+     keeps img-src to this origin. #}
+  <div class="hero-media" aria-hidden="true">
+    <figure class="hero-media-slide is-active" id="hero-shot-structure">
+      <img src="{{ url_for('static', filename='img/hero/structure.jpg') }}"
+           alt="" width="1800" height="1201" fetchpriority="high" decoding="async" />
+    </figure>
+    <figure class="hero-media-slide" id="hero-shot-interior">
+      <img src="{{ url_for('static', filename='img/hero/interior.jpg') }}"
+           alt="" width="1600" height="1065" loading="lazy" decoding="async" />
+    </figure>
+    <figure class="hero-media-slide" id="hero-shot-kitchen">
+      <img src="{{ url_for('static', filename='img/hero/kitchen.jpg') }}"
+           alt="" width="1800" height="1200" loading="lazy" decoding="async" />
+    </figure>
+    <figure class="hero-media-slide" id="hero-shot-firstfix">
+      <img src="{{ url_for('static', filename='img/hero/firstfix.jpg') }}"
+           alt="" width="1600" height="1068" loading="lazy" decoding="async" />
+    </figure>
+  </div>
+  <div class="hero-scrim" aria-hidden="true"></div>
+
   <div class="container hero-inner">
     <div class="hero-copy">
       <p class="hero-pill"><span class="hero-pill-dot"></span> Independent build management · Zimbabwe</p>
-      <h1 class="hero-title">
-        You can't be on site.<br />
-        <span class="accent">We can.</span>
-      </h1>
-      <p class="hero-lead">
-        YaVaKa manages your Zimbabwe build while your contractor does the work:
-        we vet the builder, approve every payment—or make it ourselves when you
-        place the funds with us—chase the programme and settle the arguments.
-        Want us to build it instead? We do that too. Everything is logged as it
-        happens, so you can watch it from anywhere in the world.
-      </p>
+
+      <div class="hero-copy-stack">
+        <div class="hero-copy-slide is-active" data-hero-copy>
+          <h1 class="hero-title">
+            You can't be on site.<br />
+            <span class="accent">We can.</span>
+          </h1>
+          <p class="hero-lead">
+            YaVaKa manages your Zimbabwe build while your contractor does the work —
+            vetting the builder, approving every payment and settling the arguments.
+            Everything is logged as it happens, so you can watch it from anywhere.
+          </p>
+        </div>
+
+        <div class="hero-copy-slide" data-hero-copy>
+          <p class="hero-title">
+            Walls up.<br />
+            <span class="accent">Evidence logged.</span>
+          </p>
+          <p class="hero-lead">
+            Every stage is inspected against the approved drawings before the
+            next payment is released. You see the stage, the photographs and the
+            approval — not a phone call asking you to trust it.
+          </p>
+        </div>
+
+        <div class="hero-copy-slide" data-hero-copy>
+          <p class="hero-title">
+            The kitchen you agreed.<br />
+            <span class="accent">Not a cheaper version.</span>
+          </p>
+          <p class="hero-lead">
+            Tiles, units and fittings are matched against the signed bill of
+            quantities as they arrive on site. If the specification changes, you
+            approve the variation before the order is placed — not after.
+          </p>
+        </div>
+
+        <div class="hero-copy-slide" data-hero-copy>
+          <p class="hero-title">
+            The work you'd never see.<br />
+            <span class="accent">Written down.</span>
+          </p>
+          <p class="hero-lead">
+            First-fix wiring, plumbing and waterproofing are inspected and
+            photographed before the walls close. The evidence stays with the
+            stage it belongs to — not in a phone that gets lost.
+          </p>
+        </div>
+      </div>
 
       <div class="hero-actions">
         <a class="btn btn-primary btn-lg" href="/register" data-modal-open="modal-register">Start your project {{ icon('arrow-right', 18) }}</a>
-        <a class="btn btn-outline btn-lg" href="/login" data-modal-open="modal-login">{{ icon('play', 15) }} Explore the demo</a>
+        <a class="btn btn-outline hero-btn-glass btn-lg" href="/login" data-modal-open="modal-login">{{ icon('play', 15) }} Explore the demo</a>
       </div>
 
       {% if demo_mode %}
         <p class="demo-hint">Demo login · <code>client@yavaka.co.zw</code> · <code>YaVaKa2026!</code></p>
       {% endif %}
+
       <ul class="hero-trust">
         <li>{{ icon('shield', 16) }} We vet the contractor</li>
         <li>{{ icon('wallet', 16) }} We approve or make payments</li>
@@ -39,84 +102,242 @@
         <div><dt>0</dt><dd>Payments without proof</dd></div>
       </dl>
     </div>
+  </div>
 
-    <div class="hero-visual" aria-hidden="true">
-      <div class="mock-project">
-        <div class="mock-project-head">
-          <span class="mock-window"><span></span><span></span><span></span></span>
-          <span class="badge badge-live">Live</span>
+  <div class="container hero-bar">
+    <div class="hero-jumps" role="tablist" aria-label="Browse the build as it happens">
+      <button class="hero-jump is-active" type="button" role="tab" aria-selected="true"
+              aria-controls="hero-shot-structure" data-hero-go="0">
+        <span class="hero-jump-label">The brickwork</span>
+        <span class="hero-jump-fill" aria-hidden="true"></span>
+      </button>
+      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
+              aria-controls="hero-shot-interior" data-hero-go="1">
+        <span class="hero-jump-label">The interior</span>
+        <span class="hero-jump-fill" aria-hidden="true"></span>
+      </button>
+      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
+              aria-controls="hero-shot-kitchen" data-hero-go="2">
+        <span class="hero-jump-label">The kitchen</span>
+        <span class="hero-jump-fill" aria-hidden="true"></span>
+      </button>
+      <button class="hero-jump" type="button" role="tab" aria-selected="false" tabindex="-1"
+              aria-controls="hero-shot-firstfix" data-hero-go="3">
+        <span class="hero-jump-label">The first fix</span>
+        <span class="hero-jump-fill" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="hero-arrows">
+      <button class="hero-shot-arrow" type="button" data-hero-prev aria-label="Previous photo">
+        {{ icon('arrow-left', 16) }}
+      </button>
+      <span class="hero-count" data-hero-count aria-hidden="true">01 / 04</span>
+      <button class="hero-shot-arrow" type="button" data-hero-next aria-label="Next photo">
+        {{ icon('arrow-right', 16) }}
+      </button>
+    </div>
+    <span class="sr-only" role="status" aria-live="polite" data-hero-status></span>
+  </div>
+</section>
+
+<section class="section section-tight live-band" id="live">
+  <div class="container live-layout">
+    <div class="live-copy">
+      <p class="eyebrow">A live look</p>
+      <h2>The build, the money and the proof — on one screen.</h2>
+      <p class="lead">
+        This is the record your contractor, your manager and your family all read
+        from. Nothing is retold in a group chat; it is written down as it happens.
+      </p>
+      <ul class="check-list">
+        <li>{{ icon('check', 17) }}<span>Every payment carries its receipt</span></li>
+        <li>{{ icon('check', 17) }}<span>Every stage carries its approval gate</span></li>
+        <li>{{ icon('check', 17) }}<span>Every update lands in the same record</span></li>
+      </ul>
+    </div>
+
+    <div class="hero-visual">
+      <div class="hero-slider" data-hero-slider aria-roledescription="carousel" aria-label="A live look at a YaVaKa build">
+        <div class="hero-tabs" role="tablist" aria-label="Choose a view">
+          <button class="hero-tab is-active" type="button" role="tab" aria-selected="true"
+                  aria-controls="hero-panel-money" id="hero-tab-money" data-hero-go="0">
+            {{ icon('wallet', 14) }}<span>Money</span>
+          </button>
+          <button class="hero-tab" type="button" role="tab" aria-selected="false" tabindex="-1"
+                  aria-controls="hero-panel-stages" id="hero-tab-stages" data-hero-go="1">
+            {{ icon('layout', 14) }}<span>Stages</span>
+          </button>
+          <button class="hero-tab" type="button" role="tab" aria-selected="false" tabindex="-1"
+                  aria-controls="hero-panel-updates" id="hero-tab-updates" data-hero-go="2">
+            {{ icon('message', 14) }}<span>Updates</span>
+          </button>
         </div>
 
-        <div class="mock-title-row">
-          <div>
-            <p class="mock-label">Project</p>
-            <p class="mock-title">Greendale Family Home</p>
-            <p class="mock-sub">Harare · managed build</p>
+        <div class="hero-viewport">
+          <article class="hero-slide is-active" role="tabpanel" aria-labelledby="hero-tab-money"
+                   id="hero-panel-money" data-hero-slide>
+            <div class="mock-project">
+              <div class="mock-project-head">
+                <span class="mock-window"><span></span><span></span><span></span></span>
+                <span class="badge badge-live">Live</span>
+              </div>
+
+              <div class="mock-title-row">
+                <div>
+                  <p class="mock-label">Project</p>
+                  <p class="mock-title">Greendale Family Home</p>
+                  <p class="mock-sub">Harare · managed build</p>
+                </div>
+              </div>
+
+              <div class="mock-kpis">
+                <div class="mock-kpi">
+                  <p class="mock-label">Funded</p>
+                  <p class="mock-kpi-value">$60,000</p>
+                </div>
+                <div class="mock-kpi">
+                  <p class="mock-label">Spent</p>
+                  <p class="mock-kpi-value">$29,020</p>
+                </div>
+                <div class="mock-kpi mock-kpi--accent">
+                  <p class="mock-label">Available</p>
+                  <p class="mock-kpi-value">$30,980</p>
+                </div>
+              </div>
+
+              <div class="mock-progress">
+                <div class="mock-progress-head"><span>Funds used</span><strong>48%</strong></div>
+                <div class="progress"><span style="width:48%"></span></div>
+              </div>
+
+              <ul class="mock-ledger">
+                <li>
+                  <span class="ledger-icon ledger-out">{{ icon('receipt', 15) }}</span>
+                  <span class="ledger-text"><strong>Roof trusses deposit</strong><small>Materials · 2 Oct</small></span>
+                  <span class="ledger-amount">−$5,200</span>
+                </li>
+                <li>
+                  <span class="ledger-icon ledger-in">{{ icon('wallet', 15) }}</span>
+                  <span class="ledger-text"><strong>Third tranche</strong><small>Client deposit · 29 Jul</small></span>
+                  <span class="ledger-amount ledger-in-text">+$15,000</span>
+                </li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="hero-slide" role="tabpanel" aria-labelledby="hero-tab-stages"
+                   id="hero-panel-stages" data-hero-slide>
+            <div class="mock-project">
+              <div class="mock-project-head">
+                <span class="mock-window"><span></span><span></span><span></span></span>
+                <span class="badge badge-soft">Stage 9 of 19</span>
+              </div>
+
+              <div class="mock-title-row">
+                <div>
+                  <p class="mock-label">Build programme</p>
+                  <p class="mock-title">Superstructure brickwork</p>
+                  <p class="mock-sub">Approved by YaVaKa · 12 Oct</p>
+                </div>
+              </div>
+
+              <ol class="mock-stages">
+                <li class="is-done">
+                  <span class="mock-stage-mark">{{ icon('check', 11) }}</span>
+                  <span class="mock-stage-body">
+                    <strong>Oversite slab &amp; damp course</strong>
+                    <small>Signed off · 28 Sep</small>
+                  </span>
+                </li>
+                <li class="is-current">
+                  <span class="mock-stage-mark"></span>
+                  <span class="mock-stage-body">
+                    <strong>Superstructure brickwork</strong>
+                    <small>On programme · 2 weeks left</small>
+                  </span>
+                  <span class="mock-stage-tag">Now</span>
+                </li>
+                <li>
+                  <span class="mock-stage-mark"></span>
+                  <span class="mock-stage-body">
+                    <strong>Ring beam, trusses &amp; roof sheeting</strong>
+                    <small>Gate · council inspector</small>
+                  </span>
+                </li>
+              </ol>
+
+              <div class="mock-progress">
+                <div class="mock-progress-head"><span>Build progress</span><strong>39%</strong></div>
+                <div class="progress"><span style="width:39%"></span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="hero-slide" role="tabpanel" aria-labelledby="hero-tab-updates"
+                   id="hero-panel-updates" data-hero-slide>
+            <div class="mock-project">
+              <div class="mock-project-head">
+                <span class="mock-window"><span></span><span></span><span></span></span>
+                <span class="badge badge-live">Live</span>
+              </div>
+
+              <div class="mock-title-row">
+                <div>
+                  <p class="mock-label">Updates</p>
+                  <p class="mock-title">Everything, as it happens</p>
+                  <p class="mock-sub">You, your manager and the file</p>
+                </div>
+              </div>
+
+              <ul class="mock-feed">
+                <li>
+                  <span class="mock-feed-icon is-wa">{{ icon('message', 15) }}</span>
+                  <span class="mock-feed-body">
+                    <strong>Slab passed council inspection</strong>
+                    <small>WhatsApp · 2 min ago</small>
+                  </span>
+                </li>
+                <li>
+                  <span class="mock-feed-icon is-doc">{{ icon('receipt', 15) }}</span>
+                  <span class="mock-feed-body">
+                    <strong>Receipt added to Stage 9</strong>
+                    <small>Halsted · $845.00</small>
+                  </span>
+                </li>
+                <li>
+                  <span class="mock-feed-icon is-mail">{{ icon('mail', 15) }}</span>
+                  <span class="mock-feed-body">
+                    <strong>Weekly report sent</strong>
+                    <small>Email · Monday 07:00</small>
+                  </span>
+                </li>
+              </ul>
+
+              <p class="mock-foot-note">{{ icon('shield', 14) }} Nothing leaves out the record</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="hero-foot">
+          <span class="hero-live"><span class="hero-live-dot"></span> Live from the site</span>
+          <span class="hero-count" data-hero-count aria-hidden="true">01 / 03</span>
+          <span class="sr-only" role="status" aria-live="polite" data-hero-status></span>
+          <div class="hero-arrows">
+            <button class="icon-btn hero-arrow" type="button" data-hero-prev aria-label="Previous view">
+              {{ icon('arrow-left', 16) }}
+            </button>
+            <button class="icon-btn hero-arrow" type="button" data-hero-next aria-label="Next view">
+              {{ icon('arrow-right', 16) }}
+            </button>
           </div>
-        </div>
-
-        <div class="mock-kpis">
-          <div class="mock-kpi">
-            <p class="mock-label">Funded</p>
-            <p class="mock-kpi-value">$60,000</p>
-          </div>
-          <div class="mock-kpi">
-            <p class="mock-label">Spent</p>
-            <p class="mock-kpi-value">$29,020</p>
-          </div>
-          <div class="mock-kpi mock-kpi--accent">
-            <p class="mock-label">Available</p>
-            <p class="mock-kpi-value">$30,980</p>
-          </div>
-        </div>
-
-        <div class="mock-progress">
-          <div class="mock-progress-head"><span>Build progress</span><strong>39%</strong></div>
-          <div class="progress"><span style="width:39%"></span></div>
-        </div>
-
-        <div class="mock-stage">
-          <span class="stage-dot is-active"></span>
-          <div>
-            <p class="mock-label">Current stage</p>
-            <p class="mock-stage-name">Superstructure brickwork</p>
-          </div>
-          <span class="mock-stage-count">9 / 19</span>
-        </div>
-
-        <ul class="mock-ledger">
-          <li>
-            <span class="ledger-icon ledger-out">{{ icon('receipt', 15) }}</span>
-            <span class="ledger-text"><strong>Roof trusses deposit</strong><small>Materials · 2 Oct</small></span>
-            <span class="ledger-amount">−$5,200</span>
-          </li>
-          <li>
-            <span class="ledger-icon ledger-in">{{ icon('wallet', 15) }}</span>
-            <span class="ledger-text"><strong>Third tranche</strong><small>Client deposit · 29 Jul</small></span>
-            <span class="ledger-amount ledger-in-text">+$15,000</span>
-          </li>
-        </ul>
-      </div>
-
-      <div class="float-card float-receipt">
-        <span class="float-icon">{{ icon('receipt', 18) }}</span>
-        <div>
-          <p class="float-title">Receipt attached</p>
-          <p class="float-sub">Halsted · $845.00</p>
-        </div>
-        {{ icon('check', 16) }}
-      </div>
-
-      <div class="float-card float-chat">
-        <span class="float-avatar">{{ icon('message', 16) }}</span>
-        <div>
-          <p class="float-title">WhatsApp update</p>
-          <p class="float-sub">“Slab passed council inspection ✅”</p>
         </div>
       </div>
     </div>
   </div>
+</section>
 
+<div class="authority-band">
   <div class="container authority-strip">
     <p class="authority-label">Approval gates we plan for</p>
     <div class="authority-list">
@@ -129,7 +350,7 @@
       <span>Council building inspectors</span>
     </div>
   </div>
-</section>
+</div>
 
 <section class="section problem-band" id="problem" data-reveal>
   <div class="container problem-layout">
@@ -195,9 +416,11 @@
 
 <section class="section" id="why" data-reveal>
   <div class="container">
-    <div class="section-head">
-      <p class="eyebrow">What YaVaKa actually does</p>
-      <h2>We stand on the site so you don't have to fly home to check.</h2>
+    <div class="section-head section-head--split">
+      <div>
+        <p class="eyebrow">What YaVaKa actually does</p>
+        <h2>We stand on the site so you don't have to fly home to check.</h2>
+      </div>
       <p class="lead">
         YaVaKa manages builds that other contractors deliver — as your
         independent manager, not their friend. We can also build your home
@@ -286,9 +509,11 @@
 
 <section class="section" id="stages" data-reveal>
   <div class="container">
-    <div class="section-head">
-      <p class="eyebrow">The Zimbabwe build sequence</p>
-      <h2>Nineteen stages. No guessing what comes next.</h2>
+    <div class="section-head section-head--split">
+      <div>
+        <p class="eyebrow">The Zimbabwe build sequence</p>
+        <h2>Nineteen stages. No guessing what comes next.</h2>
+      </div>
       <p class="lead">
         See the sequence from land due diligence through council plan approval,
         environmental and utility processes to the Certificate of Occupation.
@@ -566,10 +791,12 @@
 
 <section class="section section-sand" id="about" data-reveal>
   <div class="container">
-    <div class="section-head">
-      <p class="eyebrow">Why we exist</p>
-      <h2>Zimbabwe is full of good builders and unfinished houses.</h2>
-      <p class="section-sub">
+    <div class="section-head section-head--split">
+      <div>
+        <p class="eyebrow">Why we exist</p>
+        <h2>Zimbabwe is full of good builders and unfinished houses.</h2>
+      </div>
+      <p class="lead">
         The money is usually real and the intentions are usually good. What is
         missing is someone accountable standing on the site, in writing. YaVaKa
         was built for that gap.
