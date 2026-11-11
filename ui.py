@@ -95,22 +95,22 @@ def icon(name: str, size: int = 20, css_class: str = "") -> Markup:
 
 
 def logo_mark(size: int = 40, css_class: str = "") -> Markup:
-    # The bar/roof classes are inert everywhere except the loader, where they
-    # drive the build-up animation (see transitions.css).
+    # The roof is the brand's "V": copper pitch over pale walls, standing on a
+    # copper foundation — the build and the record it stands on.
+    # The roof/wall/base classes are inert everywhere except the loader, where
+    # they drive the build-up animation (see transitions.css).
     # Colours come from the palette tokens (with the brand values as fallbacks)
     # so the mark recolours with the rest of the page, including print.
     return Markup(
         f'<svg class="logo-mark {css_class}" width="{size}" height="{size}" viewBox="0 0 64 64" '
         'role="img" aria-label="YaVaKa">'
-        '<rect width="64" height="64" rx="15" fill="var(--forest-700, #24395F)"/>'
-        '<path class="logo-roof" d="M12 32 32 15l20 17" fill="none" '
-        'stroke="var(--sand-100, #F5F7FA)" stroke-width="4.2" '
+        '<rect width="64" height="64" rx="16" fill="var(--forest-700, #24395F)"/>'
+        '<path class="logo-roof" d="M14 30 32 14.5 50 30" fill="none" pathLength="100" '
+        'stroke="var(--brass-400, #CC8C64)" stroke-width="5.2" '
         'stroke-linecap="round" stroke-linejoin="round"/>'
-        '<rect class="logo-bar logo-bar-1" x="17" y="34" width="5.5" height="15" rx="2.4" '
-        'fill="var(--brass-500, #BA7044)"/>'
-        '<rect class="logo-bar logo-bar-2" x="26.5" y="29" width="5.5" height="20" rx="2.4" '
-        'fill="var(--brass-400, #CC8C64)"/>'
-        '<rect class="logo-bar logo-bar-3" x="36" y="24" width="5.5" height="25" rx="2.4" '
+        '<path class="logo-wall" d="M15 31v15M49 31v15" fill="none" pathLength="100" '
+        'stroke="var(--sand-100, #F5F7FA)" stroke-width="4.4" stroke-linecap="round"/>'
+        '<rect class="logo-base" x="10" y="49.6" width="44" height="4.4" rx="2.2" '
         'fill="var(--brass-500, #BA7044)"/>'
         "</svg>"
     )

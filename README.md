@@ -160,6 +160,15 @@ renderer that draws the poster fonts and filters exactly as the site does. Both
 formats are committed, so a poster can be posted straight from
 `/static/posters/` without rebuilding anything.
 
+### App icons
+
+The favicon, PWA and Apple touch icons are drawn from the same mark as
+`ui.logo_mark()`. Change the mark, then re-render them (needs Pillow):
+
+```powershell
+python tools/make_icons.py
+```
+
 ---
 
 ## Project layout

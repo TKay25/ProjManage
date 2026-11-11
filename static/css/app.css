@@ -2231,6 +2231,58 @@ p {
   border-block: 1px solid var(--line);
 }
 
+/* ---------- Photographic bands ----------
+   Full-bleed site photography under a flat scrim. The scrim is a solid rgba
+   layer rather than a gradient, so contrast over any photo stays predictable
+   and every band keeps its AA ratio. */
+
+.band-photo {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--forest-950);
+  border-block: 1px solid var(--line);
+}
+
+.band-photo-media,
+.band-photo-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.band-photo-media {
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.band-photo-scrim {
+  z-index: -1;
+  background: rgba(9, 14, 26, 0.84);
+  border-radius: inherit;
+}
+
+/* Copy that sits straight on the scrim instead of on a card. */
+.band-photo .eyebrow {
+  color: var(--brass-300);
+}
+
+.band-photo .section-head h2,
+.band-photo .problem-intro h2 {
+  color: #fff;
+}
+
+.band-photo .section-head .lead {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* The navy card would disappear into the scrim without an edge. */
+.band-photo .about-card--vision {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
 .section-head {
   max-width: 720px;
   margin-bottom: 44px;
@@ -2497,7 +2549,13 @@ p {
 
 .quote-band {
   padding: 8px 0 0;
-  background: var(--sand-50);
+  background: var(--forest-950);
+}
+
+/* Larger type sits comfortably on a slightly lighter scrim, so the site
+   photography behind it stays readable. */
+.quote-band .band-photo-scrim {
+  background: rgba(9, 14, 26, 0.78);
 }
 
 .quote-inner {
@@ -2519,12 +2577,12 @@ p {
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: -0.032em;
-  color: var(--ink);
+  color: #fff;
   text-wrap: balance;
 }
 
 .quote-statement span {
-  color: var(--ink-faint);
+  color: var(--brass-300);
 }
 
 .quote-by {
@@ -2542,8 +2600,9 @@ p {
   width: 38px;
   height: 38px;
   border-radius: var(--radius-pill);
-  background: var(--forest-100);
-  color: var(--forest-800);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
   font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -2553,13 +2612,13 @@ p {
   display: block;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--ink);
+  color: #fff;
 }
 
 .quote-by small {
   display: block;
   font-size: var(--text-xs);
-  color: var(--ink-faint);
+  color: rgba(255, 255, 255, 0.66);
 }
 
 /* ---------- Scroll reveal (public site) ---------- */
@@ -3316,10 +3375,25 @@ p {
   position: relative;
 }
 
+/* The photo layers stay out of the way of that relative-positioning rule. */
+.final-card > .band-photo-media,
+.final-card > .band-photo-scrim {
+  position: absolute;
+}
+
 .final-brand {
   display: flex;
   justify-content: center;
   margin-bottom: 20px;
+}
+
+/* The mark's navy tile would otherwise sink into the photography. */
+.final-brand .logo-mark {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2), 0 12px 30px -14px rgba(0, 0, 0, 0.9);
+}
+
+.final-card .band-photo-scrim {
+  background: rgba(9, 14, 26, 0.8);
 }
 
 .final-card h2 {

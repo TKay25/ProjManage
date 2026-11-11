@@ -115,33 +115,31 @@ body.app .page-loader {
   50% { transform: scale(1.06); }
 }
 
-/* The three bars inside the mark build upward in sequence, so the loader
-   animates the brand rather than spinning an anonymous ring next to it. */
-.loader-mark .logo-bar {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: loader-bar 1.35s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+/* The roof pitch is drawn first, then the walls run down to the foundation —
+   the mark builds itself instead of spinning an anonymous ring. */
+.loader-mark .logo-roof,
+.loader-mark .logo-wall {
+  stroke-dasharray: 100;
+  animation: loader-draw 1.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
-.loader-mark .logo-bar-1 { animation-delay: 0s; }
-.loader-mark .logo-bar-2 { animation-delay: 0.16s; }
-.loader-mark .logo-bar-3 { animation-delay: 0.32s; }
+.loader-mark .logo-wall { animation-delay: 0.2s; }
 
-@keyframes loader-bar {
-  0%, 100% { transform: scaleY(0.42); opacity: 0.55; }
-  35% { transform: scaleY(1); opacity: 1; }
-  65% { transform: scaleY(1); opacity: 1; }
-}
-
-/* The roof line sweeps in once per cycle, like a pencil drawing it. */
-.loader-mark .logo-roof {
-  stroke-dasharray: 60;
-  animation: loader-roof 1.35s ease-in-out infinite;
-}
-
-@keyframes loader-roof {
-  0% { stroke-dashoffset: 60; opacity: 0.4; }
+@keyframes loader-draw {
+  0% { stroke-dashoffset: 100; opacity: 0.35; }
   45%, 100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* The foundation settles under the walls once they land. */
+.loader-mark .logo-base {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: loader-base 1.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes loader-base {
+  0% { transform: scaleX(0.12); opacity: 0.4; }
+  45%, 100% { transform: scaleX(1); opacity: 1; }
 }
 
 /* A single ember-to-indigo line tracing the perimeter of the mark. The dash is
@@ -224,8 +222,9 @@ body.app.is-navigating .shell-main {
   body.app .content > *,
   body.public main > section,
   .loader-mark .logo-mark,
-  .loader-mark .logo-bar,
   .loader-mark .logo-roof,
+  .loader-mark .logo-wall,
+  .loader-mark .logo-base,
   .loader-frame,
   .loader-corner,
   .btn-spinner,

@@ -5869,15 +5869,15 @@ class PosterBrand(VakaTestCase):
         site = ui.logo_mark(54)
         poster = make_posters.logo("light")
 
-        # Same tile, roof line and three bar colours as ui.logo_mark().
+        # Same tile, roof pitch, walls and foundation colours as ui.logo_mark().
         for token in ("#24395F", "#F5F7FA", "#BA7044", "#CC8C64"):
             with self.subTest(token=token):
                 self.assertIn(token, site)
                 self.assertIn(token, poster)
 
-        # Three bars, in rising height order, on both.
-        self.assertEqual(poster.count("<rect"), 4)  # tile + three bars
-        self.assertEqual(site.count("<rect"), 4)
+        # One tile and one foundation bar, on both.
+        self.assertEqual(poster.count("<rect"), 2)  # tile + foundation
+        self.assertEqual(site.count("<rect"), 2)
 
     def test_poster_set_covers_running_builds_and_managers(self):
         import sys
