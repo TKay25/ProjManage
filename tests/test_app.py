@@ -2615,6 +2615,48 @@ class UpdateNotifications(VakaTestCase):
         self.assertIn('href="/app/updates"', page)
         self.assertIn("Latest updates", page)
 
+    def test_reference_panels_fold_away_so_the_overview_fits_one_screen(self):
+        """The dashboard is read at a glance; anything that is reference
+        material collapses into its own heading and expands on demand."""
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+
+        self.assertIn("dash-page", page)
+        for heading in ("Latest money movements", "Needs your attention", "Latest updates", "Coming up"):
+            self.assertIn(f"<h2>{heading}</h2>", page)
+
+        # Each of those headings is the summary of its own <details>, so the
+        # panel opens without JavaScript and without leaving the page.
+        self.assertRegex(page, r'<details class="card fold-card">\s*<summary class="fold-head">')
+        self.assertIn('class="fold-chevron"', page)
+
+
+class DashboardDensity(VakaTestCase):
+    """The panels are foldable, not deleted: an expanded panel still has its body."""
+
+    def test_a_folded_panel_still_renders_its_contents(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertIn('class="fold-body"', page)
+        # The project grid lives inside its own fold so a new card can be
+        # prepended to it without a reload.
+        self.assertIn("data-project-grid", page)
+        self.assertIn('class="section-block fold-section"', page)
+
+    def test_the_checklist_starts_collapsed(self):
+        from db import execute, query
+
+        self.login()
+        with self.app.app_context():
+            user_id = query("SELECT id FROM users WHERE email = 'client@yavaka.co.zw'", one=True)["id"]
+            execute("UPDATE users SET onboarded_at = NULL WHERE id = ?", (user_id,))
+
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertIn('id="onboarding"', page)
+        self.assertIn("Set up your workspace", page)
+        # No `open` attribute: the checklist is a row until it is asked for.
+        self.assertNotRegex(page, r'<details[^>]*id="onboarding"[^>]*\sopen>')
+
 
 class AssistantWindow(VakaTestCase):
     """The floating assistant answers from the same rows the pages render."""
