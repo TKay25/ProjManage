@@ -253,8 +253,10 @@ def _seed_rental(owner_id):
         """INSERT INTO properties
              (id, owner_id, code, name, address, suburb, city, property_type, bedrooms,
               bathrooms, rent_cents, currency, deposit_months, billing_day, status, notes,
-              created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'flat', 2, 1, 45000, 'USD', 2, 1, 'occupied', ?, ?, ?)""",
+              value_cents, rates_cents, insurance_cents, insurance_expiry, caretaker_name,
+              caretaker_phone, ya_vaka_checks, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'flat', 2, 1, 45000, 'USD', 2, 1, 'occupied', ?,
+                   8500000, 72000, 24000, ?, ?, ?, 1, ?, ?)""",
         (
             property_id,
             owner_id,
@@ -264,6 +266,9 @@ def _seed_rental(owner_id):
             property_row["suburb"],
             property_row["city"],
             "Two-bedroom garden flat. Tenant pays water; rates stay with the owner.",
+            (today + timedelta(days=240)).isoformat(),
+            "Simba Ndlovu",
+            "263771110099",
             "2026-01-05T08:00:00+00:00",
             "2026-01-05T08:00:00+00:00",
         ),
@@ -305,8 +310,10 @@ def _seed_rental(owner_id):
         """INSERT INTO property_leases
              (id, owner_id, property_id, tenant_id, reference, title, start_date, end_date,
               rent_cents, deposit_cents, billing_day, notice_days, terms, tenant_name,
-              tenant_signature, signed_at, status, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 30, ?, ?, NULL, ?, 'signed', ?, ?, ?)""",
+              tenant_signature, signed_at, status, escalation_percent, grace_days,
+              deposit_paid_at, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 30, ?, ?, NULL, ?, 'signed', 10, 5, ?,
+                   ?, ?, ?)""",
         (
             lease_id,
             owner_id,
@@ -321,6 +328,7 @@ def _seed_rental(owner_id):
             terms,
             "Tarisai Moyo",
             "2026-01-05T09:00:00+00:00",
+            "2026-01-05",
             owner_id,
             "2026-01-05T08:30:00+00:00",
             "2026-01-05T09:00:00+00:00",
@@ -403,6 +411,50 @@ def _seed_rental(owner_id):
             now_iso(),
             now_iso(),
         ),
+    )
+
+    execute(
+        """INSERT INTO property_expenses
+             (id, owner_id, property_id, category, amount_cents, currency, description, method,
+              reference, incurred_at, billable_to_tenant, created_by, created_at)
+           VALUES (?, ?, ?, 'rates', 18000, 'USD', 'Harare City Council rates - quarter 4',
+                   'BANK_TRANSFER', 'RATES-Q4-2026', ?, 0, ?, ?)""",
+        (new_id(), owner_id, property_id, (today - timedelta(days=40)).isoformat(), owner_id, now_iso()),
+    )
+    execute(
+        """INSERT INTO property_expenses
+             (id, owner_id, property_id, category, amount_cents, currency, description, method,
+              reference, incurred_at, billable_to_tenant, created_by, created_at)
+           VALUES (?, ?, ?, 'insurance', 6000, 'USD', 'Householders insurance - quarterly instalment',
+                   'BANK_TRANSFER', 'INS-Q4-2026', ?, 0, ?, ?)""",
+        (new_id(), owner_id, property_id, (today - timedelta(days=25)).isoformat(), owner_id, now_iso()),
+    )
+    execute(
+        """INSERT INTO property_work_orders
+             (id, owner_id, property_id, tenant_id, title, description, priority, status,
+              reported_at, scheduled_for, contractor_name, contractor_phone, cost_cents,
+              created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'Bathroom tap washer', 'Dripping mixer tap in the family bathroom.',
+                   'normal', 'in_progress', ?, ?, 'Panashe Plumbing', '263771110055', 0, ?, ?, ?)""",
+        (
+            new_id(), owner_id, property_id, tenant_id,
+            (today - timedelta(days=3)).isoformat(),
+            (today + timedelta(days=2)).isoformat(),
+            owner_id, now_iso(), now_iso(),
+        ),
+    )
+
+    rentals.log_activity(
+        owner_id, property_id, owner_id, "property.created", "Property added",
+        "Belvedere Garden Flat", href="/property", when="2026-01-05T08:05:00+00:00",
+    )
+    rentals.log_activity(
+        owner_id, property_id, owner_id, "rent.receipt", "Rent receipted",
+        "RCPT-2026-0001 - $450.00", href="/property/payments", when="2026-11-01T09:30:00+00:00",
+    )
+    rentals.log_activity(
+        owner_id, property_id, owner_id, "property.check_completed", "Property check completed",
+        "Routine check - good", href="/property", when="2026-09-12T14:00:00+00:00",
     )
 
 

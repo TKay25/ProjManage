@@ -19,6 +19,22 @@
   <noscript><button class="btn btn-ghost btn-sm" type="submit">Filter</button></noscript>
 </form>
 
+{% if reminders %}
+  <div class="card">
+    <div class="card-head">
+      <h2>Ready to chase</h2>
+      <span class="mini-meta">{{ reminders|length }} invoice{{ '' if reminders|length == 1 else 's' }} past the grace period</span>
+    </div>
+    <div class="panel-form-body">
+      <p class="muted small">One tap sends the tenant an email and a WhatsApp message with the balance and the property details.</p>
+      <form method="post" action="{{ url_for('rentals.remind_overdue') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn-primary" type="submit" data-confirm="Send reminders to every overdue tenant?">{{ icon('mail', 16) }} Remind {{ reminders|length }} overdue tenant{{ '' if reminders|length == 1 else 's' }}</button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+
 {% if lease_options %}
   <div class="card">
     <div class="card-head">
@@ -54,6 +70,15 @@
                   <option value="{{ item.id }}">{{ item.property_name }} · {{ item.tenant_name }} · {{ item.rent_cents|money }}</option>
                 {% endfor %}
               </select>
+            </label>
+            <label class="field">
+              <span class="field-label">What for</span>
+              <select class="select" name="kind">
+                {% for key, label in invoice_kinds %}
+                  <option value="{{ key }}" {% if key == 'rent' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <span class="field-hint">Rent, deposit, utilities, damages or a standing fee.</span>
             </label>
             <label class="field">
               <span class="field-label">Month</span>
@@ -121,10 +146,16 @@
               <td>{{ badge(item.status) }}</td>
               <td>
                 {% if item.status in ['issued', 'part_paid'] %}
-                  <form method="post" action="{{ url_for('rentals.void_invoice', invoice_id=item.id) }}" data-confirm="Void invoice {{ item.number }}?">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button class="btn btn-ghost btn-sm" type="submit">Void</button>
-                  </form>
+                  <div class="row-actions">
+                    <form method="post" action="{{ url_for('rentals.remind_invoice', invoice_id=item.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <button class="btn btn-ghost btn-sm" type="submit">{{ icon('mail', 14) }} Remind</button>
+                    </form>
+                    <form method="post" action="{{ url_for('rentals.void_invoice', invoice_id=item.id) }}" data-confirm="Void invoice {{ item.number }}?">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <button class="btn btn-ghost btn-sm" type="submit">Void</button>
+                    </form>
+                  </div>
                 {% endif %}
               </td>
             </tr>

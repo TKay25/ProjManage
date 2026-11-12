@@ -1,0 +1,96 @@
+{% extends "app/base.html" %}
+{% block title %}Search · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Search{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {% if q %}{{ total }} result{{ '' if total == 1 else 's' }} for “{{ q }}”{% else %}Properties, tenants, leases, invoices, receipts and work orders{% endif %}
+    <span class="page-tagline">One search across the whole property workspace.</span>
+  </p>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar filter-bar--single" method="get" action="{{ url_for('rentals.search') }}" role="search">
+  <label class="search-field">
+    {{ icon('search', 16) }}
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="Search the portfolio" aria-label="Search the portfolio" autofocus />
+  </label>
+  <button class="btn btn-outline btn-sm" type="submit">Search</button>
+</form>
+
+{% if q and not total %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('search', 26) }}</span>
+      <h3>Nothing matches</h3>
+      <p>Try a property name, tenant, invoice number, receipt number or contractor.</p>
+    </div>
+  </div>
+{% endif %}
+
+{% if results.properties %}
+  <div class="card">
+    <div class="card-head"><h2>Properties</h2></div>
+    <ul class="side-list">
+      {% for item in results.properties %}
+        <li class="side-row"><span class="side-icon">{{ icon('home', 15) }}</span><span><a href="{{ url_for('rentals.property_detail', property_id=item.id) }}">{{ item.name }}</a><span class="mini-meta">{{ item.code }} · {{ item.suburb or item.city }} · {{ item.status|title }}</span></span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if results.tenants %}
+  <div class="card">
+    <div class="card-head"><h2>Tenants</h2></div>
+    <ul class="side-list">
+      {% for item in results.tenants %}
+        <li class="side-row"><span class="side-icon">{{ icon('users', 15) }}</span><span><a href="{{ url_for('rentals.tenant_detail', tenant_id=item.id) }}">{{ item.name }}</a><span class="mini-meta">{{ item.property_name }} · {{ item.phone|phone if item.phone else 'No phone' }}</span></span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if results.leases %}
+  <div class="card">
+    <div class="card-head"><h2>Leases</h2></div>
+    <ul class="side-list">
+      {% for item in results.leases %}
+        <li class="side-row"><span class="side-icon">{{ icon('pen', 15) }}</span><span><a href="{{ url_for('rentals.lease_detail', lease_id=item.id) }}">{{ item.reference }}</a><span class="mini-meta">{{ item.property_name }} · {{ item.tenant_name }} · {{ item.status|replace('_',' ')|title }}</span></span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if results.invoices %}
+  <div class="card">
+    <div class="card-head"><h2>Invoices</h2></div>
+    <ul class="side-list">
+      {% for item in results.invoices %}
+        <li class="side-row"><span class="side-icon">{{ icon('receipt', 15) }}</span><span><a href="{{ url_for('rentals.invoice_print', invoice_id=item.id) }}" target="_blank" rel="noopener">{{ item.number }}</a><span class="mini-meta">{{ item.property_name }} · {{ item.amount_cents|money }} · {{ item.status|replace('_',' ')|title }}</span></span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if results.payments %}
+  <div class="card">
+    <div class="card-head"><h2>Receipts</h2></div>
+    <ul class="side-list">
+      {% for item in results.payments %}
+        <li class="side-row"><span class="side-icon">{{ icon('wallet', 15) }}</span><span><a href="{{ url_for('rentals.payment_receipt', payment_id=item.id) }}">{{ item.receipt_number }}</a><span class="mini-meta">{{ item.property_name }} · {{ item.amount_cents|money }} · {{ item.received_at|date }}</span></span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if results.work_orders %}
+  <div class="card">
+    <div class="card-head"><h2>Work orders</h2></div>
+    <ul class="side-list">
+      {% for item in results.work_orders %}
+        <li class="side-row"><span class="side-icon">{{ icon('alert', 15) }}</span><span><a href="{{ url_for('rentals.property_detail', property_id=item.property_id, tab='maintenance') }}">{{ item.title }}</a><span class="mini-meta">{{ item.property_name }} · {{ item.status|replace('_',' ')|title }}</span></span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+{% endblock %}

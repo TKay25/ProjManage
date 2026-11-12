@@ -75,6 +75,9 @@ PROPERTY_NAV_ITEMS = [
     {"key": "leases", "href": "/property/leases", "label": "Leases", "icon": "pen"},
     {"key": "rent_invoices", "href": "/property/invoices", "label": "Rent invoices", "icon": "receipt"},
     {"key": "rent_payments", "href": "/property/payments", "label": "Receipts", "icon": "wallet"},
+    {"key": "expenses", "href": "/property/expenses", "label": "Costs", "icon": "trending-down"},
+    {"key": "work_orders", "href": "/property/work-orders", "label": "Work orders", "icon": "alert"},
+    {"key": "reports", "href": "/property/reports", "label": "Reports", "icon": "trending-up"},
 ]
 
 

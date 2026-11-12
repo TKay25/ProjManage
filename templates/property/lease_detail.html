@@ -136,6 +136,50 @@
     {% endif %}
 
     <div class="card">
+      <div class="card-head">
+        <h2>Deposit</h2>
+        {% if deposit.settled %}{{ badge('settled') }}{% elif deposit.received %}{{ badge('held') }}{% else %}<span class="badge badge-warn">Not received</span>{% endif %}
+      </div>
+      <div style="padding:0 18px 18px">
+        <dl class="fact-list">
+          <div><dt>Expected</dt><dd>{{ deposit.expected|money }}</dd></div>
+          <div><dt>Held by YaVaKa</dt><dd>{{ deposit.held|money }}</dd></div>
+          {% if deposit.refunded %}
+            <div><dt>Refunded</dt><dd>{{ deposit.refunded|money }}</dd></div>
+            <div><dt>Due back</dt><dd>{{ deposit.due_back|money }}</dd></div>
+          {% endif %}
+        </dl>
+        {% if not deposit.received %}
+          <form class="stack-form stack-sm" method="post" action="{{ url_for('rentals.lease_deposit', lease_id=lease.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="action" value="receive" />
+            <label class="field">
+              <span class="field-label">Deposit received on</span>
+              <input class="input" type="date" name="received_on" value="{{ today }}" />
+            </label>
+            <button class="btn btn-outline btn-block btn-sm" type="submit">{{ icon('check', 14) }} Mark deposit received</button>
+          </form>
+        {% elif not deposit.settled %}
+          <form class="stack-form stack-sm" method="post" action="{{ url_for('rentals.lease_deposit', lease_id=lease.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="action" value="refund" />
+            <label class="field">
+              <span class="field-label">Refund (USD)</span>
+              <input class="input" type="text" name="amount" inputmode="decimal" placeholder="{{ (deposit.due_back / 100)|round(2) }}" />
+            </label>
+            <label class="field">
+              <span class="field-label">Refunded on</span>
+              <input class="input" type="date" name="refunded_on" value="{{ today }}" />
+            </label>
+            <button class="btn btn-outline btn-block btn-sm" type="submit">{{ icon('receipt', 14) }} Record refund</button>
+          </form>
+        {% else %}
+          <p class="micro-note">{{ icon('check', 12) }} Deposit refunded and closed out.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-head"><h2>Actions</h2></div>
       <div class="stack-sm" style="padding:0 18px 18px">
         <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('rentals.lease_print', lease_id=lease.id) }}" target="_blank" rel="noopener">{{ icon('eye', 14) }} Open print view</a>
@@ -145,6 +189,34 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <button class="btn btn-danger-ghost btn-block btn-sm" type="submit">{{ icon('close', 14) }} End lease</button>
           </form>
+          <details class="panel-form">
+            <summary>{{ icon('refresh', 14) }} Renew this lease</summary>
+            <form class="stack-form stack-sm" method="post" action="{{ url_for('rentals.renew_lease', lease_id=lease.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <div class="form-row">
+                <label class="field">
+                  <span class="field-label">New start</span>
+                  <input class="input" type="date" name="start_date" value="{{ today }}" required />
+                </label>
+                <label class="field">
+                  <span class="field-label">New end</span>
+                  <input class="input" type="date" name="end_date" />
+                </label>
+              </div>
+              <div class="form-row">
+                <label class="field">
+                  <span class="field-label">Rent (USD)</span>
+                  <input class="input" type="text" name="rent" inputmode="decimal" value="{{ (lease.rent_cents / 100)|round(2) }}" />
+                </label>
+                <label class="field">
+                  <span class="field-label">Escalation (%)</span>
+                  <input class="input" type="number" name="escalation_percent" min="0" max="100" step="0.5" value="{{ lease.escalation_percent or 0 }}" />
+                </label>
+              </div>
+              <p class="micro-note">{{ icon('alert', 12) }} The current lease is ended the day before the new start, and the new lease waits for signature.</p>
+              <button class="btn btn-outline btn-block btn-sm" type="submit">{{ icon('refresh', 14) }} Renew and draft new lease</button>
+            </form>
+          </details>
         {% endif %}
       </div>
     </div>

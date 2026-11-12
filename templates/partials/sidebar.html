@@ -8,13 +8,25 @@
     <p class="sidebar-portal">{{ icon('home', 13) }} {{ current_portal_meta.short }}</p>
 
     <nav class="sidebar-nav" aria-label="Property Management">
-      {% for item in property_nav_items %}
+      {% for item in property_nav_items[:6] %}
         <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
            {% if active == item.key %}aria-current="page"{% endif %}>
           {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
         </a>
       {% endfor %}
     </nav>
+
+    <div class="sidebar-section">
+      <p class="sidebar-label">Tools</p>
+      <nav class="sidebar-nav" aria-label="Property tools">
+        {% for item in property_nav_items[6:] %}
+          <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
+             {% if active == item.key %}aria-current="page"{% endif %}>
+            {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
+          </a>
+        {% endfor %}
+      </nav>
+    </div>
 
     <div class="sidebar-section">
       <p class="sidebar-label">Bonus module</p>

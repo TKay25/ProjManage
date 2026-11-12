@@ -4,11 +4,12 @@
 {% block page_title %}Property Management{% endblock %}
 {% block page_subtitle %}
   <p class="page-subtitle">
-    Your properties, tenants and rent
+    {{ totals.properties }} propert{{ 'y' if totals.properties == 1 else 'ies' }} · {{ totals.occupancy }}% occupied · {{ totals.month_label }}
     <span class="page-tagline">When the build is finished, this is where it keeps earning.</span>
   </p>
 {% endblock %}
 {% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.reports') }}">{{ icon('trending-up', 15) }} Reports</a>
   <a class="btn btn-primary btn-sm" href="{{ url_for('rentals.properties') }}">{{ icon('plus', 15) }} Add a property</a>
 {% endblock %}
 
@@ -19,24 +20,50 @@
     <div>
       <p class="module-note-title">Rental management is a bonus to the main system</p>
       <p class="module-note-text">
-        Project Management runs the build: the stages, the funding and the receipts.
-        Property Management picks the building up at handover — tenants, leases and
-        rent — and adds the periodic checks that keep it standing. Same record,
-        same login, second door.
+        Project Management runs the build. Property Management picks the building up at handover:
+        tenants, leases, rent, costs, work orders and the periodic checks that keep it standing.
       </p>
     </div>
-    <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.properties') }}">{{ icon('home', 14) }} Properties</a>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('rentals.reports') }}">Portfolio report {{ icon('arrow-right', 13) }}</a>
   </div>
 </div>
 
+{% if reminders or expiring or (totals.checks_due or totals.work_orders) %}
+  <div class="alert-strip">
+    {% if reminders %}
+      <a class="alert-chip alert-chip--danger" href="{{ url_for('rentals.invoices') }}">
+        {{ icon('alert', 14) }} {{ reminders|length }} overdue invoice{{ '' if reminders|length == 1 else 's' }}
+      </a>
+    {% endif %}
+    {% if expiring %}
+      <a class="alert-chip alert-chip--warn" href="{{ url_for('rentals.leases', status='signed') }}">
+        {{ icon('clock', 14) }} {{ expiring|length }} lease{{ '' if expiring|length == 1 else 's' }} ending soon
+      </a>
+    {% endif %}
+    {% if totals.checks_due %}
+      <a class="alert-chip" href="{{ url_for('rentals.properties') }}">
+        {{ icon('calendar', 14) }} {{ totals.checks_due }} check{{ '' if totals.checks_due == 1 else 's' }} due
+      </a>
+    {% endif %}
+    {% if totals.work_orders %}
+      <a class="alert-chip" href="{{ url_for('rentals.work_orders') }}">
+        {{ icon('alert', 14) }} {{ totals.work_orders }} open work order{{ '' if totals.work_orders == 1 else 's' }}
+      </a>
+    {% endif %}
+  </div>
+{% endif %}
+
 <div class="kpi-grid">
-  <div class="kpi">
-    <div class="kpi-top">
-      <span class="kpi-label">Properties</span>
-      <span class="kpi-icon">{{ icon('home', 17) }}</span>
+  <div class="kpi kpi-with-ring">
+    <div>
+      <div class="kpi-top">
+        <span class="kpi-label">Occupancy</span>
+        <span class="kpi-icon">{{ icon('home', 17) }}</span>
+      </div>
+      <p class="kpi-value">{{ totals.occupied }}<span class="kpi-value-sub">/{{ totals.properties }}</span></p>
+      <p class="kpi-sub">{{ totals.vacant }} available</p>
     </div>
-    <p class="kpi-value">{{ totals.properties }}</p>
-    <p class="kpi-sub">{{ totals.occupied }} occupied · {{ totals.vacant }} available</p>
+    <div class="kpi-ring">{{ progress_ring(totals.occupancy, 68) }}</div>
   </div>
 
   <div class="kpi">
@@ -54,7 +81,9 @@
       <span class="kpi-icon kpi-icon-positive">{{ icon('wallet', 17) }}</span>
     </div>
     <p class="kpi-value">{{ totals.collected|money }}</p>
-    <p class="kpi-sub">{{ totals.month_label }}</p>
+    <p class="kpi-sub">
+      {% if totals.rent_roll %}{{ ((totals.collected / totals.rent_roll) * 100)|round|int }}% of the rent roll{% else %}this month{% endif %}
+    </p>
   </a>
 
   <a class="kpi card-hover" href="{{ url_for('rentals.invoices') }}">
@@ -63,12 +92,72 @@
       <span class="kpi-icon {{ 'kpi-icon-negative' if totals.outstanding else '' }}">{{ icon('receipt', 17) }}</span>
     </div>
     <p class="kpi-value {{ 'is-negative' if totals.outstanding }}">{{ totals.outstanding|money }}</p>
-    <p class="kpi-sub">open invoices and part payments</p>
+    <p class="kpi-sub">{{ totals.arrears_count }} open invoice{{ '' if totals.arrears_count == 1 else 's' }}</p>
+  </a>
+</div>
+
+<div class="kpi-grid kpi-grid--four">
+  <a class="kpi card-hover" href="{{ url_for('rentals.expenses') }}">
+    <div class="kpi-top">
+      <span class="kpi-label">Net income</span>
+      <span class="kpi-icon">{{ icon('trending-down', 17) }}</span>
+    </div>
+    <p class="kpi-value {{ 'is-negative' if totals.net < 0 }}">{{ totals.net|money }}</p>
+    <p class="kpi-sub">{{ totals.expenses|money }} of costs this month</p>
+  </a>
+
+  <div class="kpi">
+    <div class="kpi-top">
+      <span class="kpi-label">Portfolio value</span>
+      <span class="kpi-icon">{{ icon('building', 17) }}</span>
+    </div>
+    <p class="kpi-value">{{ totals.value|money_compact }}</p>
+    <p class="kpi-sub">{{ totals.value|money if totals.value else 'Add a value on each property' }}</p>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-top">
+      <span class="kpi-label">Gross yield</span>
+      <span class="kpi-icon">{{ icon('percent', 17) }}</span>
+    </div>
+    <p class="kpi-value">{{ totals.yield_percent }}%</p>
+    <p class="kpi-sub">annual rent over value</p>
+  </div>
+
+  <a class="kpi card-hover" href="{{ url_for('rentals.work_orders') }}">
+    <div class="kpi-top">
+      <span class="kpi-label">Work orders</span>
+      <span class="kpi-icon {{ 'kpi-icon-negative' if totals.work_orders else '' }}">{{ icon('alert', 17) }}</span>
+    </div>
+    <p class="kpi-value">{{ totals.work_orders }}</p>
+    <p class="kpi-sub">open or in progress</p>
   </a>
 </div>
 
 <div class="detail-grid">
   <div class="detail-main">
+    <div class="card">
+      <div class="card-head">
+        <h2>Rent collected against the roll</h2>
+        <span class="mini-meta">Last six months</span>
+      </div>
+      <div class="chart">
+        {% for point in trend %}
+          <div class="chart-col" title="{{ point.label }}: {{ point.collected|money }} of {{ point.expected|money }}">
+            <div class="chart-bars">
+              <span class="chart-bar chart-bar--expected" style="height: {{ ((point.expected / peak) * 100)|round|int }}%"></span>
+              <span class="chart-bar chart-bar--collected" style="height: {{ ((point.collected / peak) * 100)|round|int }}%"></span>
+            </div>
+            <span class="chart-label">{{ point.label }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="chart-key">
+        <span><i class="chart-dot chart-dot--expected"></i> Expected</span>
+        <span><i class="chart-dot chart-dot--collected"></i> Collected</span>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-head">
         <h2>Your properties</h2>
@@ -82,6 +171,7 @@
                 <th scope="col">Property</th>
                 <th scope="col">Tenant</th>
                 <th scope="col">Status</th>
+                <th scope="col" class="align-right">Rent</th>
                 <th scope="col" class="align-right">Open balance</th>
               </tr>
             </thead>
@@ -89,11 +179,21 @@
               {% for item in properties %}
                 <tr>
                   <td>
-                    <a href="{{ url_for('rentals.property_detail', property_id=item.id) }}">{{ item.name }}</a>
-                    <span class="mini-meta">{{ item.code }} · {{ item.suburb or item.city }}</span>
+                    <span class="property-cell">
+                      {% if item.cover_id %}
+                        <img class="property-thumb" src="{{ url_for('rentals.media', attachment_id=item.cover_id) }}" alt="" loading="lazy" />
+                      {% else %}
+                        <span class="property-thumb property-thumb--empty">{{ icon('home', 15) }}</span>
+                      {% endif %}
+                      <span>
+                        <a href="{{ url_for('rentals.property_detail', property_id=item.id) }}">{{ item.name }}</a>
+                        <span class="mini-meta">{{ item.code }} · {{ item.suburb or item.city }}</span>
+                      </span>
+                    </span>
                   </td>
                   <td>{{ item.current_tenant or '—' }}</td>
                   <td>{{ badge(item.status) }}</td>
+                  <td class="align-right">{{ item.rent_cents|money }}</td>
                   <td class="align-right {{ 'neg' if item.open_balance_cents }}">{{ item.open_balance_cents|money }}</td>
                 </tr>
               {% endfor %}
@@ -139,47 +239,52 @@
           </table>
         </div>
       {% else %}
-        <p class="muted small" style="padding:0 18px 18px">Nothing is overdue. Every issued invoice is paid or not yet due.</p>
+        <p class="muted small pad-x">Nothing is overdue. Every issued invoice is paid or not yet due.</p>
       {% endif %}
     </div>
 
     <div class="card">
       <div class="card-head">
-        <h2>Recent rent receipts</h2>
-        <a class="link-quiet" href="{{ url_for('rentals.payments') }}">All receipts {{ icon('arrow-right', 13) }}</a>
+        <h2>What changed</h2>
+        <span class="mini-meta">The property workspace's own history</span>
       </div>
-      {% if recent_payments %}
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">Receipt</th>
-                <th scope="col">Property</th>
-                <th scope="col">Tenant</th>
-                <th scope="col">Received</th>
-                <th scope="col" class="align-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in recent_payments %}
-                <tr>
-                  <td><a href="{{ url_for('rentals.payment_receipt', payment_id=item.id) }}">{{ item.receipt_number }}</a></td>
-                  <td>{{ item.property_name }}</td>
-                  <td>{{ item.tenant_name or '—' }}</td>
-                  <td>{{ item.received_at|date }}</td>
-                  <td class="align-right">{{ item.amount_cents|money }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+      {% if activity %}
+        <ul class="side-list">
+          {% for item in activity %}
+            <li class="side-row">
+              <span class="side-icon">{{ icon('activity', 15) }}</span>
+              <span>
+                <a href="{{ item.href or url_for('rentals.property_detail', property_id=item.property_id) if item.property_id else '#' }}">{{ item.title }}</a>
+                <span class="mini-meta">{{ item.property_name or 'Portfolio' }}{% if item.detail %} · {{ item.detail }}{% endif %} · {{ item.created_at|relative }}</span>
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
       {% else %}
-        <p class="muted small" style="padding:0 18px 18px">No rent has been receipted yet. Record the first payment from Receipts.</p>
+        <p class="muted small pad-x">Nothing has changed yet. Rent receipts, checks and work orders appear here.</p>
       {% endif %}
     </div>
   </div>
 
   <aside class="detail-side">
+    <div class="card">
+      <div class="card-head"><h2>Arrears ageing</h2></div>
+      <ul class="aging-list">
+        {% for bucket in aging %}
+          <li class="aging-row">
+            <span>{{ bucket.label }}</span>
+            <span class="{{ 'neg' if bucket.total }}">{{ bucket.total|money }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if reminders %}
+        <form method="post" action="{{ url_for('rentals.remind_overdue') }}" style="padding:0 18px 18px">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="btn btn-outline btn-block btn-sm" type="submit">{{ icon('message', 14) }} Send {{ reminders|length }} overdue reminder{{ '' if reminders|length == 1 else 's' }}</button>
+        </form>
+      {% endif %}
+    </div>
+
     <div class="card">
       <div class="card-head">
         <h2>Checks due</h2>
@@ -191,29 +296,28 @@
             <li class="side-row">
               <span class="side-icon">{{ icon('calendar', 15) }}</span>
               <span>
-                <a href="{{ url_for('rentals.property_detail', property_id=item.property_id) }}">{{ item.property_name }}</a>
+                <a href="{{ url_for('rentals.property_detail', property_id=item.property_id, tab='checks') }}">{{ item.property_name }}</a>
                 <span class="mini-meta">{{ item.check_type|replace('_', ' ')|title }} · {{ item.scheduled_for|date if item.scheduled_for else 'No date' }}</span>
               </span>
             </li>
           {% endfor %}
         </ul>
       {% else %}
-        <p class="muted small" style="padding:0 18px 18px">No checks booked. A quarterly look at the building is what keeps small repairs small.</p>
+        <p class="muted small pad-x">No checks booked. A quarterly look at the building keeps small repairs small.</p>
       {% endif %}
     </div>
 
-    {% if recent_checks %}
+    {% if expiring %}
       <div class="card">
-        <div class="card-head"><h2>Latest checks</h2></div>
+        <div class="card-head"><h2>Leases ending</h2></div>
         <ul class="side-list">
-          {% for item in recent_checks %}
+          {% for item in expiring %}
             <li class="side-row">
-              <span class="side-icon">{{ icon('camera', 15) }}</span>
+              <span class="side-icon">{{ icon('clock', 15) }}</span>
               <span>
-                <a href="{{ url_for('rentals.property_detail', property_id=item.property_id) }}">{{ item.property_name }}</a>
-                <span class="mini-meta">{{ item.conducted_at|date if item.conducted_at else item.created_at|date }} · {{ item.media_count }} file{{ '' if item.media_count == 1 else 's' }}</span>
+                <a href="{{ url_for('rentals.lease_detail', lease_id=item.id) }}">{{ item.property_name }}</a>
+                <span class="mini-meta">{{ item.tenant_name }} · ends {{ item.end_date|date }}</span>
               </span>
-              {{ badge(item.rating) }}
             </li>
           {% endfor %}
         </ul>
@@ -235,15 +339,15 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p class="muted small" style="padding:0 18px 18px">No lease is waiting for a signature.</p>
+        <p class="muted small pad-x">No lease is waiting for a signature.</p>
       {% endif %}
     </div>
 
     <div class="card">
       <div class="card-head"><h2>Ask the assistant</h2></div>
-      <div class="stack-sm" style="padding:0 18px 18px">
+      <div class="stack-sm pad-x">
         <p class="muted small">The assistant reads this portfolio back to you. Try:</p>
-        <p class="mini-meta">“Which tenants are behind on rent?”<br />“How much did I collect this month?”<br />“When is the next property check?”</p>
+        <p class="mini-meta">“Which tenants are behind on rent?”<br />“What is my net income this month?”<br />“What maintenance is open?”</p>
       </div>
     </div>
   </aside>

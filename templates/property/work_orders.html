@@ -1,0 +1,96 @@
+{% extends "app/base.html" %}
+{% block title %}Work orders · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Work orders{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ work_orders|length }} {{ status|replace('_', ' ') }}
+    <span class="page-tagline">A tenant repair becomes a work order, then a recorded cost on the property.</span>
+  </p>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar filter-bar--single" method="get" action="{{ url_for('rentals.work_orders') }}">
+  <select class="select select-sm" name="status" data-autosubmit aria-label="Filter by status">
+    {% for key, label in [('open', 'Open'), ('in_progress', 'In progress'), ('done', 'Done'), ('cancelled', 'Cancelled')] %}
+      <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="btn btn-ghost btn-sm" type="submit">Filter</button></noscript>
+</form>
+
+<div class="card">
+  <details class="panel-form" {% if not work_orders %}open{% endif %}>
+    <summary>{{ icon('plus', 15) }} Open a work order</summary>
+    <div class="panel-form-body">
+      {% if properties %}
+        <form class="stack-form" method="post" action="{{ url_for('rentals.create_work_order') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="form-row">
+            <label class="field"><span class="field-label">Property</span>
+              <select class="select" name="property_id" required>
+                {% for item in properties %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
+              </select>
+            </label>
+            <label class="field"><span class="field-label">What needs fixing?</span><input class="input" name="title" required maxlength="160" placeholder="Geyser leaking into the ceiling" /></label>
+            <label class="field"><span class="field-label">Priority</span>
+              <select class="select" name="priority">
+                {% for key, label in work_order_priorities %}<option value="{{ key }}" {% if key == 'normal' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field"><span class="field-label">Contractor</span><input class="input" name="contractor_name" maxlength="120" /></label>
+            <label class="field"><span class="field-label">Contractor phone</span><input class="input" type="tel" name="contractor_phone" maxlength="30" /></label>
+            <label class="field"><span class="field-label">Reported on</span><input class="input" type="date" name="reported_at" value="{{ today }}" /></label>
+            <label class="field"><span class="field-label">Scheduled for</span><input class="input" type="date" name="scheduled_for" /></label>
+          </div>
+          <label class="field"><span class="field-label">Details</span><textarea class="input textarea" name="description" rows="2" maxlength="2000"></textarea></label>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('alert', 16) }} Open work order</button></div>
+        </form>
+      {% else %}
+        <p class="muted small">Add a property first.</p>
+      {% endif %}
+    </div>
+  </details>
+</div>
+
+{% if work_orders %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th scope="col">Issue</th><th scope="col">Property</th><th scope="col">Priority</th><th scope="col">Contractor</th><th scope="col" class="align-right">Cost</th><th scope="col">Update</th></tr></thead>
+        <tbody>
+          {% for item in work_orders %}
+            <tr>
+              <td>{{ item.title }}<span class="mini-meta">{{ item.reported_at|date }}{% if item.tenant_name %} · {{ item.tenant_name }}{% endif %}</span></td>
+              <td><a href="{{ url_for('rentals.property_detail', property_id=item.property_id, tab='maintenance') }}">{{ item.property_name }}</a></td>
+              <td>{% if item.priority == 'urgent' %}<span class="badge badge-danger">Urgent</span>{% else %}{{ item.priority|title }}{% endif %}</td>
+              <td>{{ item.contractor_name or '—' }}{% if item.contractor_phone %}<span class="mini-meta">{{ item.contractor_phone|phone }}</span>{% endif %}</td>
+              <td class="align-right">{{ item.cost_cents|money if item.cost_cents else '—' }}</td>
+              <td>
+                <form class="inline-form" method="post" action="{{ url_for('rentals.update_work_order', work_order_id=item.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <select class="select select-sm" name="status" aria-label="Status for {{ item.title }}">
+                    {% for key, label in work_order_statuses %}<option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                  </select>
+                  <input class="input input-sm" name="cost" placeholder="Cost" inputmode="decimal" style="max-width:100px" />
+                  <button class="btn btn-outline btn-sm" type="submit">Save</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('alert', 26) }}</span>
+      <h3>Nothing here</h3>
+      <p>No work order with that status. Open one above when a tenant reports something.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

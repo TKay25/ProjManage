@@ -1422,6 +1422,73 @@ class BrandMigration(unittest.TestCase):
         self.assertEqual(client.get("/app").status_code, 200)
 
 
+class RentalSchemaUpgrade(unittest.TestCase):
+    """A database created before invoices carried a kind must still open.
+
+    The unique index on (lease_id, period_start, kind) cannot be created by the
+    base schema: on an older database the column does not exist yet, so the
+    migration has to add the column first and then index it.
+    """
+
+    def test_an_older_invoice_table_upgrades_in_place(self):
+        import sqlite3
+
+        import db
+
+        path = Path(_TEMP_DIR) / "rental-upgrade.db"
+        connection = sqlite3.connect(path)
+        connection.executescript(
+            """
+            CREATE TABLE property_invoices (
+              id TEXT PRIMARY KEY,
+              owner_id TEXT NOT NULL,
+              property_id TEXT NOT NULL,
+              lease_id TEXT,
+              tenant_id TEXT,
+              number TEXT NOT NULL UNIQUE,
+              period_start TEXT NOT NULL,
+              period_end TEXT NOT NULL,
+              due_date TEXT NOT NULL,
+              amount_cents INTEGER NOT NULL,
+              currency TEXT NOT NULL DEFAULT 'USD',
+              status TEXT NOT NULL DEFAULT 'issued',
+              notes TEXT,
+              issued_at TEXT,
+              created_by TEXT,
+              created_at TEXT NOT NULL
+            );
+            CREATE INDEX idx_property_invoices_period ON property_invoices(lease_id, period_start);
+            PRAGMA user_version = 23;
+            """
+        )
+        connection.commit()
+        connection.close()
+
+        app = create_app(
+            isolated_config(
+                DATABASE=str(path),
+                UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "rental-upgrade-uploads"),
+            )
+        )
+        with app.app_context():
+            columns = {row["name"] for row in db.query("PRAGMA table_info(property_invoices)")}
+            self.assertIn("kind", columns)
+            self.assertGreaterEqual(db.query("PRAGMA user_version", one=True)["user_version"], 24)
+
+            index = db.query(
+                "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_property_invoices_period_kind'",
+                one=True,
+            )
+            self.assertIsNotNone(index)
+            self.assertIn("UNIQUE", index["sql"].upper())
+            self.assertIsNone(
+                db.query(
+                    "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_property_invoices_period'",
+                    one=True,
+                )
+            )
+
+
 class StageAttachments(VakaTestCase):
     """Files attached to a build stage also appear in the document vault."""
 
@@ -6521,6 +6588,77 @@ class PropertyManagement(VakaTestCase):
         with self.app.app_context():
             invoice = query("SELECT * FROM property_invoices WHERE id = ?", (invoice["id"],), one=True)
         self.assertEqual(invoice["status"], "paid")
+
+    def test_an_extra_invoice_can_be_raised_by_hand(self):
+        """Water, levies and recharges ride the same invoice path as rent."""
+        from db import query
+
+        self.property_login()
+        property_row = self.add_property("Extra Invoice Cottage")
+        tenant = self.add_tenant(property_row["id"], "Extra Invoice Tenant")
+        token = self.csrf()
+        self.client.post(
+            "/property/leases",
+            data={
+                "csrf_token": token,
+                "property_id": property_row["id"],
+                "tenant_id": tenant["id"],
+                "start_date": "2026-11-01",
+                "rent": "350.00",
+                "deposit": "0",
+                "billing_day": "5",
+                "notice_days": "30",
+                "title": "Lease — Extra Invoice Cottage",
+            },
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            lease = query(
+                "SELECT * FROM property_leases WHERE property_id = ?",
+                (property_row["id"],),
+                one=True,
+            )
+        self.client.post(
+            f"/property/leases/{lease['id']}/sign",
+            data={"csrf_token": token, "signature": "", "signed_name": "Extra Invoice Tenant"},
+            follow_redirects=True,
+        )
+
+        raised = self.client.post(
+            "/property/invoices",
+            data={
+                "csrf_token": token,
+                "lease_id": lease["id"],
+                "kind": "water",
+                "period": "2027-06",
+                "amount": "25.00",
+                "notes": "Water share",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(raised.status_code, 200)
+
+        with self.app.app_context():
+            extra = query(
+                "SELECT * FROM property_invoices WHERE lease_id = ? AND kind = 'water'",
+                (lease["id"],),
+                one=True,
+            )
+        self.assertIsNotNone(extra)
+        self.assertEqual(extra["amount_cents"], 2_500)
+
+        # The extra invoice does not block the rent invoice for the same month.
+        self.client.post(
+            "/property/invoices/generate",
+            data={"csrf_token": token, "period": "2027-06"},
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            kinds = {
+                row["kind"]
+                for row in query("SELECT kind FROM property_invoices WHERE lease_id = ?", (lease["id"],))
+            }
+        self.assertEqual(kinds, {"rent", "water"})
 
     def test_the_same_month_cannot_be_invoiced_twice(self):
         from db import query

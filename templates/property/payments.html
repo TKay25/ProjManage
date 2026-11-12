@@ -112,6 +112,7 @@
             <th scope="col">Received</th>
             <th scope="col">Method</th>
             <th scope="col" class="align-right">Amount</th>
+            <th scope="col"></th>
           </tr>
         </thead>
         <tbody>
@@ -124,6 +125,14 @@
               <td>{{ item.received_at|date }}</td>
               <td>{{ method_label(item.method) }}</td>
               <td class="align-right">{{ item.amount_cents|money }}</td>
+              <td>
+                <div class="row-actions">
+                  <form method="post" action="{{ url_for('rentals.reverse_payment', payment_id=item.id) }}" data-confirm="Reverse receipt {{ item.receipt_number }}? The invoice reopens for the balance.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button class="btn btn-ghost btn-sm" type="submit">{{ icon('refresh', 14) }} Reverse</button>
+                  </form>
+                </div>
+              </td>
             </tr>
           {% endfor %}
         </tbody>

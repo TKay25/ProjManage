@@ -1,0 +1,109 @@
+{% extends "app/base.html" %}
+{% block title %}Property costs · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Property costs{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ totals|money }} out · {{ income|money }} in · {{ net|money }} net
+    <span class="page-tagline">Rates, insurance, repairs and management fees, so net income is real.</span>
+  </p>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar" method="get" action="{{ url_for('rentals.expenses') }}">
+  <select class="select select-sm" name="property" data-autosubmit aria-label="Filter by property">
+    <option value="">All properties</option>
+    {% for item in properties %}
+      <option value="{{ item.id }}" {% if property_id == item.id %}selected{% endif %}>{{ item.name }}</option>
+    {% endfor %}
+  </select>
+  <label class="field-inline"><span class="sr-only">From</span><input class="input input-sm" type="date" name="from" value="{{ start }}" aria-label="From date" /></label>
+  <label class="field-inline"><span class="sr-only">To</span><input class="input input-sm" type="date" name="to" value="{{ end }}" aria-label="To date" /></label>
+  <button class="btn btn-outline btn-sm" type="submit">Apply</button>
+  <a class="link-quiet" href="{{ url_for('rentals.export_report', dataset='expenses') }}">Export CSV</a>
+</form>
+
+<div class="kpi-grid kpi-grid--four">
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Costs</span><span class="kpi-icon">{{ icon('trending-down', 17) }}</span></div><p class="kpi-value">{{ totals|money }}</p><p class="kpi-sub">{{ expenses|length }} entries</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Received</span><span class="kpi-icon">{{ icon('wallet', 17) }}</span></div><p class="kpi-value">{{ income|money }}</p><p class="kpi-sub">rent in the same period</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Net</span><span class="kpi-icon">{{ icon('trending-up', 17) }}</span></div><p class="kpi-value {{ 'is-negative' if net < 0 }}">{{ net|money }}</p><p class="kpi-sub">income less costs</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Biggest cost</span><span class="kpi-icon">{{ icon('alert', 17) }}</span></div><p class="kpi-value" style="font-size:1.1rem">{{ by_category[0].category|replace('_',' ')|title if by_category else '—' }}</p><p class="kpi-sub">{{ by_category[0].total|money if by_category else 'Nothing recorded' }}</p></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Record a cost</h2></div>
+  <div class="panel-form-body">
+    {% if properties %}
+      <form class="stack-form" method="post" action="{{ url_for('rentals.create_expense') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="form-row">
+          <label class="field"><span class="field-label">Property</span>
+            <select class="select" name="property_id" required>
+              {% for item in properties %}<option value="{{ item.id }}" {% if property_id == item.id %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="field"><span class="field-label">Category</span>
+            <select class="select" name="category">
+              {% for key, label in expense_categories %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="field"><span class="field-label">Amount (USD)</span><input class="input" name="amount" inputmode="decimal" required /></label>
+        </div>
+        <div class="form-row">
+          <label class="field"><span class="field-label">Description</span><input class="input" name="description" required maxlength="200" placeholder="Harare City Council rates, Q4" /></label>
+          <label class="field"><span class="field-label">Paid with</span>
+            <select class="select" name="method">
+              {% for key, label in payment_methods %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="field"><span class="field-label">Reference</span><input class="input" name="reference" maxlength="80" /></label>
+        </div>
+        <div class="form-row">
+          <label class="field"><span class="field-label">Date</span><input class="input" type="date" name="incurred_at" value="{{ today }}" /></label>
+          <label class="checkbox"><input type="checkbox" name="billable" value="yes" /><span>Recoverable from the tenant</span></label>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('plus', 16) }} Record cost</button></div>
+      </form>
+    {% else %}
+      <p class="muted small">Add a property first, then its costs can be recorded against it.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if expenses %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th scope="col">Date</th><th scope="col">Property</th><th scope="col">Category</th><th scope="col">Description</th><th scope="col">Paid with</th><th scope="col" class="align-right">Amount</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for item in expenses %}
+            <tr>
+              <td>{{ item.incurred_at|date }}</td>
+              <td><a href="{{ url_for('rentals.property_detail', property_id=item.property_id, tab='money') }}">{{ item.property_name }}</a></td>
+              <td>{{ item.category|replace('_',' ')|title }}</td>
+              <td>{{ item.description }}{% if item.billable_to_tenant %} <span class="badge badge-warn">Recharge</span>{% endif %}</td>
+              <td>{{ method_label(item.method) }}{% if item.reference %}<span class="mini-meta">{{ item.reference }}</span>{% endif %}</td>
+              <td class="align-right">{{ item.amount_cents|money }}</td>
+              <td>
+                <form method="post" action="{{ url_for('rentals.delete_expense', expense_id=item.id) }}" data-confirm="Remove this cost?">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button class="btn btn-ghost btn-sm" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr><td colspan="5">Total</td><td class="align-right">{{ totals|money }}</td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('trending-down', 26) }}</span>
+      <h3>No costs in this period</h3>
+      <p>Record rates, insurance, repairs and management fees. They come off the rent so the reports show real net income.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

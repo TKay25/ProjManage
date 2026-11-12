@@ -91,6 +91,19 @@
           </label>
         </div>
 
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Annual escalation (%)</span>
+            <input class="input" type="number" name="escalation_percent" min="0" max="100" step="0.5" value="{{ values.escalation_percent }}" />
+            <span class="field-hint">Applied when the lease is renewed, not mid-term.</span>
+          </label>
+          <label class="field">
+            <span class="field-label">Grace days before a reminder</span>
+            <input class="input" type="number" name="grace_days" min="0" max="60" value="{{ values.grace_days }}" />
+            <span class="field-hint">Rent stays due on the billing day; this only softens the chase.</span>
+          </label>
+        </div>
+
         <div class="all-clear">
           <span>{{ icon('shield', 16) }}</span>
           <p>The lease is saved as “awaiting signature”. The tenant signs on screen and the signed copy is locked to the property.</p>

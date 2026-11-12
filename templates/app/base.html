@@ -24,6 +24,13 @@
           <input class="topbar-search-input" type="search" name="q" placeholder="Search everything" aria-label="Search everything" />
         </form>
       </noscript>
+      {% else %}
+      <form class="topbar-search" method="get" action="{{ url_for('rentals.search') }}" role="search">
+        {{ icon('search', 15) }}
+        <input class="topbar-search-input" type="search" name="q"
+               value="{{ request.args.get('q', '') if request.endpoint == 'rentals.search' else '' }}"
+               placeholder="Search the portfolio" aria-label="Search the portfolio" />
+      </form>
       {% endif %}
       <div class="topbar-spacer"></div>
       {# The bell is the notification inbox: what changed. Outstanding work has

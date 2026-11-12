@@ -155,6 +155,17 @@ CREATE TABLE IF NOT EXISTS properties (
   deposit_months INTEGER NOT NULL DEFAULT 1,
   billing_day INTEGER NOT NULL DEFAULT 1,
   status TEXT NOT NULL DEFAULT 'available',
+  -- What the asset is worth and costs to hold. Both feed the reports page:
+  -- gross yield uses the value, net income subtracts the costs.
+  value_cents INTEGER NOT NULL DEFAULT 0,
+  rates_cents INTEGER NOT NULL DEFAULT 0,
+  insurance_cents INTEGER NOT NULL DEFAULT 0,
+  insurance_expiry TEXT,
+  caretaker_name TEXT,
+  caretaker_phone TEXT,
+  -- YaVaKa inspects managed properties on the ground and sends the owner the
+  -- report. A self-managed landlord can turn that off and record their own.
+  ya_vaka_checks INTEGER NOT NULL DEFAULT 1,
   -- A completed build can become the rental property, which is the point where
   -- the main system hands over to the bonus module.
   project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
@@ -201,6 +212,14 @@ CREATE TABLE IF NOT EXISTS property_leases (
   tenant_signature TEXT,
   signed_at TEXT,
   status TEXT NOT NULL DEFAULT 'awaiting_signature',
+  -- The money side of a tenancy: annual escalation, a grace period before a
+  -- reminder, and the deposit that has to come back at move-out.
+  escalation_percent REAL NOT NULL DEFAULT 0,
+  grace_days INTEGER NOT NULL DEFAULT 5,
+  deposit_paid_at TEXT,
+  deposit_refund_cents INTEGER NOT NULL DEFAULT 0,
+  deposit_refunded_at TEXT,
+  renewed_from TEXT,
   created_by TEXT REFERENCES users(id),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -216,6 +235,9 @@ CREATE TABLE IF NOT EXISTS property_invoices (
   lease_id TEXT REFERENCES property_leases(id) ON DELETE SET NULL,
   tenant_id TEXT REFERENCES property_tenants(id) ON DELETE SET NULL,
   number TEXT NOT NULL UNIQUE,
+  -- rent, deposit, water, levy, repair or other. Extras carry the same shape
+  -- as rent, so one statement and one receipt path cover everything.
+  kind TEXT NOT NULL DEFAULT 'rent',
   period_start TEXT NOT NULL,
   period_end TEXT NOT NULL,
   due_date TEXT NOT NULL,
@@ -229,9 +251,10 @@ CREATE TABLE IF NOT EXISTS property_invoices (
 );
 CREATE INDEX IF NOT EXISTS idx_property_invoices_owner ON property_invoices(owner_id, status);
 CREATE INDEX IF NOT EXISTS idx_property_invoices_property ON property_invoices(property_id);
--- One rent invoice per lease per month, so "raise this month" cannot double-bill.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_property_invoices_period
-  ON property_invoices(lease_id, period_start);
+-- One rent invoice per lease per month, so "raise this month" cannot
+-- double-bill. Extras (water, levy, repair) are separate invoices, hence kind.
+-- The unique index lives in the schema upgrade (see init_db): a database created
+-- before `kind` existed would fail here, before the migration could add it.
 
 CREATE TABLE IF NOT EXISTS property_payments (
   id TEXT PRIMARY KEY,
@@ -273,6 +296,72 @@ CREATE INDEX IF NOT EXISTS idx_property_checks_property
   ON property_checks(property_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_property_checks_owner
   ON property_checks(owner_id, status);
+
+CREATE TABLE IF NOT EXISTS property_expenses (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  category TEXT NOT NULL DEFAULT 'other',
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  description TEXT NOT NULL,
+  method TEXT NOT NULL DEFAULT 'BANK_TRANSFER',
+  reference TEXT,
+  incurred_at TEXT NOT NULL,
+  billable_to_tenant INTEGER NOT NULL DEFAULT 0,
+  invoice_id TEXT REFERENCES property_invoices(id) ON DELETE SET NULL,
+  work_order_id TEXT,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_property_expenses_owner
+  ON property_expenses(owner_id, incurred_at);
+CREATE INDEX IF NOT EXISTS idx_property_expenses_property
+  ON property_expenses(property_id, incurred_at);
+
+CREATE TABLE IF NOT EXISTS property_work_orders (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  tenant_id TEXT REFERENCES property_tenants(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  priority TEXT NOT NULL DEFAULT 'normal',
+  status TEXT NOT NULL DEFAULT 'open',
+  reported_at TEXT NOT NULL,
+  scheduled_for TEXT,
+  completed_at TEXT,
+  contractor_name TEXT,
+  contractor_phone TEXT,
+  cost_cents INTEGER NOT NULL DEFAULT 0,
+  expense_id TEXT,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_property_work_orders_owner
+  ON property_work_orders(owner_id, status);
+CREATE INDEX IF NOT EXISTS idx_property_work_orders_property
+  ON property_work_orders(property_id, created_at);
+
+-- What happened in the property workspace, newest first. The build side keeps
+-- its own notifications; this is the property equivalent and doubles as the
+-- history a landlord can read back.
+CREATE TABLE IF NOT EXISTS property_activity (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id TEXT REFERENCES properties(id) ON DELETE CASCADE,
+  actor_id TEXT REFERENCES users(id),
+  action TEXT NOT NULL,
+  title TEXT NOT NULL,
+  detail TEXT,
+  href TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_property_activity_owner
+  ON property_activity(owner_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_property_activity_property
+  ON property_activity(property_id, created_at);
 
 CREATE TABLE IF NOT EXISTS suppliers (
   id TEXT PRIMARY KEY,
@@ -449,6 +538,25 @@ ALTER TABLE attachments ADD COLUMN IF NOT EXISTS data BYTEA;
 ALTER TABLE attachments ADD COLUMN IF NOT EXISTS category TEXT;
 ALTER TABLE attachments ADD COLUMN IF NOT EXISTS property_id TEXT;
 ALTER TABLE attachments ADD COLUMN IF NOT EXISTS check_id TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS value_cents INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS rates_cents INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS insurance_cents INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS insurance_expiry TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS caretaker_name TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS caretaker_phone TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS ya_vaka_checks INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE property_leases ADD COLUMN IF NOT EXISTS escalation_percent REAL NOT NULL DEFAULT 0;
+ALTER TABLE property_leases ADD COLUMN IF NOT EXISTS grace_days INTEGER NOT NULL DEFAULT 5;
+ALTER TABLE property_leases ADD COLUMN IF NOT EXISTS deposit_paid_at TEXT;
+ALTER TABLE property_leases ADD COLUMN IF NOT EXISTS deposit_refund_cents INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE property_leases ADD COLUMN IF NOT EXISTS deposit_refunded_at TEXT;
+ALTER TABLE property_leases ADD COLUMN IF NOT EXISTS renewed_from TEXT;
+ALTER TABLE property_invoices ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'rent';
+-- Extras per month need their own invoice, so the uniqueness moves to
+-- (lease, period, kind). Drop the older narrower index first.
+DROP INDEX IF EXISTS idx_property_invoices_period;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_property_invoices_period_kind
+  ON property_invoices(lease_id, period_start, kind);
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_at TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_by TEXT REFERENCES users(id);
@@ -1041,6 +1149,44 @@ def run_migrations(connection):
             connection.execute("ALTER TABLE attachments ADD COLUMN check_id TEXT")
         connection.execute("PRAGMA user_version = 23")
 
+    if version < 24:
+        # Property Management grew a ledger: what the asset is worth, what it
+        # costs to hold, annual escalation, the deposit lifecycle, invoice
+        # kinds (rent, water, levy, repair), expenses, work orders and a
+        # readable activity trail.
+        upgrades = {
+            "properties": [
+                ("value_cents", "INTEGER NOT NULL DEFAULT 0"),
+                ("rates_cents", "INTEGER NOT NULL DEFAULT 0"),
+                ("insurance_cents", "INTEGER NOT NULL DEFAULT 0"),
+                ("insurance_expiry", "TEXT"),
+                ("caretaker_name", "TEXT"),
+                ("caretaker_phone", "TEXT"),
+                ("ya_vaka_checks", "INTEGER NOT NULL DEFAULT 1"),
+            ],
+            "property_leases": [
+                ("escalation_percent", "REAL NOT NULL DEFAULT 0"),
+                ("grace_days", "INTEGER NOT NULL DEFAULT 5"),
+                ("deposit_paid_at", "TEXT"),
+                ("deposit_refund_cents", "INTEGER NOT NULL DEFAULT 0"),
+                ("deposit_refunded_at", "TEXT"),
+                ("renewed_from", "TEXT"),
+            ],
+            "property_invoices": [("kind", "TEXT NOT NULL DEFAULT 'rent'")],
+        }
+        for table, columns in upgrades.items():
+            existing = {row[1] for row in connection.execute(f"PRAGMA table_info({table})")}
+            for column, definition in columns:
+                if column not in existing:
+                    connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+        connection.execute("DROP INDEX IF EXISTS idx_property_invoices_period")
+        connection.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_property_invoices_period_kind "
+            "ON property_invoices(lease_id, period_start, kind)"
+        )
+        connection.execute("PRAGMA user_version = 24")
+
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(
@@ -1127,6 +1273,9 @@ DUMP_ORDER = [
     "property_invoices",
     "property_payments",
     "property_checks",
+    "property_expenses",
+    "property_work_orders",
+    "property_activity",
     "stages",
     "transactions",
     "attachments",

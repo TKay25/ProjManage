@@ -809,64 +809,126 @@
   </div>
 </section>
 
-<section class="section" id="property" data-reveal>
+<section class="section pm-section" id="property" data-reveal>
+  <div class="pm-glow" aria-hidden="true"></div>
   <div class="container">
-    <div class="section-head">
-      <p class="eyebrow">After the handover</p>
-      <h2>The building is finished. The record keeps earning.</h2>
-      <p class="lead">
-        When a build, a renovation or a fit-out is done, YaVaKa gives you a second
-        workspace for the property itself. Tenants, leases, rent invoices and
-        receipts live next to the build that produced them — and a periodic check
-        on the building reaches you on the system and on WhatsApp, with photos and
-        video attached.
-      </p>
-    </div>
+    <div class="pm-hero">
+      <div class="pm-copy">
+        <p class="pm-eyebrow"><span class="pm-eyebrow-dot" aria-hidden="true"></span> YaVaKa Property Management</p>
+        <h2 class="pm-title">After the keys,<br /><span class="pm-title-accent">we keep watch.</span></h2>
+        <p class="pm-lead">
+          A finished build, a renovation or a buy-to-let does not stop needing attention.
+          YaVaKa gives the property its own workspace — the tenant, the lease, the rent,
+          the costs — and puts a YaVaKa inspector on the ground for the periodic checks,
+          so the owner gets the truth about the building, not a promise.
+        </p>
 
-    <div class="steps">
-      <div class="step">
-        <span class="step-number">01</span>
-        <h3>Add the property</h3>
-        <p>Link the finished build or add an inherited house or buy-to-let. Rent, billing day and deposit are recorded once and used everywhere after.</p>
-      </div>
-      <div class="step">
-        <span class="step-number">02</span>
-        <h3>Add the tenant, produce the lease</h3>
-        <p>Capture the tenant's details, generate the lease with your facts filled in, and have them sign on screen. The signed copy stays on the property record.</p>
-      </div>
-      <div class="step">
-        <span class="step-number">03</span>
-        <h3>Invoice the rent and receipt it</h3>
-        <p>Raise one rent invoice per lease per month, or the whole portfolio at once. Every payment gets a numbered receipt the tenant can keep.</p>
-      </div>
-      <div class="step">
-        <span class="step-number">04</span>
-        <h3>Keep an eye on the building</h3>
-        <p>Schedule quarterly or annual checks. Condition, findings, photos and video go into the record, and the owner hears about it by email and WhatsApp.</p>
-      </div>
-    </div>
+        <ul class="pm-points">
+          <li>
+            <span class="pm-point-icon">{{ icon('users', 17) }}</span>
+            <span class="pm-point-text"><strong>Tenant and lease</strong><span>Every tenant, every clause, signed on screen.</span></span>
+          </li>
+          <li>
+            <span class="pm-point-icon">{{ icon('receipt', 17) }}</span>
+            <span class="pm-point-text"><strong>Rent in, receipts out</strong><span>Monthly invoices, numbered receipts, arrears that age.</span></span>
+          </li>
+          <li>
+            <span class="pm-point-icon">{{ icon('camera', 17) }}</span>
+            <span class="pm-point-text"><strong>Inspections, done for you</strong><span>We attend, photograph and report back.</span></span>
+          </li>
+          <li>
+            <span class="pm-point-icon">{{ icon('wallet', 17) }}</span>
+            <span class="pm-point-text"><strong>Costs that tell the truth</strong><span>Rates, insurance and repairs against the rent.</span></span>
+          </li>
+        </ul>
 
-    <div class="module-note" style="margin-top:8px">
-      <div class="module-note-body">
-        <span class="module-note-icon">{{ icon('sparkles', 20) }}</span>
-        <div>
-          <p class="module-note-title">Rental management is a bonus, not a replacement</p>
-          <p class="module-note-text">
-            Project Management remains the main system for the build. Property
-            Management is its own sign-in door, and rental management is the module
-            that comes with it.
-          </p>
+        <div class="pm-actions">
+          <a class="pm-btn-primary" href="/property/login">Open Property Management {{ icon('arrow-right', 15) }}</a>
+          <a class="pm-btn-ghost" href="/register?portal=property">Create a property account</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="/property/login">Property Management sign-in {{ icon('arrow-right', 14) }}</a>
+      </div>
+
+      <div class="pm-showcase" aria-hidden="true">
+        <div class="pm-app">
+          <div class="pm-app-bar">
+            <span class="pm-app-dots"><i></i><i></i><i></i></span>
+            <span class="pm-app-title">YaVaKa · Property Management</span>
+            <span class="pm-app-chip">October</span>
+          </div>
+          <div class="pm-app-body">
+            <div class="pm-row">
+              <img class="pm-thumb" src="{{ url_for('static', filename='img/hero/interior.jpg') }}" alt="" loading="lazy" />
+              <span class="pm-row-text"><strong>Belvedere Garden Flat</strong><span>2 bed · Harare</span></span>
+              <span class="pm-pill">Occupied</span>
+            </div>
+            <div class="pm-metrics">
+              <div><span>Rent roll</span><strong>$450</strong></div>
+              <div><span>Collected</span><strong class="pm-good">$450</strong></div>
+              <div><span>Arrears</span><strong>$0</strong></div>
+            </div>
+            <div class="pm-progress"><span></span></div>
+            <div class="pm-progress-label"><span>October rent</span><span>100% collected</span></div>
+          </div>
+        </div>
+
+        <div class="pm-report">
+          <div class="pm-report-head">
+            <span class="pm-report-badge">Inspection report</span>
+            <span class="pm-report-rating">Good</span>
+          </div>
+          <div class="pm-report-photos">
+            <img src="{{ url_for('static', filename='img/hero/interior.jpg') }}" alt="" loading="lazy" />
+            <img src="{{ url_for('static', filename='img/hero/kitchen.jpg') }}" alt="" loading="lazy" />
+            <img src="{{ url_for('static', filename='img/hero/firstfix.jpg') }}" alt="" loading="lazy" />
+          </div>
+          <p class="pm-report-text">Roof sound, gutters clear, no damp on the north wall. One tap washer to replace.</p>
+          <p class="pm-report-foot">{{ icon('message', 12) }} Sent to the owner · system, email and WhatsApp</p>
+        </div>
       </div>
     </div>
 
-    <div class="hero-actions" style="margin-top:20px">
-      <a class="btn btn-outline" href="/register?portal=property">Create a property account</a>
-      <a class="btn btn-ghost" href="/#faq">Read the questions</a>
+    <div class="pm-feature-grid">
+      <article class="pm-feature">
+        <span class="pm-feature-icon">{{ icon('pen', 18) }}</span>
+        <h3>Leases, without the paper chase</h3>
+        <p>Produce the lease from the property and tenant, sign it on screen, and keep the signed copy with the building.</p>
+      </article>
+      <article class="pm-feature">
+        <span class="pm-feature-icon">{{ icon('wallet', 18) }}</span>
+        <h3>Rent that reconciles itself</h3>
+        <p>One invoice per lease per month, or the whole portfolio at once. Receipts part-pay or settle, and arrears age themselves.</p>
+      </article>
+      <article class="pm-feature">
+        <span class="pm-feature-icon">{{ icon('alert', 18) }}</span>
+        <h3>Repairs with a paper trail</h3>
+        <p>A tenant issue becomes a work order, the work order becomes a recorded cost, and the property report shows real net income.</p>
+      </article>
+      <article class="pm-feature pm-feature--accent">
+        <span class="pm-feature-icon">{{ icon('camera', 18) }}</span>
+        <h3>YaVaKa walks the building</h3>
+        <p>Request an inspection and a YaVaKa inspector attends. Condition, findings, photos and video reach you by email and WhatsApp.</p>
+      </article>
+    </div>
+
+    <div class="pm-bonus">
+      <div class="pm-bonus-mark">{{ icon('sparkles', 22) }}</div>
+      <div class="pm-bonus-copy">
+        <p class="pm-bonus-kicker">Bonus module</p>
+        <h3>Rental management is a bonus, not a replacement.</h3>
+        <p>
+          Project Management remains the main system for the build. Property Management is its
+          own sign-in door, and rental management is the module that comes with it.
+        </p>
+      </div>
+      <div class="pm-bonus-links">
+        <a class="pm-link-primary" href="/property/login">Property Management sign-in {{ icon('arrow-right', 13) }}</a>
+        <a class="pm-link-soft" href="/register?portal=property">Create a property account</a>
+        <a class="pm-link-quiet" href="/#faq">Read the questions</a>
+      </div>
     </div>
   </div>
 </section>
+
 
 <section class="section" id="suppliers" data-reveal>
   <div class="container">

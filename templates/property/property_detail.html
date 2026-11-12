@@ -17,461 +17,616 @@
 {% endblock %}
 
 {% block content %}
-<div class="kpi-grid">
-  <div class="kpi">
-    <div class="kpi-top"><span class="kpi-label">Status</span><span class="kpi-icon">{{ icon('home', 17) }}</span></div>
-    <p class="kpi-value" style="font-size:1.15rem">{{ badge(property.status) }}</p>
-    <p class="kpi-sub">{{ tenants|selectattr('status', 'equalto', 'active')|list|length }} tenant in place</p>
-  </div>
-  <div class="kpi">
-    <div class="kpi-top"><span class="kpi-label">Monthly rent</span><span class="kpi-icon">{{ icon('wallet', 17) }}</span></div>
-    <p class="kpi-value">{{ property.rent_cents|money }}</p>
-    <p class="kpi-sub">Due day {{ property.billing_day }}</p>
-  </div>
-  <div class="kpi">
-    <div class="kpi-top"><span class="kpi-label">Open invoices</span><span class="kpi-icon">{{ icon('receipt', 17) }}</span></div>
-    <p class="kpi-value">{{ invoices|selectattr('status', 'in', ['issued', 'part_paid'])|list|length }}</p>
-    <p class="kpi-sub">{{ (invoices|selectattr('status', 'in', ['issued', 'part_paid'])|list|sum(attribute='balance_cents'))|money }} outstanding</p>
-  </div>
-  <div class="kpi">
-    <div class="kpi-top"><span class="kpi-label">Checks</span><span class="kpi-icon">{{ icon('camera', 17) }}</span></div>
-    <p class="kpi-value">{{ checks|length }}</p>
-    <p class="kpi-sub">{{ checks|selectattr('status', 'equalto', 'scheduled')|list|length }} scheduled</p>
-  </div>
-</div>
-
-<div class="detail-grid">
-  <div class="detail-main">
-    <div class="card">
-      <div class="card-head">
-        <h2>Tenants</h2>
-        <span class="mini-meta">{{ tenants|length }} on record</span>
-      </div>
-      {% if tenants %}
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">Tenant</th>
-                <th scope="col">Contact</th>
-                <th scope="col">In place since</th>
-                <th scope="col">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in tenants %}
-                <tr>
-                  <td>{{ item.name }}<span class="mini-meta">{{ item.national_id or '' }}</span></td>
-                  <td>
-                    {{ item.phone|phone if item.phone else '—' }}<span class="mini-meta">{{ item.email or '' }}</span>
-                  </td>
-                  <td>{{ item.moved_in|date if item.moved_in else '—' }}</td>
-                  <td>{{ badge(item.status) }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <p class="muted small" style="padding:0 18px 16px">No tenant yet. Add the person who lives here, then draft the lease.</p>
+{% set tabs = [
+  ('overview', 'Overview', 'dashboard'),
+  ('tenants', 'Tenants', 'users'),
+  ('leases', 'Leases', 'pen'),
+  ('money', 'Money', 'wallet'),
+  ('checks', 'Checks', 'camera'),
+  ('documents', 'Documents', 'folder'),
+  ('maintenance', 'Maintenance', 'alert')
+] %}
+<nav class="detail-tabs" aria-label="Property sections">
+  {% for key, label, icon_name in tabs %}
+    <a class="detail-tab {% if tab == key %}is-active{% endif %}"
+       href="{{ url_for('rentals.property_detail', property_id=property.id, tab=key) }}"
+       {% if tab == key %}aria-current="page"{% endif %}>
+      {{ icon(icon_name, 15) }}<span>{{ label }}</span>
+      {% if key == 'maintenance' and work_orders|selectattr('status', 'in', ['open', 'in_progress'])|list %}
+        <span class="detail-tab-count">{{ work_orders|selectattr('status', 'in', ['open', 'in_progress'])|list|length }}</span>
       {% endif %}
+    </a>
+  {% endfor %}
+</nav>
 
-      <details class="panel-form">
-        <summary>{{ icon('plus', 15) }} Add a tenant</summary>
-        <div class="panel-form-body">
-          <form class="stack-form" method="post" action="{{ url_for('rentals.add_tenant', property_id=property.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="form-row">
-              <label class="field">
-                <span class="field-label">Full name</span>
-                <input class="input" type="text" name="name" required maxlength="120" placeholder="Tarisai Moyo" />
-              </label>
-              <label class="field">
-                <span class="field-label">WhatsApp number</span>
-                <input class="input" type="tel" name="phone" maxlength="30" placeholder="+263 77 000 0000" />
-              </label>
-            </div>
-            <div class="form-row">
-              <label class="field">
-                <span class="field-label">Email</span>
-                <input class="input" type="email" name="email" maxlength="120" />
-              </label>
-              <label class="field">
-                <span class="field-label">National ID</span>
-                <input class="input" type="text" name="national_id" maxlength="40" placeholder="63-1234567 A 00" />
-              </label>
-              <label class="field">
-                <span class="field-label">Moved in</span>
-                <input class="input" type="date" name="moved_in" value="{{ today }}" />
-              </label>
-            </div>
-            <label class="field">
-              <span class="field-label">Notes</span>
-              <textarea class="input textarea" name="notes" rows="2" maxlength="1000" placeholder="Place of work, next of kin, deposit paid…"></textarea>
-            </label>
-            <div class="form-actions">
-              <button class="btn btn-primary" type="submit">{{ icon('users', 16) }} Add tenant</button>
-            </div>
-          </form>
-        </div>
-      </details>
+{% if tab == 'overview' %}
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-top"><span class="kpi-label">Status</span><span class="kpi-icon">{{ icon('home', 17) }}</span></div>
+      <p class="kpi-value" style="font-size:1.1rem">{{ badge(property.status) }}</p>
+      <p class="kpi-sub">{{ tenants|selectattr('status', 'equalto', 'active')|list|length }} tenant in place</p>
     </div>
-
-    <div class="card">
-      <div class="card-head">
-        <h2>Leases</h2>
-        <span class="mini-meta">Signed leases are what rent invoices hang off</span>
-      </div>
-      {% if leases %}
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">Reference</th>
-                <th scope="col">Tenant</th>
-                <th scope="col">Term</th>
-                <th scope="col" class="align-right">Rent</th>
-                <th scope="col">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in leases %}
-                <tr>
-                  <td><a href="{{ url_for('rentals.lease_detail', lease_id=item.id) }}">{{ item.reference }}</a></td>
-                  <td>{{ item.tenant_name }}</td>
-                  <td>{{ item.start_date|date }} → {{ item.end_date|date if item.end_date else 'open' }}</td>
-                  <td class="align-right">{{ item.rent_cents|money }}</td>
-                  <td>{{ badge(item.status) }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <p class="muted small" style="padding:0 18px 16px">No lease drafted. Add a tenant, then produce the lease for signature.</p>
-      {% endif %}
+    <div class="kpi">
+      <div class="kpi-top"><span class="kpi-label">Rent</span><span class="kpi-icon">{{ icon('wallet', 17) }}</span></div>
+      <p class="kpi-value">{{ property.rent_cents|money }}</p>
+      <p class="kpi-sub">Due day {{ property.billing_day }}</p>
     </div>
+    <div class="kpi">
+      <div class="kpi-top"><span class="kpi-label">Net this year</span><span class="kpi-icon">{{ icon('trending-up', 17) }}</span></div>
+      <p class="kpi-value {{ 'is-negative' if finances.net < 0 }}">{{ finances.net|money }}</p>
+      <p class="kpi-sub">{{ finances.income|money }} in · {{ finances.expenses|money }} out</p>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top"><span class="kpi-label">Deposit</span><span class="kpi-icon">{{ icon('lock', 17) }}</span></div>
+      <p class="kpi-value">{{ (deposit.held if deposit else 0)|money }}</p>
+      <p class="kpi-sub">{{ 'Held for the tenancy' if deposit and deposit.received else 'Not yet received' }}</p>
+    </div>
+  </div>
 
+  {% set latest_check = checks|selectattr('status', 'equalto', 'completed')|list|first %}
+  {% if latest_check %}
     <div class="card">
       <div class="card-head">
-        <h2>Rent invoices</h2>
-        <a class="link-quiet" href="{{ url_for('rentals.invoices') }}">All invoices {{ icon('arrow-right', 13) }}</a>
+        <h2>Latest inspection</h2>
+        <span class="mini-meta">
+          {{ (latest_check.conducted_at or latest_check.scheduled_for)|date }}
+          {% if latest_check.reported_at %} · sent {{ latest_check.reported_at|relative }}{% endif %}
+        </span>
       </div>
-      {% if invoices %}
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">Invoice</th>
-                <th scope="col">Period</th>
-                <th scope="col">Due</th>
-                <th scope="col" class="align-right">Invoiced</th>
-                <th scope="col" class="align-right">Balance</th>
-                <th scope="col">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in invoices %}
-                <tr>
-                  <td><a href="{{ url_for('rentals.invoice_print', invoice_id=item.id) }}" target="_blank" rel="noopener">{{ item.number }}</a></td>
-                  <td>{{ item.period_start|date }}</td>
-                  <td>{{ item.due_date|date }}</td>
-                  <td class="align-right">{{ item.amount_cents|money }}</td>
-                  <td class="align-right {{ 'neg' if item.balance_cents }}">{{ item.balance_cents|money }}</td>
-                  <td>{{ badge(item.status) }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <p class="muted small" style="padding:0 18px 16px">Nothing invoiced yet. Raise the month once the lease is signed.</p>
-      {% endif %}
+      <div class="panel-form-body">
+        <p class="check-meta">{{ latest_check.check_type|replace('_', ' ')|title }} {{ badge(latest_check.rating) }}</p>
+        <p class="small">{{ latest_check.findings }}</p>
+        {% if latest_check.action_required %}<p class="small neg">Action: {{ latest_check.action_required }}</p>{% endif %}
+        <a class="link-quiet" href="{{ url_for('rentals.property_detail', property_id=property.id, tab='checks') }}">All checks, photos and video {{ icon('arrow-right', 13) }}</a>
+      </div>
+    </div>
+  {% endif %}
 
-      {% set signed_leases = leases|selectattr('status', 'equalto', 'signed')|list %}
-      {% if signed_leases %}
+  <div class="detail-grid">
+    <div class="detail-main">
+      <div class="card">
+        <div class="card-head">
+          <h2>Property record</h2>
+          <span class="mini-meta">{{ property.code }}</span>
+        </div>
+        {% if property.cover_id %}{% endif %}
+        {% set cover = documents|selectattr('category', 'equalto', 'image')|list %}
+        {% if cover %}
+          <img class="property-cover" src="{{ url_for('rentals.media', attachment_id=cover[0].id) }}" alt="{{ property.name }}" />
+        {% endif %}
+        <dl class="fact-list">
+          <div><dt>Type</dt><dd>{{ property.property_type|replace('_', ' ')|title }}</dd></div>
+          <div><dt>Address</dt><dd>{{ property.address or '—' }}{% if property.suburb %}, {{ property.suburb }}{% endif %}</dd></div>
+          <div><dt>City</dt><dd>{{ property.city }}</dd></div>
+          <div><dt>Bedrooms / bathrooms</dt><dd>{{ property.bedrooms }} / {{ property.bathrooms }}</dd></div>
+          <div><dt>Value</dt><dd>{{ property.value_cents|money if property.value_cents else 'Not recorded' }}</dd></div>
+          <div><dt>Council rates</dt><dd>{{ property.rates_cents|money }} a year</dd></div>
+          <div><dt>Insurance</dt><dd>{{ property.insurance_cents|money }} a year{% if property.insurance_expiry %} · renews {{ property.insurance_expiry|date }}{% endif %}</dd></div>
+          {% if property.caretaker_name %}
+            <div><dt>Caretaker</dt><dd>{{ property.caretaker_name }}{% if property.caretaker_phone %} · {{ property.caretaker_phone|phone }}{% endif %}</dd></div>
+          {% endif %}
+          <div><dt>Checks</dt><dd>{{ 'YaVaKa inspects on site' if property.ya_vaka_checks else 'Owner records checks' }}</dd></div>
+          {% if project %}
+            <div><dt>From the build</dt><dd><a href="{{ url_for('projects.detail', project_id=project.id) }}">{{ project.name }}</a></dd></div>
+          {% endif %}
+        </dl>
+        {% if property.notes %}<p class="muted small pad-x">{{ property.notes }}</p>{% endif %}
+
         <details class="panel-form">
-          <summary>{{ icon('plus', 15) }} Raise a rent invoice</summary>
+          <summary>{{ icon('settings', 15) }} Edit the property</summary>
           <div class="panel-form-body">
-            <form class="stack-form" method="post" action="{{ url_for('rentals.create_invoice') }}">
+            <form class="stack-form" method="post" action="{{ url_for('rentals.edit_property', property_id=property.id) }}" enctype="multipart/form-data">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <div class="form-row">
-                <label class="field">
-                  <span class="field-label">Signed lease</span>
-                  <select class="select" name="lease_id">
-                    {% for item in signed_leases %}
-                      <option value="{{ item.id }}">{{ item.tenant_name }} · {{ item.rent_cents|money }} / month</option>
-                    {% endfor %}
+                <label class="field"><span class="field-label">Name</span><input class="input" name="name" value="{{ property.name }}" required maxlength="120" /></label>
+                <label class="field"><span class="field-label">Type</span>
+                  <select class="select" name="property_type">
+                    {% for key, label in property_types %}<option value="{{ key }}" {% if property.property_type == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
                   </select>
                 </label>
-                <label class="field">
-                  <span class="field-label">Month</span>
-                  <input class="input" type="month" name="period" value="{{ today[:7] }}" />
-                </label>
-                <label class="field">
-                  <span class="field-label">Amount (USD)</span>
-                  <input class="input" type="text" name="amount" inputmode="decimal" placeholder="{{ (property.rent_cents / 100)|round(2) }}" />
-                  <span class="field-hint">Leave blank to invoice the lease rent.</span>
+                <label class="field"><span class="field-label">Status</span>
+                  <span class="field-static">{{ badge(property.status) }}</span>
                 </label>
               </div>
-              <div class="form-actions">
-                <button class="btn btn-primary" type="submit">{{ icon('receipt', 16) }} Raise invoice</button>
+              <div class="form-row">
+                <label class="field"><span class="field-label">Address</span><input class="input" name="address" value="{{ property.address or '' }}" maxlength="200" /></label>
+                <label class="field"><span class="field-label">Suburb</span><input class="input" name="suburb" value="{{ property.suburb or '' }}" maxlength="80" /></label>
+                <label class="field"><span class="field-label">City</span><input class="input" name="city" value="{{ property.city }}" maxlength="80" /></label>
               </div>
+              <div class="form-row">
+                <label class="field"><span class="field-label">Rent (USD)</span><input class="input" name="rent" value="{{ property.rent_cents|money_input }}" inputmode="decimal" /></label>
+                <label class="field"><span class="field-label">Value (USD)</span><input class="input" name="value" value="{{ property.value_cents|money_input }}" inputmode="decimal" /></label>
+                <label class="field"><span class="field-label">Deposit months</span><input class="input" type="number" name="deposit_months" min="0" max="12" value="{{ property.deposit_months }}" /></label>
+                <label class="field"><span class="field-label">Billing day</span><input class="input" type="number" name="billing_day" min="1" max="28" value="{{ property.billing_day }}" /></label>
+              </div>
+              <div class="form-row">
+                <label class="field"><span class="field-label">Bedrooms</span><input class="input" type="number" name="bedrooms" min="0" max="40" value="{{ property.bedrooms }}" /></label>
+                <label class="field"><span class="field-label">Bathrooms</span><input class="input" type="number" name="bathrooms" min="0" max="20" value="{{ property.bathrooms }}" /></label>
+                <label class="field"><span class="field-label">Rates a year</span><input class="input" name="rates" value="{{ property.rates_cents|money_input }}" inputmode="decimal" /></label>
+                <label class="field"><span class="field-label">Insurance a year</span><input class="input" name="insurance" value="{{ property.insurance_cents|money_input }}" inputmode="decimal" /></label>
+              </div>
+              <div class="form-row">
+                <label class="field"><span class="field-label">Insurance renewal</span><input class="input" type="date" name="insurance_expiry" value="{{ property.insurance_expiry|date_input }}" /></label>
+                <label class="field"><span class="field-label">Caretaker</span><input class="input" name="caretaker_name" value="{{ property.caretaker_name or '' }}" maxlength="120" /></label>
+                <label class="field"><span class="field-label">Caretaker phone</span><input class="input" type="tel" name="caretaker_phone" value="{{ property.caretaker_phone or '' }}" maxlength="30" /></label>
+                <label class="field"><span class="field-label">Replace cover photo</span><input class="input" type="file" name="photo" accept="{{ upload_accept }}" /></label>
+              </div>
+              <label class="field"><span class="field-label">Notes</span><textarea class="input textarea" name="notes" rows="2" maxlength="2000">{{ property.notes or '' }}</textarea></label>
+              <label class="field"><span class="field-label">Periodic checks</span>
+                <select class="select" name="ya_vaka_checks">
+                  <option value="1" {% if property.ya_vaka_checks %}selected{% endif %}>YaVaKa inspects on site</option>
+                  <option value="0" {% if not property.ya_vaka_checks %}selected{% endif %}>I record my own checks</option>
+                </select>
+              </label>
+              <div class="form-actions"><button class="btn btn-primary" type="submit">Save property</button></div>
             </form>
           </div>
         </details>
-      {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>What changed here</h2></div>
+        {% if activity %}
+          <ul class="side-list">
+            {% for item in activity %}
+              <li class="side-row">
+                <span class="side-icon">{{ icon('activity', 15) }}</span>
+                <span>
+                  <strong>{{ item.title }}</strong>
+                  <span class="mini-meta">{% if item.detail %}{{ item.detail }} · {% endif %}{{ item.created_at|relative }}</span>
+                </span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted small pad-x">Nothing has changed here yet.</p>
+        {% endif %}
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <h2>Rent receipts</h2>
-        <a class="link-quiet" href="{{ url_for('rentals.payments') }}">All receipts {{ icon('arrow-right', 13) }}</a>
+    <aside class="detail-side">
+      <div class="card">
+        <div class="card-head"><h2>Status</h2></div>
+        <form class="stack-form pad-x" method="post" action="{{ url_for('rentals.set_property_status', property_id=property.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <label class="field">
+            <span class="field-label">Mark this property</span>
+            <select class="select" name="status">
+              {% for key, label in property_statuses %}<option value="{{ key }}" {% if property.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          <button class="btn btn-outline btn-sm" type="submit">Update status</button>
+        </form>
       </div>
-      {% if payments %}
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
+      {% if active_lease %}
+        <div class="card">
+          <div class="card-head"><h2>Current tenancy</h2></div>
+          <dl class="fact-list">
+            <div><dt>Tenant</dt><dd>{{ active_lease.tenant_name }}</dd></div>
+            <div><dt>Lease</dt><dd><a href="{{ url_for('rentals.lease_detail', lease_id=active_lease.id) }}">{{ active_lease.reference }}</a></dd></div>
+            <div><dt>Term</dt><dd>{{ active_lease.start_date|date }} → {{ active_lease.end_date|date if active_lease.end_date else 'open' }}</dd></div>
+            <div><dt>Deposit</dt><dd>{{ deposit.held|money }}{% if deposit.received %} held{% endif %}</dd></div>
+          </dl>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+
+{% elif tab == 'tenants' %}
+  <div class="card">
+    <div class="card-head">
+      <h2>Tenants</h2>
+      <span class="mini-meta">{{ tenants|length }} on record</span>
+    </div>
+    {% if tenants %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Tenant</th><th scope="col">Contact</th><th scope="col">In place since</th><th scope="col">Status</th><th scope="col"></th></tr></thead>
+          <tbody>
+            {% for item in tenants %}
               <tr>
-                <th scope="col">Receipt</th>
-                <th scope="col">Tenant</th>
-                <th scope="col">Received</th>
-                <th scope="col">Method</th>
-                <th scope="col" class="align-right">Amount</th>
+                <td><a href="{{ url_for('rentals.tenant_detail', tenant_id=item.id) }}">{{ item.name }}</a><span class="mini-meta">{{ item.national_id or '' }}</span></td>
+                <td>{{ item.phone|phone if item.phone else '—' }}<span class="mini-meta">{{ item.email or '' }}</span></td>
+                <td>{{ item.moved_in|date if item.moved_in else '—' }}</td>
+                <td>{{ badge(item.status) }}</td>
+                <td><a class="btn btn-ghost btn-sm" href="{{ url_for('rentals.tenant_detail', tenant_id=item.id) }}">Statement</a></td>
               </tr>
-            </thead>
-            <tbody>
-              {% for item in payments %}
-                <tr>
-                  <td><a href="{{ url_for('rentals.payment_receipt', payment_id=item.id) }}">{{ item.receipt_number }}</a></td>
-                  <td>{{ item.tenant_name or '—' }}</td>
-                  <td>{{ item.received_at|date }}</td>
-                  <td>{{ method_label(item.method) }}</td>
-                  <td class="align-right">{{ item.amount_cents|money }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <p class="muted small" style="padding:0 18px 16px">No rent receipted against this property yet.</p>
-      {% endif %}
-
-      <details class="panel-form">
-        <summary>{{ icon('receipt', 15) }} Receipt a rent payment</summary>
-        <div class="panel-form-body">
-          <form class="stack-form" method="post" action="{{ url_for('rentals.create_payment') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <input type="hidden" name="property_id" value="{{ property.id }}" />
-            <div class="form-row">
-              <label class="field">
-                <span class="field-label">Against invoice</span>
-                <select class="select" name="invoice_id">
-                  <option value="">On account — no invoice yet</option>
-                  {% for item in invoices if item.status in ['issued', 'part_paid'] %}
-                    <option value="{{ item.id }}">{{ item.number }} · {{ item.period_start|date }} · {{ item.balance_cents|money }} due</option>
-                  {% endfor %}
-                </select>
-              </label>
-              <label class="field">
-                <span class="field-label">Amount received (USD)</span>
-                <input class="input" type="text" name="amount" inputmode="decimal" required placeholder="450.00" />
-              </label>
-            </div>
-            <div class="form-row">
-              <label class="field">
-                <span class="field-label">Method</span>
-                <select class="select" name="method">
-                  {% for key, label in payment_methods %}
-                    <option value="{{ key }}" {% if key == 'ECOCASH' %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
-              </label>
-              <label class="field">
-                <span class="field-label">Reference</span>
-                <input class="input" type="text" name="reference" maxlength="80" placeholder="EcoCash ref / transfer ref" />
-              </label>
-              <label class="field">
-                <span class="field-label">Received on</span>
-                <input class="input" type="date" name="received_at" value="{{ today }}" />
-              </label>
-            </div>
-            <label class="field">
-              <span class="field-label">Notes</span>
-              <textarea class="input textarea" name="notes" rows="2" maxlength="500" placeholder="Paid by the tenant's brother, balance promised Friday…"></textarea>
-            </label>
-            <div class="form-actions">
-              <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Record receipt</button>
-            </div>
-          </form>
-        </div>
-      </details>
-    </div>
-
-    <div class="card">
-      <div class="card-head">
-        <h2>Periodic property checks</h2>
-        <span class="mini-meta">Photos and video go to the owner by email and WhatsApp</span>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-
-      {% if checks %}
-        {% for item in checks %}
-          <div class="check-card" style="padding:0 18px 16px">
-            <div class="card-head" style="padding:14px 0 8px">
-              <div>
-                <p class="check-meta">
-                  <strong>{{ item.check_type|replace('_', ' ')|title }}</strong>
-                  {% if item.status == 'completed' %}{{ badge(item.rating) }}{% else %}{{ badge(item.status) }}{% endif %}
-                </p>
-                <p class="mini-meta">
-                  {{ (item.conducted_at or item.scheduled_for)|date if (item.conducted_at or item.scheduled_for) else 'No date' }}
-                  {% if item.status == 'scheduled' %} · scheduled{% endif %}
-                  {% if item.reported_at %} · sent {{ item.reported_at|relative }}{% endif %}
-                </p>
-              </div>
-              {% if item.status == 'completed' %}
-                <form method="post" action="{{ url_for('rentals.report_check', check_id=item.id) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                  <button class="btn btn-ghost btn-sm" type="submit">{{ icon('message', 13) }} Resend</button>
-                </form>
-              {% endif %}
-            </div>
-
-            {% if item.findings %}
-              <p class="small" style="margin:0 0 6px">{{ item.findings }}</p>
-            {% endif %}
-            {% if item.action_required %}
-              <p class="small neg" style="margin:0">Action: {{ item.action_required }}</p>
-            {% endif %}
-
-            {% set files = media|selectattr('check_id', 'equalto', item.id)|list %}
-            {% if files %}
-              <div class="media-grid" style="padding:10px 0 0">
-                {% for file in files %}
-                  <a class="media-item" href="{{ url_for('rentals.media', attachment_id=file.id) }}" target="_blank" rel="noopener">
-                    {% if file.category == 'image' %}
-                      <img class="media-thumb" src="{{ url_for('rentals.media', attachment_id=file.id) }}" alt="{{ file.original_name }}" loading="lazy" />
-                    {% elif file.category == 'video' %}
-                      <span class="media-thumb doc-pdf doc-pdf--video" style="display:grid;place-items:center;color:#fff">{{ icon('play', 22) }}</span>
-                    {% else %}
-                      <span class="media-thumb doc-pdf" style="display:grid;place-items:center">{{ icon('folder', 22) }}</span>
-                    {% endif %}
-                    <span class="media-caption">{{ file.original_name }}</span>
-                  </a>
-                {% endfor %}
-              </div>
-            {% endif %}
-
-            {% if item.status == 'scheduled' %}
-              <details class="panel-form" style="margin-top:10px">
-                <summary>{{ icon('camera', 15) }} Complete the check</summary>
-                <div class="panel-form-body">
-                  <form class="stack-form" method="post" action="{{ url_for('rentals.complete_check', check_id=item.id) }}" enctype="multipart/form-data">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div class="form-row">
-                      <label class="field">
-                        <span class="field-label">Checked on</span>
-                        <input class="input" type="date" name="conducted_at" value="{{ today }}" />
-                      </label>
-                      <label class="field">
-                        <span class="field-label">Condition</span>
-                        <select class="select" name="rating">
-                          {% for key, label in check_ratings %}
-                            <option value="{{ key }}">{{ label }}</option>
-                          {% endfor %}
-                        </select>
-                      </label>
-                    </div>
-                    <label class="field">
-                      <span class="field-label">What did you find?</span>
-                      <textarea class="input textarea" name="findings" rows="3" required minlength="10" maxlength="4000" placeholder="Roof sound, one leaking tap in the bathroom, gutters clear. Tenant keeps the yard tidy."></textarea>
-                    </label>
-                    <label class="field">
-                      <span class="field-label">Action required</span>
-                      <input class="input" type="text" name="action_required" maxlength="1000" placeholder="Replace the bathroom tap washer before month end" />
-                    </label>
-                    <label class="field">
-                      <span class="field-label">Photos or video</span>
-                      <input class="input" type="file" name="media" accept="{{ upload_accept }}" multiple />
-                      <span class="field-hint">Up to {{ upload_limit_mb }} MB each. Images and video stay with the check.</span>
-                    </label>
-                    <div class="form-actions">
-                      <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save check and notify owner</button>
-                    </div>
-                  </form>
-                </div>
-              </details>
-            {% endif %}
+    {% else %}
+      <p class="muted small pad-x">No tenant yet. Add the person who lives here, then draft the lease.</p>
+    {% endif %}
+    <details class="panel-form">
+      <summary>{{ icon('plus', 15) }} Add a tenant</summary>
+      <div class="panel-form-body">
+        <form class="stack-form" method="post" action="{{ url_for('rentals.add_tenant', property_id=property.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="form-row">
+            <label class="field"><span class="field-label">Full name</span><input class="input" name="name" required maxlength="120" placeholder="Tarisai Moyo" /></label>
+            <label class="field"><span class="field-label">WhatsApp number</span><input class="input" type="tel" name="phone" maxlength="30" placeholder="+263 77 000 0000" /></label>
+            <label class="field"><span class="field-label">Email</span><input class="input" type="email" name="email" maxlength="120" /></label>
           </div>
-        {% endfor %}
-      {% else %}
-        <p class="muted small" style="padding:0 18px 16px">No checks yet. Book one below; a periodic look keeps small repairs small.</p>
-      {% endif %}
+          <div class="form-row">
+            <label class="field"><span class="field-label">National ID</span><input class="input" name="national_id" maxlength="40" placeholder="63-1234567 A 00" /></label>
+            <label class="field"><span class="field-label">Moved in</span><input class="input" type="date" name="moved_in" value="{{ today }}" /></label>
+            <label class="field"><span class="field-label">Notes</span><input class="input" name="notes" maxlength="1000" placeholder="Next of kin, deposit paid…" /></label>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('users', 16) }} Add tenant</button></div>
+        </form>
+      </div>
+    </details>
+  </div>
 
-      <details class="panel-form">
-        <summary>{{ icon('calendar', 15) }} Schedule a check</summary>
-        <div class="panel-form-body">
-          <form class="stack-form" method="post" action="{{ url_for('rentals.schedule_check', property_id=property.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="form-row">
-              <label class="field">
-                <span class="field-label">Type of check</span>
-                <select class="select" name="check_type">
-                  {% for key, label in check_types %}
-                    <option value="{{ key }}">{{ label }}</option>
-                  {% endfor %}
-                </select>
-              </label>
-              <label class="field">
-                <span class="field-label">Date</span>
-                <input class="input" type="date" name="scheduled_for" value="{{ today }}" />
-              </label>
-            </div>
-            <div class="form-actions">
-              <button class="btn btn-outline" type="submit">{{ icon('plus', 16) }} Schedule</button>
-            </div>
-          </form>
-        </div>
-      </details>
+{% elif tab == 'leases' %}
+  <div class="card">
+    <div class="card-head">
+      <h2>Leases</h2>
+      <a class="link-quiet" href="{{ url_for('rentals.new_lease', property=property.id) }}">New lease {{ icon('arrow-right', 13) }}</a>
+    </div>
+    {% if leases %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Reference</th><th scope="col">Tenant</th><th scope="col">Term</th><th scope="col" class="align-right">Rent</th><th scope="col">Status</th></tr></thead>
+          <tbody>
+            {% for item in leases %}
+              <tr>
+                <td><a href="{{ url_for('rentals.lease_detail', lease_id=item.id) }}">{{ item.reference }}</a></td>
+                <td>{{ item.tenant_name }}</td>
+                <td>{{ item.start_date|date }} → {{ item.end_date|date if item.end_date else 'open' }}</td>
+                <td class="align-right">{{ item.rent_cents|money }}</td>
+                <td>{{ badge(item.status) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted small pad-x">No lease drafted yet.</p>
+    {% endif %}
+  </div>
+
+{% elif tab == 'money' %}
+  <div class="card">
+    <div class="card-head"><h2>This year</h2></div>
+    <div class="money-summary">
+      <div><span>Received</span><strong>{{ finances.income|money }}</strong></div>
+      <div><span>Costs</span><strong>{{ finances.expenses|money }}</strong></div>
+      <div><span>Net</span><strong class="{{ 'neg' if finances.net < 0 }}">{{ finances.net|money }}</strong></div>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('rentals.expenses', property=property.id) }}">Costs {{ icon('arrow-right', 13) }}</a>
     </div>
   </div>
 
-  <aside class="detail-side">
-    <div class="card">
-      <div class="card-head"><h2>The property</h2></div>
-      <dl class="fact-list">
-        <div><dt>Reference</dt><dd>{{ property.code }}</dd></div>
-        <div><dt>Type</dt><dd>{{ property.property_type|replace('_', ' ')|title }}</dd></div>
-        <div><dt>Address</dt><dd>{{ property.address or '—' }}{% if property.suburb %}, {{ property.suburb }}{% endif %}</dd></div>
-        <div><dt>City</dt><dd>{{ property.city }}</dd></div>
-        <div><dt>Bedrooms</dt><dd>{{ property.bedrooms }}</dd></div>
-        <div><dt>Bathrooms</dt><dd>{{ property.bathrooms }}</dd></div>
-        <div><dt>Rent</dt><dd>{{ property.rent_cents|money }} / month</dd></div>
-        <div><dt>Deposit</dt><dd>{{ property.deposit_months }} month{{ '' if property.deposit_months == 1 else 's' }}</dd></div>
-        {% if project %}
-          <div><dt>From the build</dt><dd><a href="{{ url_for('projects.detail', project_id=project.id) }}">{{ project.name }}</a></dd></div>
-        {% endif %}
-      </dl>
-      {% if property.notes %}
-        <p class="muted small" style="padding:0 18px 16px">{{ property.notes }}</p>
-      {% endif %}
-    </div>
-
-    <div class="card">
-      <div class="card-head"><h2>Status</h2></div>
-      <form class="stack-form" method="post" action="{{ url_for('rentals.set_property_status', property_id=property.id) }}" style="padding:0 18px 18px">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <label class="field">
-          <span class="field-label">Mark this property</span>
-          <select class="select" name="status">
-            {% for key, label in property_statuses %}
-              <option value="{{ key }}" {% if property.status == key %}selected{% endif %}>{{ label }}</option>
+  <div class="card">
+    <div class="card-head"><h2>Rent invoices</h2><a class="link-quiet" href="{{ url_for('rentals.invoices') }}">All invoices</a></div>
+    {% if invoices %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Invoice</th><th scope="col">Kind</th><th scope="col">Period</th><th scope="col">Due</th><th scope="col" class="align-right">Invoiced</th><th scope="col" class="align-right">Balance</th><th scope="col">Status</th></tr></thead>
+          <tbody>
+            {% for item in invoices %}
+              <tr>
+                <td><a href="{{ url_for('rentals.invoice_print', invoice_id=item.id) }}" target="_blank" rel="noopener">{{ item.number }}</a></td>
+                <td>{{ item.kind|title }}</td>
+                <td>{{ item.period_start|date }}</td>
+                <td>{{ item.due_date|date }}</td>
+                <td class="align-right">{{ item.amount_cents|money }}</td>
+                <td class="align-right {{ 'neg' if item.balance_cents }}">{{ item.balance_cents|money }}</td>
+                <td>{{ badge(item.status) }}</td>
+              </tr>
             {% endfor %}
-          </select>
-        </label>
-        <button class="btn btn-outline btn-sm" type="submit">Update status</button>
-      </form>
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted small pad-x">Nothing invoiced yet.</p>
+    {% endif %}
+
+    {% set signed_leases = leases|selectattr('status', 'equalto', 'signed')|list %}
+    {% if signed_leases %}
+      <details class="panel-form">
+        <summary>{{ icon('plus', 15) }} Raise an invoice</summary>
+        <div class="panel-form-body">
+          <form class="stack-form" method="post" action="{{ url_for('rentals.create_invoice') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <div class="form-row">
+              <label class="field"><span class="field-label">Signed lease</span>
+                <select class="select" name="lease_id">
+                  {% for item in signed_leases %}<option value="{{ item.id }}">{{ item.tenant_name }} · {{ item.rent_cents|money }}</option>{% endfor %}
+                </select>
+              </label>
+              <label class="field"><span class="field-label">Kind</span>
+                <select class="select" name="kind">
+                  {% for key, label in invoice_kinds %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                </select>
+              </label>
+              <label class="field"><span class="field-label">Month</span><input class="input" type="month" name="period" value="{{ today[:7] }}" /></label>
+            </div>
+            <div class="form-row">
+              <label class="field"><span class="field-label">Amount (USD)</span><input class="input" name="amount" inputmode="decimal" placeholder="Blank uses the lease rent for rent invoices" /></label>
+              <label class="field"><span class="field-label">Due date</span><input class="input" type="date" name="due_date" /></label>
+              <label class="field"><span class="field-label">Note</span><input class="input" name="notes" maxlength="500" /></label>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('receipt', 16) }} Raise invoice</button></div>
+          </form>
+        </div>
+      </details>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Receipts</h2><a class="link-quiet" href="{{ url_for('rentals.payments') }}">All receipts</a></div>
+    {% if payments %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Receipt</th><th scope="col">Tenant</th><th scope="col">Received</th><th scope="col">Method</th><th scope="col" class="align-right">Amount</th><th scope="col"></th></tr></thead>
+          <tbody>
+            {% for item in payments %}
+              <tr>
+                <td><a href="{{ url_for('rentals.payment_receipt', payment_id=item.id) }}">{{ item.receipt_number }}</a></td>
+                <td>{{ item.tenant_name or '—' }}</td>
+                <td>{{ item.received_at|date }}</td>
+                <td>{{ method_label(item.method) }}</td>
+                <td class="align-right">{{ item.amount_cents|money }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('rentals.reverse_payment', payment_id=item.id) }}" data-confirm="Reverse receipt {{ item.receipt_number }}? The invoice opens again.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button class="btn btn-ghost btn-sm" type="submit">Reverse</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted small pad-x">No rent receipted here yet.</p>
+    {% endif %}
+    <details class="panel-form">
+      <summary>{{ icon('receipt', 15) }} Receipt a payment</summary>
+      <div class="panel-form-body">
+        <form class="stack-form" method="post" action="{{ url_for('rentals.create_payment') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="property_id" value="{{ property.id }}" />
+          <div class="form-row">
+            <label class="field"><span class="field-label">Against invoice</span>
+              <select class="select" name="invoice_id">
+                <option value="">On account</option>
+                {% for item in invoices if item.status in ['issued', 'part_paid'] %}
+                  <option value="{{ item.id }}">{{ item.number }} · {{ item.balance_cents|money }} due</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field"><span class="field-label">Amount (USD)</span><input class="input" name="amount" inputmode="decimal" required /></label>
+            <label class="field"><span class="field-label">Method</span>
+              <select class="select" name="method">
+                {% for key, label in payment_methods %}<option value="{{ key }}" {% if key == 'ECOCASH' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field"><span class="field-label">Reference</span><input class="input" name="reference" maxlength="80" /></label>
+            <label class="field"><span class="field-label">Received on</span><input class="input" type="date" name="received_at" value="{{ today }}" /></label>
+            <label class="field"><span class="field-label">Notes</span><input class="input" name="notes" maxlength="500" /></label>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Record receipt</button></div>
+        </form>
+      </div>
+    </details>
+  </div>
+
+{% elif tab == 'checks' %}
+  <div class="inspection-card">
+    <div class="inspection-copy">
+      <p class="inspection-eyebrow">{{ icon('camera', 13) }} YaVaKa inspection service</p>
+      <h2>We go to the building. You get the report.</h2>
+      <p>
+        A YaVaKa inspector attends on site, walks the property and records the condition,
+        findings and any action needed — with photos and video. The report lands in this
+        record and reaches you by email and WhatsApp.
+      </p>
     </div>
-  </aside>
-</div>
+    <form class="inspection-form" method="post" action="{{ url_for('rentals.request_inspection', property_id=property.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <label class="field">
+        <span class="field-label">Preferred date</span>
+        <input class="input" type="date" name="on" value="{{ today }}" />
+      </label>
+      <button class="btn btn-primary" type="submit">{{ icon('calendar', 16) }} Request an inspection</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Periodic property checks</h2><span class="mini-meta">Photos and video go to the owner by email and WhatsApp</span></div>
+    {% if checks %}
+      {% for item in checks %}
+        <div class="check-card">
+          <div class="check-head">
+            <div>
+              <p class="check-meta">
+                <strong>{{ item.check_type|replace('_', ' ')|title }}</strong>
+                {{ badge(item.rating if item.status == 'completed' else item.status) }}
+              </p>
+              <p class="mini-meta">
+                {{ (item.conducted_at or item.scheduled_for)|date if (item.conducted_at or item.scheduled_for) else 'No date' }}
+                {% if item.reported_at %} · sent {{ item.reported_at|relative }}{% endif %}
+              </p>
+            </div>
+            {% if item.status == 'completed' %}
+              <form method="post" action="{{ url_for('rentals.report_check', check_id=item.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button class="btn btn-ghost btn-sm" type="submit">{{ icon('message', 13) }} Resend</button>
+              </form>
+            {% endif %}
+          </div>
+          {% if item.findings %}<p class="small">{{ item.findings }}</p>{% endif %}
+          {% if item.action_required %}<p class="small neg">Action: {{ item.action_required }}</p>{% endif %}
+          {% set files = media|selectattr('check_id', 'equalto', item.id)|list %}
+          {% if files %}
+            <div class="media-grid">
+              {% for file in files %}
+                <a class="media-item" href="{{ url_for('rentals.media', attachment_id=file.id) }}" target="_blank" rel="noopener">
+                  {% if file.category == 'image' %}
+                    <img class="media-thumb" src="{{ url_for('rentals.media', attachment_id=file.id) }}" alt="{{ file.original_name }}" loading="lazy" />
+                  {% elif file.category == 'video' %}
+                    <span class="media-thumb doc-pdf doc-pdf--video">{{ icon('play', 22) }}</span>
+                  {% else %}
+                    <span class="media-thumb doc-pdf">{{ icon('folder', 22) }}</span>
+                  {% endif %}
+                  <span class="media-caption">{{ file.original_name }}</span>
+                </a>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if item.status == 'scheduled' %}
+            <details class="panel-form">
+              <summary>{{ icon('camera', 15) }} Complete the check</summary>
+              <div class="panel-form-body">
+                <form class="stack-form" method="post" action="{{ url_for('rentals.complete_check', check_id=item.id) }}" enctype="multipart/form-data">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <div class="form-row">
+                    <label class="field"><span class="field-label">Checked on</span><input class="input" type="date" name="conducted_at" value="{{ today }}" /></label>
+                    <label class="field"><span class="field-label">Condition</span>
+                      <select class="select" name="rating">
+                        {% for key, label in check_ratings %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                      </select>
+                    </label>
+                  </div>
+                  <label class="field"><span class="field-label">What did you find?</span><textarea class="input textarea" name="findings" rows="3" required minlength="10" maxlength="4000"></textarea></label>
+                  <label class="field"><span class="field-label">Action required</span><input class="input" name="action_required" maxlength="1000" /></label>
+                  <label class="field"><span class="field-label">Photos or video</span><input class="input" type="file" name="media" accept="{{ upload_accept }}" multiple /><span class="field-hint">Up to {{ upload_limit_mb }} MB each. The next check is scheduled automatically.</span></label>
+                  <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save check and notify owner</button></div>
+                </form>
+              </div>
+            </details>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="muted small pad-x">No checks yet. Book one below.</p>
+    {% endif %}
+    <details class="panel-form">
+      <summary>{{ icon('calendar', 15) }} Schedule a check</summary>
+      <div class="panel-form-body">
+        <form class="stack-form" method="post" action="{{ url_for('rentals.schedule_check', property_id=property.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="form-row">
+            <label class="field"><span class="field-label">Type</span>
+              <select class="select" name="check_type">
+                {% for key, label in check_types %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+              </select>
+            </label>
+            <label class="field"><span class="field-label">Date</span><input class="input" type="date" name="scheduled_for" value="{{ today }}" /></label>
+          </div>
+          <div class="form-actions"><button class="btn btn-outline" type="submit">{{ icon('plus', 16) }} Schedule</button></div>
+        </form>
+      </div>
+    </details>
+  </div>
+
+{% elif tab == 'documents' %}
+  <div class="card">
+    <div class="card-head"><h2>Property documents and photos</h2><span class="mini-meta">{{ documents|length }} filed</span></div>
+    {% if documents %}
+      <div class="media-grid">
+        {% for file in documents %}
+          <div class="media-item">
+            <a href="{{ url_for('rentals.media', attachment_id=file.id) }}" target="_blank" rel="noopener">
+              {% if file.category == 'image' %}
+                <img class="media-thumb" src="{{ url_for('rentals.media', attachment_id=file.id) }}" alt="{{ file.original_name }}" loading="lazy" />
+              {% elif file.category == 'video' %}
+                <span class="media-thumb doc-pdf doc-pdf--video">{{ icon('play', 22) }}</span>
+              {% else %}
+                <span class="media-thumb doc-pdf">{{ icon('folder', 22) }}</span>
+              {% endif %}
+              <span class="media-caption">{{ file.original_name }}</span>
+            </a>
+            <form method="post" action="{{ url_for('rentals.delete_property_document', attachment_id=file.id) }}" data-confirm="Remove this document?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button class="media-remove" type="submit" aria-label="Remove {{ file.original_name }}">{{ icon('trash', 13) }}</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted small pad-x">Title deed, rates clearance, insurance policy, photos — keep them with the property.</p>
+    {% endif %}
+    <details class="panel-form" {% if not documents %}open{% endif %}>
+      <summary>{{ icon('upload', 15) }} Add a document or photo</summary>
+      <div class="panel-form-body">
+        <form class="stack-form" method="post" action="{{ url_for('rentals.upload_property_document', property_id=property.id) }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="form-row">
+            <label class="field"><span class="field-label">File</span><input class="input" type="file" name="file" accept="{{ upload_accept }}" required /></label>
+            <label class="field"><span class="field-label">Label</span><input class="input" name="label" maxlength="120" placeholder="Title deed, insurance policy, rates clearance" /></label>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('upload', 16) }} File it</button></div>
+        </form>
+      </div>
+    </details>
+  </div>
+
+{% elif tab == 'maintenance' %}
+  <div class="card">
+    <div class="card-head"><h2>Work orders</h2><a class="link-quiet" href="{{ url_for('rentals.work_orders') }}">All work orders</a></div>
+    {% if work_orders %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th scope="col">Issue</th><th scope="col">Priority</th><th scope="col">Contractor</th><th scope="col">Status</th><th scope="col" class="align-right">Cost</th><th scope="col"></th></tr></thead>
+          <tbody>
+            {% for item in work_orders %}
+              <tr>
+                <td>{{ item.title }}<span class="mini-meta">{{ item.reported_at|date }}</span></td>
+                <td>{{ item.priority|title }}</td>
+                <td>{{ item.contractor_name or '—' }}{% if item.contractor_phone %}<span class="mini-meta">{{ item.contractor_phone|phone }}</span>{% endif %}</td>
+                <td>{{ badge(item.status) }}</td>
+                <td class="align-right">{{ item.cost_cents|money if item.cost_cents else '—' }}</td>
+                <td>
+                  {% if item.status not in ['done', 'cancelled'] %}
+                    <form class="inline-form" method="post" action="{{ url_for('rentals.update_work_order', work_order_id=item.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <select class="select select-sm" name="status" aria-label="Work order status">
+                        {% for key, label in work_order_statuses %}<option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                      </select>
+                      <input class="input input-sm" name="cost" placeholder="Cost" inputmode="decimal" style="max-width:100px" />
+                      <button class="btn btn-outline btn-sm" type="submit">Save</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted small pad-x">Nothing reported. A tenant repair becomes a work order, then a recorded cost.</p>
+    {% endif %}
+    <details class="panel-form" {% if not work_orders %}open{% endif %}>
+      <summary>{{ icon('plus', 15) }} Open a work order</summary>
+      <div class="panel-form-body">
+        <form class="stack-form" method="post" action="{{ url_for('rentals.create_work_order') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="property_id" value="{{ property.id }}" />
+          <div class="form-row">
+            <label class="field"><span class="field-label">What needs fixing?</span><input class="input" name="title" required maxlength="160" placeholder="Leaking bathroom tap" /></label>
+            <label class="field"><span class="field-label">Priority</span>
+              <select class="select" name="priority">
+                {% for key, label in work_order_priorities %}<option value="{{ key }}" {% if key == 'normal' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            </label>
+            <label class="field"><span class="field-label">Scheduled for</span><input class="input" type="date" name="scheduled_for" /></label>
+          </div>
+          <div class="form-row">
+            <label class="field"><span class="field-label">Contractor</span><input class="input" name="contractor_name" maxlength="120" /></label>
+            <label class="field"><span class="field-label">Contractor phone</span><input class="input" type="tel" name="contractor_phone" maxlength="30" /></label>
+            <label class="field"><span class="field-label">Reported on</span><input class="input" type="date" name="reported_at" value="{{ today }}" /></label>
+          </div>
+          <label class="field"><span class="field-label">Details</span><textarea class="input textarea" name="description" rows="2" maxlength="2000"></textarea></label>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('alert', 16) }} Open work order</button></div>
+        </form>
+      </div>
+    </details>
+  </div>
+{% endif %}
 {% endblock %}

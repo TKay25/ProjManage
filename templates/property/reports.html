@@ -1,0 +1,119 @@
+{% extends "app/base.html" %}
+{% block title %}Property reports · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Portfolio report {{ year }}{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    Rent, costs, arrears and yield in one read
+    <span class="page-tagline">What the portfolio earned, what it cost and what is still owed.</span>
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.export_report', dataset='invoices') }}">{{ icon('download', 15) }} Invoices CSV</a>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.export_report', dataset='payments') }}">{{ icon('download', 15) }} Receipts CSV</a>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.export_report', dataset='expenses') }}">{{ icon('download', 15) }} Costs CSV</a>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.export_report', dataset='arrears') }}">{{ icon('download', 15) }} Arrears CSV</a>
+{% endblock %}
+
+{% block content %}
+<div class="kpi-grid kpi-grid--four">
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Received</span><span class="kpi-icon">{{ icon('wallet', 17) }}</span></div><p class="kpi-value">{{ income|money }}</p><p class="kpi-sub">since 1 January</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Costs</span><span class="kpi-icon">{{ icon('trending-down', 17) }}</span></div><p class="kpi-value">{{ expenses_total|money }}</p><p class="kpi-sub">rates, insurance, repairs</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Net income</span><span class="kpi-icon">{{ icon('trending-up', 17) }}</span></div><p class="kpi-value {{ 'is-negative' if net < 0 }}">{{ net|money }}</p><p class="kpi-sub">what the portfolio made</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Outstanding</span><span class="kpi-icon">{{ icon('receipt', 17) }}</span></div><p class="kpi-value {{ 'is-negative' if totals.outstanding }}">{{ totals.outstanding|money }}</p><p class="kpi-sub">{{ totals.arrears_count }} open invoices</p></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Collected against the roll</h2><span class="mini-meta">Last twelve months</span></div>
+  <div class="chart chart--wide">
+    {% for point in trend %}
+      <div class="chart-col" title="{{ point.month }}: {{ point.collected|money }} of {{ point.expected|money }}">
+        <div class="chart-bars">
+          <span class="chart-bar chart-bar--expected" style="height: {{ ((point.expected / peak) * 100)|round|int }}%"></span>
+          <span class="chart-bar chart-bar--collected" style="height: {{ ((point.collected / peak) * 100)|round|int }}%"></span>
+        </div>
+        <span class="chart-label">{{ point.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="chart-key">
+    <span><i class="chart-dot chart-dot--expected"></i> Expected</span>
+    <span><i class="chart-dot chart-dot--collected"></i> Collected</span>
+  </div>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-main">
+    <div class="card">
+      <div class="card-head"><h2>Property by property</h2></div>
+      {% if rows %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th scope="col">Property</th><th scope="col">Status</th><th scope="col" class="align-right">Rent roll</th><th scope="col" class="align-right">Received</th><th scope="col" class="align-right">Costs</th><th scope="col" class="align-right">Net</th><th scope="col" class="align-right">Yield</th></tr></thead>
+            <tbody>
+              {% for item in rows %}
+                <tr>
+                  <td><a href="{{ url_for('rentals.property_detail', property_id=item.id) }}">{{ item.name }}</a><span class="mini-meta">{{ item.code }}</span></td>
+                  <td>{{ badge(item.status) }}</td>
+                  <td class="align-right">{{ item.rent_cents|money }}</td>
+                  <td class="align-right">{{ item.income|money }}</td>
+                  <td class="align-right">{{ item.expenses|money }}</td>
+                  <td class="align-right {{ 'neg' if item.net < 0 }}">{{ item.net|money }}</td>
+                  <td class="align-right">{{ item.gross_yield }}%</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot><tr><td colspan="3">Portfolio</td><td class="align-right">{{ income|money }}</td><td class="align-right">{{ expenses_total|money }}</td><td class="align-right">{{ net|money }}</td><td class="align-right">{{ totals.yield_percent }}%</td></tr></tfoot>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted small pad-x">No properties yet.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Where the money went</h2><a class="link-quiet" href="{{ url_for('rentals.expenses') }}">Costs {{ icon('arrow-right', 13) }}</a></div>
+      {% if by_category %}
+        <ul class="side-list">
+          {% for item in by_category %}
+            <li class="side-row">
+              <span class="side-icon">{{ icon('trending-down', 15) }}</span>
+              <span><strong>{{ item.category|replace('_',' ')|title }}</strong><span class="mini-meta">{{ item.entries }} entr{{ 'y' if item.entries == 1 else 'ies' }}</span></span>
+              <span>{{ item.total|money }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted small pad-x">No costs recorded this year.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <aside class="detail-side">
+    <div class="card">
+      <div class="card-head"><h2>Arrears ageing</h2></div>
+      <ul class="aging-list">
+        {% for bucket in aging %}
+          <li class="aging-row">
+            <span>{{ bucket.label }} <span class="mini-meta">{{ bucket.count }}</span></span>
+            <span class="{{ 'neg' if bucket.total }}">{{ bucket.total|money }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Portfolio facts</h2></div>
+      <dl class="fact-list">
+        <div><dt>Properties</dt><dd>{{ totals.properties }}</dd></div>
+        <div><dt>Occupancy</dt><dd>{{ totals.occupancy }}%</dd></div>
+        <div><dt>Monthly rent roll</dt><dd>{{ totals.rent_roll|money }}</dd></div>
+        <div><dt>Portfolio value</dt><dd>{{ totals.value|money }}</dd></div>
+        <div><dt>Gross yield</dt><dd>{{ totals.yield_percent }}%</dd></div>
+        <div><dt>Open work orders</dt><dd>{{ totals.work_orders }}</dd></div>
+        <div><dt>Checks due</dt><dd>{{ totals.checks_due }}</dd></div>
+      </dl>
+    </div>
+  </aside>
+</div>
+{% endblock %}

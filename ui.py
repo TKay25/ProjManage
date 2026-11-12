@@ -51,6 +51,8 @@ ICONS = {
     "eye": '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/>',
     "calendar": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>',
     "trending-up": '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    "trending-down": '<path d="m3 7 6 6 4-4 8 8"/><path d="M15 17h6v-6"/>',
+    "percent": '<path d="m19 5-14 14"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
     "receipt": '<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
     "users": '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M17 5.2a3.5 3.5 0 0 1 0 6.6M18 20a6.6 6.6 0 0 0-2-4.7"/>',
     "lock": '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/>',
@@ -98,6 +100,8 @@ BADGES = {
     "good": ("success", "Good"),
     "fair": ("warn", "Fair"),
     "poor": ("danger", "Action needed"),
+    "held": ("success", "Held"),
+    "settled": ("muted", "Refunded"),
 }
 
 

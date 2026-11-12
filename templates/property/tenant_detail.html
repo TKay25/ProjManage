@@ -1,0 +1,113 @@
+{% extends "app/base.html" %}
+{% block title %}{{ tenant.name }} · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}{{ tenant.name }}{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ property.name }} · {{ tenant.status|replace('_', ' ')|title }}
+    <span class="page-tagline">Statement, invoices and receipts in one account.</span>
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.tenant_statement_print', tenant_id=tenant.id) }}" target="_blank" rel="noopener">{{ icon('eye', 15) }} Statement PDF</a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('rentals.property_detail', property_id=property.id, tab='tenants') }}">{{ icon('home', 15) }} Property</a>
+{% endblock %}
+
+{% block content %}
+<div class="kpi-grid kpi-grid--four">
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Balance</span><span class="kpi-icon {{ 'kpi-icon-negative' if balance else '' }}">{{ icon('receipt', 17) }}</span></div><p class="kpi-value {{ 'is-negative' if balance }}">{{ balance|money }}</p><p class="kpi-sub">{{ 'owed by the tenant' if balance else 'nothing outstanding' }}</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">In place since</span><span class="kpi-icon">{{ icon('calendar', 17) }}</span></div><p class="kpi-value" style="font-size:1.1rem">{{ tenant.moved_in|date if tenant.moved_in else '—' }}</p><p class="kpi-sub">{{ tenant.phone|phone if tenant.phone else 'No phone' }}</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Leases</span><span class="kpi-icon">{{ icon('pen', 17) }}</span></div><p class="kpi-value">{{ leases|length }}</p><p class="kpi-sub">{{ leases|selectattr('status', 'equalto', 'signed')|list|length }} signed</p></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Receipted</span><span class="kpi-icon">{{ icon('wallet', 17) }}</span></div><p class="kpi-value">{{ (payments|sum(attribute='amount_cents'))|money }}</p><p class="kpi-sub">{{ payments|length }} receipt{{ '' if payments|length == 1 else 's' }}</p></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Statement</h2><span class="mini-meta">Invoices out, receipts in</span></div>
+  {% if entries %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th scope="col">Date</th><th scope="col">Reference</th><th scope="col">Description</th><th scope="col" class="align-right">Charged</th><th scope="col" class="align-right">Paid</th><th scope="col" class="align-right">Balance</th></tr></thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr>
+              <td>{{ entry.date|date }}</td>
+              <td>{{ entry.reference }}</td>
+              <td>{{ entry.description }}</td>
+              <td class="align-right">{{ entry.debit|money if entry.debit else '' }}</td>
+              <td class="align-right">{{ entry.credit|money if entry.credit else '' }}</td>
+              <td class="align-right {{ 'neg' if entry.balance }}">{{ entry.balance|money }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr><td colspan="5">Balance</td><td class="align-right">{{ balance|money }}</td></tr></tfoot>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted small pad-x">Nothing on the account yet.</p>
+  {% endif %}
+</div>
+
+<div class="detail-grid">
+  <div class="detail-main">
+    <div class="card">
+      <div class="card-head"><h2>Invoices</h2></div>
+      {% if invoices %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th scope="col">Invoice</th><th scope="col">Kind</th><th scope="col">Period</th><th scope="col" class="align-right">Invoiced</th><th scope="col" class="align-right">Balance</th><th scope="col">Status</th></tr></thead>
+            <tbody>
+              {% for item in invoices %}
+                <tr>
+                  <td><a href="{{ url_for('rentals.invoice_print', invoice_id=item.id) }}" target="_blank" rel="noopener">{{ item.number }}</a></td>
+                  <td>{{ item.kind|title }}</td>
+                  <td>{{ item.period_start|date }}</td>
+                  <td class="align-right">{{ item.amount_cents|money }}</td>
+                  <td class="align-right {{ 'neg' if item.amount_cents - item.paid }}">{{ (item.amount_cents - item.paid)|money }}</td>
+                  <td>{{ badge(item.status) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted small pad-x">No invoices.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <aside class="detail-side">
+    <div class="card">
+      <div class="card-head"><h2>Tenant</h2></div>
+      <dl class="fact-list">
+        <div><dt>Phone</dt><dd>{{ tenant.phone|phone if tenant.phone else '—' }}</dd></div>
+        <div><dt>Email</dt><dd>{{ tenant.email or '—' }}</dd></div>
+        <div><dt>National ID</dt><dd>{{ tenant.national_id or '—' }}</dd></div>
+        <div><dt>Status</dt><dd>{{ badge(tenant.status) }}</dd></div>
+        <div><dt>Moved in</dt><dd>{{ tenant.moved_in|date if tenant.moved_in else '—' }}</dd></div>
+        <div><dt>Moved out</dt><dd>{{ tenant.moved_out|date if tenant.moved_out else '—' }}</dd></div>
+      </dl>
+      {% if tenant.notes %}<p class="muted small pad-x">{{ tenant.notes }}</p>{% endif %}
+      <form class="stack-form pad-x" method="post" action="{{ url_for('rentals.set_tenant_status', tenant_id=tenant.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <label class="field"><span class="field-label">Update status</span>
+          <select class="select" name="status">
+            {% for key, label in tenant_statuses %}<option value="{{ key }}" {% if tenant.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </label>
+        <button class="btn btn-outline btn-sm" type="submit">Save</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Leases</h2></div>
+      <ul class="side-list">
+        {% for item in leases %}
+          <li class="side-row"><span class="side-icon">{{ icon('pen', 15) }}</span><span><a href="{{ url_for('rentals.lease_detail', lease_id=item.id) }}">{{ item.reference }}</a><span class="mini-meta">{{ item.start_date|date }} → {{ item.end_date|date if item.end_date else 'open' }} · {{ item.rent_cents|money }}</span></span>{{ badge(item.status) }}</li>
+        {% else %}
+          <li class="side-row"><span class="side-icon">{{ icon('pen', 15) }}</span><span class="muted small">No lease yet.</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </aside>
+</div>
+{% endblock %}

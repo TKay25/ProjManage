@@ -4,7 +4,7 @@
 {% block page_title %}Properties{% endblock %}
 {% block page_subtitle %}
   <p class="page-subtitle">
-    {{ properties|length }} propert{{ 'y' if properties|length == 1 else 'ies' }}
+    {{ properties|length }} propert{{ 'y' if properties|length == 1 else 'ies' }} · {{ properties|selectattr('status', 'equalto', 'occupied')|list|length }} occupied
     <span class="page-tagline">Add the building, then add the tenant who lives in it.</span>
   </p>
 {% endblock %}
@@ -28,7 +28,7 @@
   <details class="panel-form" {% if not properties %}open{% endif %}>
     <summary>{{ icon('plus', 15) }} Add a property</summary>
     <div class="panel-form-body">
-      <form class="stack-form" method="post" action="{{ url_for('rentals.create_property') }}">
+      <form class="stack-form" method="post" action="{{ url_for('rentals.create_property') }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div class="form-row">
           <label class="field">
@@ -43,6 +43,10 @@
               {% endfor %}
             </select>
           </label>
+          <label class="field">
+            <span class="field-label">Cover photo</span>
+            <input class="input" type="file" name="photo" accept="{{ upload_accept }}" />
+          </label>
         </div>
         <div class="form-row">
           <label class="field">
@@ -53,15 +57,28 @@
             <span class="field-label">Suburb</span>
             <input class="input" type="text" name="suburb" maxlength="80" placeholder="Waterfalls" />
           </label>
-        </div>
-        <div class="form-row">
           <label class="field">
             <span class="field-label">City</span>
             <input class="input" type="text" name="city" value="Harare" maxlength="80" />
           </label>
+        </div>
+        <div class="form-row">
           <label class="field">
             <span class="field-label">Monthly rent (USD)</span>
             <input class="input" type="text" name="rent" inputmode="decimal" placeholder="450.00" />
+          </label>
+          <label class="field">
+            <span class="field-label">Property value (USD)</span>
+            <input class="input" type="text" name="value" inputmode="decimal" placeholder="85000.00" />
+            <span class="field-hint">Used for gross yield on the reports page.</span>
+          </label>
+          <label class="field">
+            <span class="field-label">Deposit (months)</span>
+            <input class="input" type="number" name="deposit_months" min="0" max="12" value="1" />
+          </label>
+          <label class="field">
+            <span class="field-label">Rent due on day</span>
+            <input class="input" type="number" name="billing_day" min="1" max="28" value="1" />
           </label>
         </div>
         <div class="form-row">
@@ -74,12 +91,26 @@
             <input class="input" type="number" name="bathrooms" min="0" max="20" value="1" />
           </label>
           <label class="field">
-            <span class="field-label">Deposit (months)</span>
-            <input class="input" type="number" name="deposit_months" min="0" max="12" value="1" />
+            <span class="field-label">Council rates a year (USD)</span>
+            <input class="input" type="text" name="rates" inputmode="decimal" placeholder="480.00" />
           </label>
           <label class="field">
-            <span class="field-label">Rent due on day</span>
-            <input class="input" type="number" name="billing_day" min="1" max="28" value="1" />
+            <span class="field-label">Insurance a year (USD)</span>
+            <input class="input" type="text" name="insurance" inputmode="decimal" placeholder="260.00" />
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Insurance renewal</span>
+            <input class="input" type="date" name="insurance_expiry" />
+          </label>
+          <label class="field">
+            <span class="field-label">Caretaker</span>
+            <input class="input" type="text" name="caretaker_name" maxlength="120" placeholder="Name of the person on site" />
+          </label>
+          <label class="field">
+            <span class="field-label">Caretaker phone</span>
+            <input class="input" type="tel" name="caretaker_phone" maxlength="30" placeholder="+263 77 000 0000" />
           </label>
         </div>
         <div class="form-row">
@@ -94,9 +125,19 @@
             <span class="field-hint">Link the YaVaKa build this property came from, so both records point at each other.</span>
           </label>
         </div>
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Periodic checks</span>
+            <select class="select" name="ya_vaka_checks">
+              <option value="1" selected>YaVaKa inspects on site</option>
+              <option value="0">I record my own checks</option>
+            </select>
+            <span class="field-hint">YaVaKa attends, photographs and reports back to you.</span>
+          </label>
+        </div>
         <label class="field">
           <span class="field-label">Notes</span>
-          <textarea class="input textarea" name="notes" rows="3" maxlength="2000" placeholder="Gate code, water tank, caretaker contact…"></textarea>
+          <textarea class="input textarea" name="notes" rows="2" maxlength="2000" placeholder="Gate code, water tank, caretaker contact…"></textarea>
         </label>
         <div class="form-actions">
           <button class="btn btn-primary" type="submit">{{ icon('plus', 16) }} Add property</button>
@@ -107,41 +148,39 @@
 </div>
 
 {% if properties %}
-  <div class="table-wrap card">
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">Property</th>
-          <th scope="col">Type</th>
-          <th scope="col">Tenant in place</th>
-          <th scope="col">Status</th>
-          <th scope="col" class="align-right">Rent</th>
-          <th scope="col" class="align-right">Open balance</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in properties %}
-          <tr>
-            <td>
-              <a href="{{ url_for('rentals.property_detail', property_id=item.id) }}">{{ item.name }}</a>
-              <span class="mini-meta">{{ item.code }}{% if item.suburb %} · {{ item.suburb }}{% endif %}</span>
-            </td>
-            <td>{{ item.property_type|replace('_', ' ')|title }}</td>
-            <td>{{ item.current_tenant or '—' }}</td>
-            <td>{{ badge(item.status) }}</td>
-            <td class="align-right">{{ item.rent_cents|money }}</td>
-            <td class="align-right {{ 'neg' if item.open_balance_cents }}">{{ item.open_balance_cents|money }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="property-grid">
+    {% for item in properties %}
+      <a class="property-card" href="{{ url_for('rentals.property_detail', property_id=item.id) }}">
+        <span class="property-card-media">
+          {% if item.cover_id %}
+            <img src="{{ url_for('rentals.media', attachment_id=item.cover_id) }}" alt="{{ item.name }}" loading="lazy" />
+          {% else %}
+            <span class="property-card-placeholder">{{ icon('home', 30) }}</span>
+          {% endif %}
+          <span class="property-card-badge">{{ badge(item.status) }}</span>
+        </span>
+        <span class="property-card-body">
+          <span class="property-card-title">{{ item.name }}</span>
+          <span class="property-card-meta">{{ item.code }} · {{ item.suburb or item.city }}</span>
+          <span class="property-card-facts">
+            <span><strong>{{ item.rent_cents|money }}</strong> / month</span>
+            <span>{{ item.current_tenant or 'No tenant' }}</span>
+          </span>
+          {% if item.open_balance_cents %}
+            <span class="property-card-flag">{{ item.open_balance_cents|money }} outstanding</span>
+          {% elif item.work_order_count %}
+            <span class="property-card-flag property-card-flag--warn">{{ item.work_order_count }} work order{{ '' if item.work_order_count == 1 else 's' }}</span>
+          {% endif %}
+        </span>
+      </a>
+    {% endfor %}
   </div>
 {% else %}
   <div class="card">
     <div class="empty">
       <span class="empty-icon">{{ icon('home', 26) }}</span>
       <h3>{{ 'No properties match' if search or status != 'all' else 'No properties yet' }}</h3>
-      <p>{{ 'Try a different search or clear the filter.' if search or status != 'all' else 'Add the building you rent out. Rent invoices, receipts and periodic checks all hang off it.' }}</p>
+      <p>{{ 'Try a different search or clear the filter.' if search or status != 'all' else 'Add the building you rent out. Rent, costs, work orders and checks all hang off it.' }}</p>
       {% if search or status != 'all' %}
         <a class="btn btn-outline" href="{{ url_for('rentals.properties') }}">Clear filters</a>
       {% endif %}
