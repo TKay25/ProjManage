@@ -1,4 +1,5 @@
 {% extends "app/base.html" %}
+{% block body_class %}app dash-page{% endblock %}
 {% block title %}Dashboard · YaVaKa{% endblock %}
 
 {% block page_title %}{{ greeting }}, {{ first_name }}{% endblock %}
@@ -14,6 +15,19 @@
 {% endblock %}
 
 {% block page_actions %}
+  {% if projects|length > 1 %}
+    <form class="inline-form" method="get" action="{{ url_for('dashboard.index') }}">
+      <label class="field-inline">
+        <span class="sr-only">Project</span>
+        <select class="select select-sm" name="project" data-autosubmit aria-label="Choose project">
+          {% for item in projects %}
+            <option value="{{ item.id }}" {% if item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <noscript><button class="btn btn-ghost btn-sm" type="submit">Switch</button></noscript>
+    </form>
+  {% endif %}
   {% if project %}
     <a class="btn btn-outline btn-sm" href="{{ url_for('money.index', project=project.id) }}"
        data-modal-open="modal-money">{{ icon('plus', 15) }} {{ 'Record money' if runs_build else 'Report a deposit' }}</a>
@@ -24,22 +38,19 @@
 
 {% block content %}
 {% if onboarding %}
-  <div class="card onboarding-card" id="onboarding">
-    <div class="card-head">
-      <div>
-        <h2>Set up your workspace</h2>
-        <p class="card-sub">
-          {{ onboarding.completed }} of {{ onboarding.total }} done · this disappears once it is finished
-        </p>
-      </div>
-      <button class="btn btn-ghost btn-sm" type="button" data-onboarding-dismiss>Hide for now</button>
-    </div>
-    <div class="bar-track"><span class="bar-fill" style="width:{{ onboarding.percent }}%"></span></div>
-    <details class="onboarding-details" {% if onboarding.completed == 0 %}open{% endif %}>
-      <summary class="onboarding-summary">
-        {{ 'Show the checklist' if onboarding.completed else 'Hide the checklist' }}
-        <span class="mini-meta">{{ onboarding.remaining or (onboarding.total - onboarding.completed) }} left</span>
-      </summary>
+  <details class="card fold-card onboarding-card" id="onboarding">
+    <summary class="fold-head">
+      <h2>Set up your workspace</h2>
+      <span class="fold-side">
+        <span class="fold-meta">
+          {{ onboarding.completed }} of {{ onboarding.total }} done ·
+          {{ onboarding.remaining or (onboarding.total - onboarding.completed) }} left
+        </span>
+        <span class="fold-progress" aria-hidden="true"><span style="width:{{ onboarding.percent }}%"></span></span>
+        <span class="fold-chevron">{{ icon('chevron-right', 16) }}</span>
+      </span>
+    </summary>
+    <div class="fold-body">
     <ul class="checklist">
       {% for step in onboarding.steps %}
         <li class="checklist-item {{ 'is-done' if step.done }}">
@@ -54,8 +65,9 @@
         </li>
       {% endfor %}
     </ul>
-    </details>
-  </div>
+      <button class="btn btn-ghost btn-sm" type="button" data-onboarding-dismiss>Hide for now</button>
+    </div>
+  </details>
 {% endif %}
 
 {% if not project %}
@@ -70,26 +82,6 @@
 {% else %}
   {% set funded_percent = ((totals.spent / totals.funded) * 100)|round|int if totals.funded else 0 %}
   {% set max_value = ([1] + flow|map(attribute='funded')|list + flow|map(attribute='spent')|list)|max %}
-
-  {% if projects|length > 1 %}
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <span class="toolbar-label">Viewing</span>
-        <form class="inline-form" method="get" action="{{ url_for('dashboard.index') }}">
-          <label class="field-inline">
-            <span class="sr-only">Project</span>
-            <select class="select select-sm" name="project" data-autosubmit aria-label="Choose project">
-              {% for item in projects %}
-                <option value="{{ item.id }}" {% if item.id == project.id %}selected{% endif %}>{{ item.name }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <noscript><button class="btn btn-ghost btn-sm" type="submit">Switch</button></noscript>
-        </form>
-      </div>
-      <a class="link-quiet" href="{{ url_for('projects.index') }}">All projects {{ icon('arrow-right', 14) }}</a>
-    </div>
-  {% endif %}
 
   <div class="kpi-grid">
     <a class="kpi card-hover" href="{{ url_for('money.index', project=project.id) }}">
@@ -179,21 +171,18 @@
         {% endif %}
       </div>
 
-      <div class="card">
-        <div class="card-head">
-          <div>
-            <h2>Latest money movements</h2>
-            <p class="card-sub">Keep the proof beside the payment, not buried in a chat.</p>
+      <details class="card fold-card">
+        <summary class="fold-head">
+          <h2>Latest money movements</h2>
+          <span class="fold-side">
             {% if runway and runway.runway_days %}
-              <p class="mini-meta">
-                {{ icon('clock', 12) }} About {{ runway.runway_days }} days of funding left
-                at roughly {{ runway.monthly|money }} a month.
-              </p>
+              <span class="fold-meta">{{ runway.runway_days }} days of funding left</span>
             {% endif %}
-          </div>
-          <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">View all {{ icon('arrow-right', 14) }}</a>
-        </div>
-
+            <a class="link-quiet" href="{{ url_for('money.index', project=project.id) }}">View all {{ icon('arrow-right', 14) }}</a>
+            <span class="fold-chevron">{{ icon('chevron-right', 16) }}</span>
+          </span>
+        </summary>
+        <div class="fold-body">
         {% if transactions %}
           <ul class="tx-list">
             {% for tx in transactions %}
@@ -212,27 +201,34 @@
             {% endif %}
           </div>
         {% endif %}
-      </div>
+        </div>
+      </details>
 
       {% if missing %}
-        <div class="card">
-          <div class="card-head">
+        <details class="card fold-card">
+          <summary class="fold-head">
             <h2>{{ 'Receipts to chase' if runs_build else 'Missing receipts' }}</h2>
-            <a class="link-quiet" href="{{ url_for('money.index', project=project.id, filter='missing') }}">View all</a>
+            <span class="fold-side">
+              <span class="count-pill">{{ missing|length }}</span>
+              <a class="link-quiet" href="{{ url_for('money.index', project=project.id, filter='missing') }}">View all</a>
+              <span class="fold-chevron">{{ icon('chevron-right', 16) }}</span>
+            </span>
+          </summary>
+          <div class="fold-body">
+            <ul class="mini-list">
+              {% for tx in missing[:4] %}
+                <li>
+                  <span class="mini-icon">{{ icon('receipt', 15) }}</span>
+                  <div>
+                    <p class="mini-title">{{ tx.description }}</p>
+                    <p class="mini-meta">{{ tx.amount_cents|money }} · {{ tx.occurred_at|date }}</p>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+            <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('money.index', project=project.id, filter='missing') }}">Attach receipts</a>
           </div>
-          <ul class="mini-list">
-            {% for tx in missing[:4] %}
-              <li>
-                <span class="mini-icon">{{ icon('receipt', 15) }}</span>
-                <div>
-                  <p class="mini-title">{{ tx.description }}</p>
-                  <p class="mini-meta">{{ tx.amount_cents|money }} · {{ tx.occurred_at|date }}</p>
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
-          <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('money.index', project=project.id, filter='missing') }}">Attach receipts</a>
-        </div>
+        </details>
       {% endif %}
     </div>
 
@@ -245,7 +241,7 @@
 
         {% if current %}
           <div class="stage-focus-body">
-            {{ progress_ring(project.progress, 92) }}
+            {{ progress_ring(project.progress, 76) }}
             <div>
               <p class="stage-focus-name">{{ current.name }}</p>
               <p class="stage-focus-meta">
@@ -273,14 +269,16 @@
         {% endif %}
       </div>
 
-      <div class="card">
-        <div class="card-head">
+      <details class="card fold-card">
+        <summary class="fold-head">
           <h2>Needs your attention</h2>
-          <div class="row-buttons">
-            <a class="link-quiet" href="{{ url_for('attention.index') }}">All builds</a>
+          <span class="fold-side">
+            <span class="fold-meta">{{ alerts[0].title if alerts else 'Nothing flagged right now' }}</span>
             <span class="count-pill">{{ alerts|length }}</span>
-          </div>
-        </div>
+            <span class="fold-chevron">{{ icon('chevron-right', 16) }}</span>
+          </span>
+        </summary>
+        <div class="fold-body">
         {% if alerts %}
           <ul class="alert-list">
             {% for alert in alerts %}
@@ -297,19 +295,22 @@
         {% else %}
           <div class="all-clear">
             <span>{{ icon('check', 18) }}</span>
-            <p>Nothing is flagged right now. Keep the updates and receipts coming so everyone stays on the same page.</p>
+            <p>Keep the updates and receipts coming so everyone stays on the same page.</p>
           </div>
         {% endif %}
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2>Latest updates</h2>
-          <div class="row-buttons">
-            <a class="link-quiet" href="{{ url_for('updates.index') }}">View all</a>
-            {% if unread_updates %}<span class="count-pill">{{ unread_updates }} new</span>{% endif %}
-          </div>
         </div>
+      </details>
+
+      <details class="card fold-card">
+        <summary class="fold-head">
+          <h2>Latest updates</h2>
+          <span class="fold-side">
+            {% if unread_updates %}<span class="count-pill">{{ unread_updates }} new</span>{% endif %}
+            <span class="fold-meta">{{ updates|length }} recent</span>
+            <span class="fold-chevron">{{ icon('chevron-right', 16) }}</span>
+          </span>
+        </summary>
+        <div class="fold-body">
         {% if updates %}
           <ul class="timeline">
             {% for item in updates %}
@@ -339,39 +340,52 @@
             {% endif %}
           </p>
         {% endif %}
-      </div>
+        </div>
+      </details>
 
       {% if upcoming %}
-        <div class="card">
-          <div class="card-head"><h2>Coming up</h2></div>
-          <ol class="upcoming-list">
-            {% for stage in upcoming %}
-              <li>
-                <span class="upcoming-index">{{ loop.index }}</span>
-                <div>
-                  <p class="mini-title">{{ stage.name }}</p>
-                  <p class="mini-meta">
-                    {% if stage_by_key(stage.key) and stage_by_key(stage.key).authority %}
-                      {{ icon('shield', 11) }} {{ stage_by_key(stage.key).authority }}
-                    {% else %}
-                      Site works
-                    {% endif %}
-                    · {{ stage.budget_cents|money }}
-                  </p>
-                </div>
-              </li>
-            {% endfor %}
-          </ol>
-        </div>
+        <details class="card fold-card">
+          <summary class="fold-head">
+            <h2>Coming up</h2>
+            <span class="fold-side">
+              <span class="fold-meta">{{ upcoming|length }} stage{{ '' if upcoming|length == 1 else 's' }}</span>
+              <span class="fold-chevron">{{ icon('chevron-right', 16) }}</span>
+            </span>
+          </summary>
+          <div class="fold-body">
+            <ol class="upcoming-list">
+              {% for stage in upcoming %}
+                <li>
+                  <span class="upcoming-index">{{ loop.index }}</span>
+                  <div>
+                    <p class="mini-title">{{ stage.name }}</p>
+                    <p class="mini-meta">
+                      {% if stage_by_key(stage.key) and stage_by_key(stage.key).authority %}
+                        {{ icon('shield', 11) }} {{ stage_by_key(stage.key).authority }}
+                      {% else %}
+                        Site works
+                      {% endif %}
+                      · {{ stage.budget_cents|money }}
+                    </p>
+                  </div>
+                </li>
+              {% endfor %}
+            </ol>
+          </div>
+        </details>
       {% endif %}
     </aside>
   </div>
 
-  <section class="section-block">
-    <div class="section-block-head">
+  <details class="section-block fold-section">
+    <summary class="fold-section-head">
       <h2>Your projects</h2>
-      {% if projects|length > 1 %}<a class="link-quiet" href="{{ url_for('projects.index') }}">Manage {{ icon('arrow-right', 14) }}</a>{% endif %}
-    </div>
+      <span class="fold-side">
+        <span class="fold-meta">{{ projects|length }} in this workspace</span>
+        <a class="link-quiet" href="{{ url_for('projects.index') }}">Manage {{ icon('arrow-right', 14) }}</a>
+        <span class="fold-chevron">{{ icon('chevron-right', 16) }}</span>
+      </span>
+    </summary>
     <div class="project-grid" data-project-grid>
       {% for item in projects %}
         {% set is_active = item.id == project.id %}
@@ -385,7 +399,7 @@
         <p>Start a new stand or rental build.</p>
       </a>
     </div>
-  </section>
+  </details>
 {% endif %}
 {% endblock %}
 

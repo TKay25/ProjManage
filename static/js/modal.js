@@ -397,6 +397,11 @@
     else if (data.mode === "append") container.appendChild(node);
     else if (data.mode === "innerHTML") container.innerHTML = data.fragment;
     else container.replaceWith(node);
+
+    // A patched card inside a folded panel has to be visible, or the change
+    // reads as if nothing happened.
+    const fold = node.closest("details") || container.closest("details");
+    if (fold) fold.open = true;
   }
 
   /* ---------- Busy states ---------- */
@@ -513,6 +518,12 @@
         return;
       }
 
+      // The server often answers with a fragment for one region of the page.
+      // On an empty workspace that region is not rendered yet — the project
+      // grid only exists once there is a project in it — so a prepend has
+      // nowhere to land and the page would keep showing the empty state.
+      const unpatched = Boolean(data.fragment && data.target && !$(data.target));
+
       patch(data);
       if (data.open_modal) {
         closeModal(form.closest("dialog.modal"));
@@ -544,6 +555,11 @@
       }
 
       if (data.reload) {
+        setTimeout(() => window.location.reload(), 220);
+        return;
+      }
+
+      if (unpatched) {
         setTimeout(() => window.location.reload(), 220);
         return;
       }

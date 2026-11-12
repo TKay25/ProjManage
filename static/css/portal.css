@@ -5785,54 +5785,302 @@ html:not([data-theme="dark"]) .kpi-icon {
   margin: 6px 0 3px;
 }
 
-/* The checklist is reference material, not the work. Collapsed by default, it
-   takes one row; the KPIs and the current stage move up into view. */
-.onboarding-card {
-  padding: 16px 18px;
+/* ---------- Foldable dashboard panels ----------
+
+   The overview is read in one screen: cash flow and the current stage stay
+   open, and every panel that is reference material opens from its own heading
+   — native <details>, so it works with JavaScript off and remembers nothing it
+   should not. */
+
+.dash-page .page-head {
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.onboarding-details > summary {
+/* The quote is decoration; on the overview it costs a line the panels need. */
+.dash-page .page-tagline {
+  display: none;
+}
+
+.dash-page .content {
+  padding-bottom: 20px;
+}
+
+/* The work area is a flex column, so without this a tall dashboard would
+   squeeze its own panels instead of scrolling: cards must keep their height. */
+.dash-page .content > * {
+  flex: 0 0 auto;
+}
+
+.dash-page .toolbar {
+  margin-bottom: 10px;
+}
+
+.dash-page .kpi-grid {
+  margin-bottom: 12px;
+}
+
+.dash-page .kpi {
+  padding: 11px 14px;
+}
+
+.dash-page .kpi-value {
+  margin: 4px 0 2px;
+}
+
+.dash-page .card {
+  padding: 13px 16px;
+}
+
+.dash-page .card-head {
+  margin-bottom: 9px;
+}
+
+.dash-page .chart-legend {
+  margin-bottom: 4px;
+}
+
+.dash-page .chart-area {
+  height: 96px;
+}
+
+/* The bars block has a fixed height for the tall charts; inside the compact
+   dashboard it has to follow the area or the labels collide with the bars. */
+.dash-page .chart-bars {
+  height: auto;
+  min-height: 0;
+}
+
+.dash-page .chart-summary {
+  margin-top: 10px;
+  padding-top: 8px;
+}
+
+.dash-page .stage-focus-body {
+  margin-bottom: 10px;
+}
+
+.dash-page .stage-focus-summary {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  padding: 8px 0;
+}
+
+.dash-page .stage-focus-foot {
+  padding: 8px 0;
+}
+
+.dash-page .section-block {
+  margin-top: 12px;
+}
+
+.dash-page .fold-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.fold-progress {
+  display: inline-block;
+  width: 64px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--sand-200);
+  overflow: hidden;
+}
+
+.fold-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--forest-600);
+}
+
+.dash-page .onboarding-card {
+  margin-bottom: 12px;
+}
+
+.fold-card > summary.fold-head,
+.fold-section > summary.fold-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 10px;
-  padding: 9px 12px;
-  border-radius: var(--radius-xs);
-  background: var(--sand-100);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--ink-soft);
+  margin: 0;
+  padding: 10px 16px;
   cursor: pointer;
   list-style: none;
 }
 
-.onboarding-details > summary::-webkit-details-marker {
+.fold-head h2,
+.fold-section-head h2 {
+  flex: none;
+  white-space: nowrap;
+  font-size: 0.94rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.fold-card > summary.fold-head::-webkit-details-marker,
+.fold-section > summary.fold-section-head::-webkit-details-marker {
   display: none;
 }
 
-.onboarding-details > summary::after {
-  content: "";
-  width: 9px;
-  height: 9px;
-  margin-left: 2px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(45deg) translateY(-2px);
+.fold-card > summary.fold-head:hover,
+.fold-section > summary.fold-section-head:hover {
+  background: var(--sand-50);
+}
+
+.fold-card[open] > summary.fold-head,
+.fold-section[open] > summary.fold-section-head {
+  border-bottom: 1px solid var(--line);
+}
+
+.fold-side {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.fold-meta {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 0.74rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 32ch;
+}
+
+.fold-chevron {
+  display: inline-flex;
+  color: var(--ink-faint);
   transition: transform 0.18s ease;
 }
 
-.onboarding-details[open] > summary::after {
-  transform: rotate(-135deg) translateY(-2px);
+.fold-card[open] > summary .fold-chevron,
+.fold-section[open] > summary .fold-chevron {
+  transform: rotate(90deg);
 }
 
-.onboarding-details > summary:hover {
-  background: var(--sand-200);
-  color: var(--forest-800);
+.fold-body {
+  padding: 12px 16px 15px;
 }
 
-.onboarding-details .checklist {
-  margin-top: 12px;
+.fold-body > :first-child {
+  margin-top: 0;
+}
+
+.fold-body > :last-child {
+  margin-bottom: 0;
+}
+
+.fold-body .empty {
+  padding: 8px 0 4px;
+}
+
+.fold-section {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.fold-section .project-grid {
+  padding: 16px;
+}
+
+@media (max-width: 640px) {
+  .fold-meta {
+    display: none;
+  }
+}
+
+/* Short windows (a 768p laptop with browser chrome) keep the same overview by
+   tightening the rhythm, not by hiding a whole panel. */
+@media (max-height: 820px) {
+  .dash-page .page-head {
+    margin-bottom: 6px;
+  }
+
+  .dash-page .kpi {
+    padding: 7px 12px;
+  }
+
+  .dash-page .kpi-value {
+    font-size: 1.22rem;
+  }
+
+  .dash-page .onboarding-card {
+    margin-bottom: 8px;
+  }
+
+  .dash-page .section-block {
+    margin-top: 8px;
+  }
+
+  .dash-page .chart-area {
+    height: 76px;
+  }
+
+  .dash-page .stage-focus-summary {
+    display: none;
+  }
+
+  .dash-page .stage-focus-body .ring {
+    width: 64px;
+    height: 64px;
+  }
+
+  .fold-card > summary.fold-head,
+  .fold-section > summary.fold-section-head {
+    padding: 8px 16px;
+  }
+}
+
+@media (max-height: 740px) {
+  .dash-page .page-head {
+    margin-bottom: 4px;
+  }
+
+  .dash-page .card {
+    padding: 11px 14px;
+  }
+
+  .dash-page .kpi {
+    padding: 6px 10px;
+  }
+
+  .dash-page .chart-area {
+    height: 64px;
+  }
+
+  .dash-page .kpi-value {
+    font-size: 1.12rem;
+  }
+
+  .dash-page .empty {
+    padding: 12px;
+  }
+
+  .dash-page .onboarding-card {
+    margin-bottom: 6px;
+  }
+
+  .dash-page .section-block {
+    margin-top: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold-chevron {
+    transition: none;
+  }
 }
 
 /* ---------- Tablet: two comfortable columns, not four thin ones ---------- */
@@ -5855,12 +6103,6 @@ html:not([data-theme="dark"]) .kpi-icon {
 
 table {
   max-width: 100%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .onboarding-details > summary::after {
-    transition: none;
-  }
 }
 
 /* ============================================================
@@ -7257,6 +7499,7 @@ td.align-right,
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  white-space: nowrap;
   color: var(--ink-faint, #5A667C);
 }
 
