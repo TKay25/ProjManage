@@ -1,0 +1,107 @@
+{% extends "app/base.html" %}
+{% block title %}New lease · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}New lease{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ property.name }} · {{ property.code }}
+    <span class="page-tagline">The lease stores the terms as they stood on the day it was produced.</span>
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.leases') }}">{{ icon('arrow-left', 15) }} Leases</a>
+{% endblock %}
+
+{% block content %}
+{% if properties|length > 1 %}
+  <form class="filter-bar filter-bar--single" method="get" action="{{ url_for('rentals.new_lease') }}">
+    <span class="toolbar-label">Property</span>
+    <select class="select select-sm" name="property" data-autosubmit aria-label="Choose property">
+      {% for item in properties %}
+        <option value="{{ item.id }}" {% if item.id == property.id %}selected{% endif %}>{{ item.name }} ({{ item.code }})</option>
+      {% endfor %}
+    </select>
+    <noscript><button class="btn btn-ghost btn-sm" type="submit">Switch</button></noscript>
+  </form>
+{% endif %}
+
+{% if not tenants %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('users', 26) }}</span>
+      <h3>No tenant on this property</h3>
+      <p>Add the tenant to {{ property.name }} first, then the lease can name them.</p>
+      <a class="btn btn-primary" href="{{ url_for('rentals.property_detail', property_id=property.id) }}">{{ icon('plus', 16) }} Add a tenant</a>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-head">
+      <h2>Lease terms</h2>
+      <span class="mini-meta">Standard Zimbabwe residential terms, filled with your facts</span>
+    </div>
+    <div class="panel-form-body">
+      <form class="stack-form" method="post" action="{{ url_for('rentals.create_lease') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="property_id" value="{{ property.id }}" />
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Tenant</span>
+            <select class="select" name="tenant_id" required>
+              {% for item in tenants %}
+                <option value="{{ item.id }}" {% if tenant and item.id == tenant.id %}selected{% endif %}>{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Title</span>
+            <input class="input" type="text" name="title" value="{{ values.title }}" maxlength="160" required />
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Starts</span>
+            <input class="input" type="date" name="start_date" value="{{ values.start_date }}" required />
+          </label>
+          <label class="field">
+            <span class="field-label">Ends</span>
+            <input class="input" type="date" name="end_date" value="{{ values.end_date }}" />
+            <span class="field-hint">Leave open for a month-to-month tenancy.</span>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Monthly rent (USD)</span>
+            <input class="input" type="text" name="rent" value="{{ values.rent }}" inputmode="decimal" required />
+          </label>
+          <label class="field">
+            <span class="field-label">Deposit (USD)</span>
+            <input class="input" type="text" name="deposit" value="{{ values.deposit }}" inputmode="decimal" />
+          </label>
+          <label class="field">
+            <span class="field-label">Rent due on day</span>
+            <input class="input" type="number" name="billing_day" min="1" max="28" value="{{ values.billing_day }}" />
+          </label>
+          <label class="field">
+            <span class="field-label">Notice (days)</span>
+            <input class="input" type="number" name="notice_days" min="0" max="180" value="{{ values.notice_days }}" />
+          </label>
+        </div>
+
+        <div class="all-clear">
+          <span>{{ icon('shield', 16) }}</span>
+          <p>The lease is saved as “awaiting signature”. The tenant signs on screen and the signed copy is locked to the property.</p>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">{{ icon('pen', 16) }} Produce lease</button>
+          <a class="btn btn-ghost" href="{{ url_for('rentals.property_detail', property_id=property.id) }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

@@ -10,7 +10,9 @@
   <div class="shell-main">
     <header class="topbar">
       <button class="icon-btn menu-toggle" type="button" data-drawer-open aria-label="Open menu">{{ icon('menu', 22) }}</button>
-      <a class="topbar-brand" href="/app">{{ logo_mark(28) }}<span>YaVaKa</span></a>
+      <a class="topbar-brand" href="{{ current_portal_meta.home_path }}">{{ logo_mark(28) }}<span>YaVaKa</span></a>
+      {# Search and the bell are build-side tools; the property workspace keeps its own pages. #}
+      {% if current_portal != 'property' %}
       <button class="topbar-search" type="button" data-palette-open aria-label="Search or jump to (Ctrl K)">
         {{ icon('search', 15) }}
         <span class="topbar-search-text">Search or jump to…</span>
@@ -22,11 +24,13 @@
           <input class="topbar-search-input" type="search" name="q" placeholder="Search everything" aria-label="Search everything" />
         </form>
       </noscript>
+      {% endif %}
       <div class="topbar-spacer"></div>
       {# The bell is the notification inbox: what changed. Outstanding work has
          its own entry in the sidebar. Clicking it opens a panel rather than
          navigating, so a glance at what changed costs nothing; each row leads
          to the record it is about. #}
+      {% if current_portal != 'property' %}
       <details class="notif" data-notif>
         <summary class="icon-btn topbar-alert{% if unread_updates %} is-unread{% endif %}"
                  aria-label="Updates{% if unread_updates %}: {{ unread_updates }} new{% endif %}"
@@ -59,6 +63,7 @@
           <a class="notif-foot" href="{{ url_for('updates.index') }}">Open the full inbox</a>
         </div>
       </details>
+      {% endif %}
       <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch between light and dark" title="Switch theme">
         <span class="theme-icon-light">{{ icon('sun', 17) }}</span>
         <span class="theme-icon-dark">{{ icon('moon', 17) }}</span>
@@ -117,7 +122,8 @@
    base.html's scripts block — which attaches every handler twice. The scripts
    block is therefore declared after body_content closes. #}
 <nav class="tabbar" aria-label="Sections">
-  {% for item in tab_items %}
+  {% set tabs = property_tab_items if current_portal == 'property' else tab_items %}
+  {% for item in tabs %}
     <a class="tab {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
        {% if active == item.key %}aria-current="page"{% endif %}>
       {{ icon(item.icon, 21) }}<span>{{ item.label }}</span>
@@ -135,7 +141,9 @@
 <script src="{{ asset_url('js/phone-field.js') }}" defer></script>
   <script src="{{ asset_url('js/whatsapp.js') }}" defer></script>
   <script src="{{ asset_url('js/palette.js') }}" defer></script>
+  {% if current_portal != 'property' %}
   <script src="{{ asset_url('js/updates.js') }}" defer></script>
+  {% endif %}
   <script src="{{ asset_url('js/offline.js') }}" defer></script>
   <script src="{{ asset_url('js/views.js') }}" defer></script>
 {% endblock %}

@@ -1,9 +1,37 @@
 <aside class="sidebar" id="sidebar" aria-label="Workspace">
   <div class="sidebar-top">
-    {{ brand('/app') }}
+    {{ brand(current_portal_meta.home_path, tagline=current_portal_meta.tagline) }}
     <button class="icon-btn drawer-close" type="button" data-drawer-close aria-label="Close menu">{{ icon('close', 20) }}</button>
   </div>
 
+  {% if current_portal == 'property' %}
+    <p class="sidebar-portal">{{ icon('home', 13) }} {{ current_portal_meta.short }}</p>
+
+    <nav class="sidebar-nav" aria-label="Property Management">
+      {% for item in property_nav_items %}
+        <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
+           {% if active == item.key %}aria-current="page"{% endif %}>
+          {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+
+    <div class="sidebar-section">
+      <p class="sidebar-label">Bonus module</p>
+      <p class="sidebar-hint">
+        Rental management comes with Property Management. It keeps the rent, the
+        lease and the periodic checks for a building that is already standing.
+      </p>
+      <p class="sidebar-hint">
+        Builds, stages and build money stay in the main Project Management system.
+      </p>
+      {% if portal_switch %}
+        <a class="nav-link" href="{{ portal_switch.home_path }}">
+          {{ icon('arrow-left', 18) }}<span>{{ portal_switch.short }}</span>
+        </a>
+      {% endif %}
+    </div>
+  {% else %}
   <nav class="sidebar-nav" aria-label="Main">
     {% for item in nav_items[:6] %}
       <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
@@ -58,6 +86,17 @@
     {% endif %}
   </div>
 
+    {% if portal_switch %}
+      <div class="sidebar-section">
+        <p class="sidebar-label">{{ portal_switch.short }}</p>
+        <a class="nav-link" href="{{ portal_switch.home_path }}">
+          {{ icon('home', 18) }}<span>Open Property Management</span>
+        </a>
+        <p class="sidebar-hint">Tenants, leases, rent and periodic property checks — the bonus module for a finished building.</p>
+      </div>
+    {% endif %}
+  {% endif %}
+
   {% if user.role == 'admin' %}
     <div class="sidebar-section">
       <p class="sidebar-label">YaVaKa staff</p>
@@ -83,7 +122,7 @@
       <span class="avatar" style="background:{{ user.avatar_color }}">{{ user.name|initials }}</span>
       <span class="user-card-text">
         <span class="user-card-name">{{ user.name }}</span>
-        <span class="user-card-role">{{ 'Build manager' if user.role == 'manager' else 'Client' }}</span>
+        <span class="user-card-role">{% if current_portal == 'property' %}{{ 'Property manager' if user.role == 'manager' else 'Property owner' }}{% else %}{{ 'Build manager' if user.role == 'manager' else 'Client' }}{% endif %}</span>
       </span>
     </a>
     <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form">

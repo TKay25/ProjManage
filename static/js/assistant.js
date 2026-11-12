@@ -11,6 +11,9 @@
   const closeButton = root.querySelector("[data-aide-close]");
   const meta = document.querySelector('meta[name="csrf-token"]');
   const token = meta ? meta.getAttribute("content") : "";
+  // Which door the page belongs to, so a portfolio question is answered from
+  // the property side even when the account holds both.
+  const portal = root.getAttribute("data-portal") || "project";
 
   if (!form || !input || !log) return;
 
@@ -57,7 +60,7 @@
           "Content-Type": "application/json",
           "X-CSRF-Token": token,
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, portal }),
       });
       const payload = await response.json().catch(() => ({}));
       pending.remove();

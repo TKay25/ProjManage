@@ -1,0 +1,215 @@
+{% extends "app/base.html" %}
+{% block title %}{{ lease.title }} · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}{{ lease.title }}{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ property.name }} · {{ lease.reference }} · {{ tenant.name if tenant else lease.tenant_name }}
+    <span class="page-tagline">{{ lease.rent_cents|money }} a month, due on day {{ lease.billing_day }}.</span>
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.lease_print', lease_id=lease.id) }}" target="_blank" rel="noopener">{{ icon('eye', 15) }} Print view</a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('rentals.leases') }}">All leases</a>
+{% endblock %}
+
+{% block content %}
+<div class="detail-grid">
+  <div class="detail-main">
+    <div class="card contract-doc">
+      <div class="contract-doc-head">
+        <div class="contract-doc-brand">
+          {{ logo_mark(38) }}
+          <div>
+            <p class="contract-doc-title">{{ lease.title }}</p>
+            <p class="muted small">{{ lease.reference }} · {{ property.code }} · {{ property.name }}</p>
+          </div>
+        </div>
+        {{ badge(lease.status) }}
+      </div>
+
+      <dl class="contract-doc-meta">
+        <div><dt>Monthly rent</dt><dd>{{ lease.rent_cents|money }}</dd></div>
+        <div><dt>Deposit</dt><dd>{{ lease.deposit_cents|money }}</dd></div>
+        <div><dt>Term</dt><dd>{{ lease.start_date|date }} → {{ lease.end_date|date if lease.end_date else 'open' }}</dd></div>
+        <div><dt>Signed</dt><dd>{{ lease.signed_at|date if lease.signed_at else 'Not yet' }}</dd></div>
+      </dl>
+
+      <section class="contract-section">
+        <h3>Terms</h3>
+        <p class="pre-wrap">{{ lease.terms }}</p>
+      </section>
+
+      <section class="contract-section">
+        <h3>Signatures</h3>
+        <div class="signature-grid">
+          <div class="signature-block">
+            {% if lease.tenant_signature %}
+              <img class="signature-img" src="{{ lease.tenant_signature }}" alt="Tenant signature" />
+            {% elif lease.signed_at %}
+              <p class="signature-name">{{ lease.tenant_name }}</p>
+            {% else %}
+              <p class="signature-placeholder">Awaiting signature</p>
+            {% endif %}
+            <p class="signature-line">Tenant · {{ lease.tenant_name }}</p>
+            <p class="mini-meta">{{ lease.signed_at|datetime if lease.signed_at else '' }}</p>
+          </div>
+          <div class="signature-block">
+            <p class="signature-name">{{ property.owner_name or user.name }}</p>
+            <p class="signature-line">Landlord · {{ property.name }}</p>
+            <p class="mini-meta">Recorded in YaVaKa on {{ lease.created_at|date }}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Rent invoices on this lease</h2>
+        <a class="link-quiet" href="{{ url_for('rentals.invoices') }}">Raise this month {{ icon('arrow-right', 13) }}</a>
+      </div>
+      {% if invoices %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Invoice</th>
+                <th scope="col">Period</th>
+                <th scope="col">Due</th>
+                <th scope="col" class="align-right">Amount</th>
+                <th scope="col" class="align-right">Balance</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in invoices %}
+                <tr>
+                  <td><a href="{{ url_for('rentals.invoice_print', invoice_id=item.id) }}" target="_blank" rel="noopener">{{ item.number }}</a></td>
+                  <td>{{ item.period_start|date }}</td>
+                  <td>{{ item.due_date|date }}</td>
+                  <td class="align-right">{{ item.amount_cents|money }}</td>
+                  <td class="align-right {{ 'neg' if item.balance_cents }}">{{ item.balance_cents|money }}</td>
+                  <td>{{ badge(item.status) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted small" style="padding:0 18px 18px">No invoices on this lease yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <aside class="detail-side">
+    {% if lease.status == 'signed' %}
+      <div class="card signed-panel">
+        <div class="card-head"><h2>Signature</h2>{{ badge(lease.status) }}</div>
+        {% if lease.tenant_signature %}
+          <img class="signature-img signature-img-lg" src="{{ lease.tenant_signature }}" alt="Tenant signature" />
+        {% endif %}
+        <p class="signature-name">{{ lease.tenant_name }}</p>
+        <p class="signature-line">Tenant signature</p>
+        <p class="mini-meta">{{ lease.signed_at|datetime if lease.signed_at else '' }}</p>
+        <div class="all-clear signed-note">
+          <span>{{ icon('lock', 16) }}</span>
+          <p>Signed and locked to the property record. A change needs a new lease.</p>
+        </div>
+      </div>
+    {% elif lease.status == 'awaiting_signature' %}
+      <div class="card">
+        <div class="card-head"><h2>Signature</h2><span class="badge badge-warn">Awaiting signature</span></div>
+        <p class="muted small">
+          Hand the screen to {{ lease.tenant_name }}. They sign with a finger or stylus
+          and the signed copy locks to the property.
+        </p>
+        <button class="btn btn-primary btn-block" type="button" data-modal-open="modal-lease-sign">
+          {{ icon('pen', 15) }} Sign this lease
+        </button>
+        <p class="micro-note">{{ icon('shield', 12) }} The signature and timestamp are stored with the lease.</p>
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card-head"><h2>Signature</h2>{{ badge(lease.status) }}</div>
+        <p class="muted small">This lease is closed. Draft a new one when the property is let again.</p>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-head"><h2>Actions</h2></div>
+      <div class="stack-sm" style="padding:0 18px 18px">
+        <a class="btn btn-outline btn-block btn-sm" href="{{ url_for('rentals.lease_print', lease_id=lease.id) }}" target="_blank" rel="noopener">{{ icon('eye', 14) }} Open print view</a>
+        <a class="btn btn-ghost btn-block btn-sm" href="{{ url_for('rentals.property_detail', property_id=property.id) }}">{{ icon('home', 14) }} {{ property.name }}</a>
+        {% if lease.status == 'signed' %}
+          <form method="post" action="{{ url_for('rentals.end_lease', lease_id=lease.id) }}" data-confirm="End this lease and mark the tenant as moved out?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button class="btn btn-danger-ghost btn-block btn-sm" type="submit">{{ icon('close', 14) }} End lease</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Record</h2></div>
+      <dl class="fact-list">
+        <div><dt>Reference</dt><dd>{{ lease.reference }}</dd></div>
+        <div><dt>Property</dt><dd>{{ property.name }}</dd></div>
+        <div><dt>Tenant</dt><dd>{{ lease.tenant_name }}</dd></div>
+        <div><dt>Billing day</dt><dd>{{ lease.billing_day }}</dd></div>
+        <div><dt>Notice</dt><dd>{{ lease.notice_days }} days</dd></div>
+        <div><dt>Status</dt><dd>{{ lease.status|replace('_', ' ')|title }}</dd></div>
+        <div><dt>Prepared</dt><dd>{{ lease.created_at|datetime }}</dd></div>
+      </dl>
+    </div>
+  </aside>
+</div>
+
+{% if lease.status == 'awaiting_signature' %}
+  <dialog class="modal modal--slim" id="modal-lease-sign" aria-labelledby="modal-lease-sign-title">
+    <div class="modal-panel">
+      <header class="modal-head">
+        <div>
+          <p class="eyebrow">Signature</p>
+          <h2 id="modal-lease-sign-title">Sign this lease</h2>
+          <p class="modal-sub">{{ lease.title }}</p>
+        </div>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Close">{{ icon('close', 18) }}</button>
+      </header>
+
+      <form class="modal-form" method="post" action="{{ url_for('rentals.sign_lease', lease_id=lease.id) }}" data-signature-form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="signature" value="" data-signature-input />
+
+        <div class="modal-body">
+          <div class="form">
+            <label class="field">
+              <span class="field-label">Signed by (full name)</span>
+              <input class="input" type="text" name="signed_name" value="{{ lease.tenant_name }}" required maxlength="120" data-modal-autofocus />
+            </label>
+
+            <div class="field">
+              <span class="field-label">Draw signature</span>
+              <div class="signature-pad" data-signature-pad>
+                <canvas width="600" height="220" data-signature-canvas></canvas>
+                <span class="signature-hint">Sign inside the box with your finger, stylus or mouse</span>
+              </div>
+              <div class="signature-actions">
+                <button class="btn btn-ghost btn-sm" type="button" data-signature-clear>{{ icon('trash', 13) }} Clear</button>
+              </div>
+            </div>
+
+            <p class="micro-note">{{ icon('lock', 12) }} Signing locks the lease and records the date and time.</p>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+          <button class="btn btn-primary" type="submit">
+            {{ icon('check', 16) }} <span data-submit-label>Sign and lock</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+{% endif %}
+{% endblock %}

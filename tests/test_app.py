@@ -6296,3 +6296,438 @@ class PaletteSystem(VakaTestCase):
         self.assertIn('data-palette="{{ palette }}"', source)
         self.assertIn("palettes.css", source)
         self.assertIn("palette-switch.js", source)
+
+class PropertyManagement(VakaTestCase):
+    """The second sign-in door and the rental module that ships inside it.
+
+    Project Management stays the main system; Property Management is where a
+    finished building is let, invoiced and checked on.
+    """
+
+    PROPERTY_EMAIL = "rentals@yavaka.co.zw"
+
+    def property_login(self):
+        token = self.csrf()
+        return self.client.post(
+            "/login",
+            data={
+                "email": self.PROPERTY_EMAIL,
+                "password": "YaVaKa2026!",
+                "csrf_token": token,
+                "portal": "property",
+            },
+            follow_redirects=True,
+        )
+
+    def add_property(self, name, **overrides):
+        from db import query
+
+        token = self.csrf()
+        payload = {
+            "csrf_token": token,
+            "name": name,
+            "suburb": "Avondale",
+            "city": "Harare",
+            "rent": "350.00",
+            "billing_day": "5",
+            "deposit_months": "1",
+            "bedrooms": "2",
+            "bathrooms": "1",
+            "property_type": "cottage",
+        }
+        payload.update(overrides)
+        self.client.post("/property/properties", data=payload, follow_redirects=True)
+        with self.app.app_context():
+            return query("SELECT * FROM properties WHERE name = ?", (name,), one=True)
+
+    def add_tenant(self, property_id, name):
+        from db import query
+
+        self.client.post(
+            f"/property/properties/{property_id}/tenants",
+            data={
+                "csrf_token": self.csrf(),
+                "name": name,
+                "phone": "+263 77 000 1234",
+                "moved_in": "2026-11-01",
+            },
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            return query(
+                "SELECT * FROM property_tenants WHERE property_id = ? AND name = ?",
+                (property_id, name),
+                one=True,
+            )
+
+    def test_the_two_doors_are_separate(self):
+        # A property account is refused at the build door and told where it belongs.
+        token = self.csrf()
+        refused = self.client.post(
+            "/login",
+            data={
+                "email": self.PROPERTY_EMAIL,
+                "password": "YaVaKa2026!",
+                "csrf_token": token,
+                "portal": "project",
+            },
+        )
+        self.assertEqual(refused.status_code, 403)
+        self.assertIn(b"signs in to Property Management", refused.data)
+
+        # And a build account is refused at the property door.
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        token = self.csrf()
+        refused = self.client.post(
+            "/login",
+            data={
+                "email": "client@yavaka.co.zw",
+                "password": "YaVaKa2026!",
+                "csrf_token": token,
+                "portal": "property",
+            },
+        )
+        self.assertEqual(refused.status_code, 403)
+        self.assertIn(b"signs in to Project Management", refused.data)
+
+    def test_property_sign_in_lands_in_the_property_workspace(self):
+        response = self.client.post(
+            "/login",
+            data={
+                "email": self.PROPERTY_EMAIL,
+                "password": "YaVaKa2026!",
+                "csrf_token": self.csrf(),
+                "portal": "property",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/property")
+        self.assertIn(b"Rental management is a bonus", self.client.get("/property").data)
+
+    def test_a_property_account_cannot_open_a_build(self):
+        self.property_login()
+        self.assertEqual(self.client.get("/app").status_code, 403)
+        self.assertEqual(self.client.get("/app/projects").status_code, 403)
+
+    def test_the_property_door_has_its_own_sign_in_page(self):
+        page = self.client.get("/property/login").get_data(as_text=True)
+        self.assertIn("Sign in to your properties", page)
+        self.assertIn('name="portal" value="property"', page)
+        # The other door is still one tap away.
+        self.assertIn('href="/login"', page)
+
+    def test_a_signed_in_build_account_is_sent_home_from_the_property_door(self):
+        self.login()
+        response = self.client.get("/property/login")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/app")
+
+    def test_a_signed_in_property_account_is_sent_home_from_the_build_door(self):
+        self.property_login()
+        response = self.client.get("/login")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/property")
+
+    def test_every_property_page_renders(self):
+        self.property_login()
+        for path in (
+            "/property",
+            "/property/properties",
+            "/property/tenants",
+            "/property/leases",
+            "/property/invoices",
+            "/property/payments",
+        ):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                response.close()
+
+    def test_a_tenant_a_lease_an_invoice_and_a_receipt(self):
+        from db import query
+
+        self.property_login()
+        property_row = self.add_property("Flow Test Cottage")
+        self.assertIsNotNone(property_row)
+
+        tenant = self.add_tenant(property_row["id"], "Flow Test Tenant")
+        self.assertIsNotNone(tenant)
+
+        token = self.csrf()
+        self.client.post(
+            "/property/leases",
+            data={
+                "csrf_token": token,
+                "property_id": property_row["id"],
+                "tenant_id": tenant["id"],
+                "start_date": "2026-11-01",
+                "end_date": "2027-10-31",
+                "rent": "350.00",
+                "deposit": "350.00",
+                "billing_day": "5",
+                "notice_days": "30",
+                "title": "Lease — Flow Test Cottage",
+            },
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            lease = query(
+                "SELECT * FROM property_leases WHERE property_id = ? ORDER BY created_at DESC",
+                (property_row["id"],),
+                one=True,
+            )
+        self.assertEqual(lease["status"], "awaiting_signature")
+
+        self.client.post(
+            f"/property/leases/{lease['id']}/sign",
+            data={"csrf_token": token, "signature": "", "signed_name": "Flow Test Tenant"},
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            lease = query("SELECT * FROM property_leases WHERE id = ?", (lease["id"],), one=True)
+        self.assertEqual(lease["status"], "signed")
+
+        # A month with no invoice yet, so the batch run has one to raise.
+        self.client.post(
+            "/property/invoices/generate",
+            data={"csrf_token": token, "period": "2027-05"},
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            invoice = query(
+                "SELECT * FROM property_invoices WHERE lease_id = ? AND period_start = ?",
+                (lease["id"], "2027-05-01"),
+                one=True,
+            )
+        self.assertIsNotNone(invoice)
+        self.assertEqual(invoice["amount_cents"], 35_000)
+        self.assertEqual(invoice["status"], "issued")
+
+        receipt = self.client.post(
+            "/property/payments",
+            data={
+                "csrf_token": token,
+                "invoice_id": invoice["id"],
+                "amount": "350.00",
+                "method": "ECOCASH",
+                "received_at": "2027-05-05",
+            },
+            follow_redirects=True,
+        )
+        page = receipt.get_data(as_text=True)
+        self.assertIn("RCPT-", page)
+        self.assertIn("$350.00", page)
+
+        with self.app.app_context():
+            invoice = query("SELECT * FROM property_invoices WHERE id = ?", (invoice["id"],), one=True)
+        self.assertEqual(invoice["status"], "paid")
+
+    def test_the_same_month_cannot_be_invoiced_twice(self):
+        from db import query
+
+        self.property_login()
+        property_row = self.add_property("Double Bill Cottage")
+        tenant = self.add_tenant(property_row["id"], "Double Bill Tenant")
+        token = self.csrf()
+        self.client.post(
+            "/property/leases",
+            data={
+                "csrf_token": token,
+                "property_id": property_row["id"],
+                "tenant_id": tenant["id"],
+                "start_date": "2026-11-01",
+                "rent": "350.00",
+                "deposit": "0",
+                "billing_day": "5",
+                "notice_days": "30",
+                "title": "Lease — Double Bill Cottage",
+            },
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            lease = query(
+                "SELECT * FROM property_leases WHERE property_id = ?",
+                (property_row["id"],),
+                one=True,
+            )
+        self.client.post(
+            f"/property/leases/{lease['id']}/sign",
+            data={"csrf_token": token, "signature": "", "signed_name": "Double Bill Tenant"},
+            follow_redirects=True,
+        )
+        self.client.post(
+            "/property/invoices/generate",
+            data={"csrf_token": token, "period": "2027-06"},
+            follow_redirects=True,
+        )
+        second = self.client.post(
+            "/property/invoices/generate",
+            data={"csrf_token": token, "period": "2027-06"},
+            follow_redirects=True,
+        )
+        self.assertIn(b"already had one", second.data)
+        with self.app.app_context():
+            rows = query(
+                "SELECT id FROM property_invoices WHERE lease_id = ? AND period_start = ?",
+                (lease["id"], "2027-06-01"),
+            )
+        self.assertEqual(len(rows), 1)
+
+    def test_a_periodic_check_is_kept_on_the_property_record(self):
+        from db import query
+
+        self.property_login()
+        property_row = self.add_property("Check Test House")
+        token = self.csrf()
+        self.client.post(
+            f"/property/properties/{property_row['id']}/checks",
+            data={"csrf_token": token, "check_type": "quarterly", "scheduled_for": "2026-11-10"},
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            check = query(
+                "SELECT * FROM property_checks WHERE property_id = ? AND status = 'scheduled'",
+                (property_row["id"],),
+                one=True,
+            )
+        self.assertIsNotNone(check)
+
+        response = self.client.post(
+            f"/property/checks/{check['id']}/complete",
+            data={
+                "csrf_token": token,
+                "conducted_at": "2026-11-10",
+                "rating": "fair",
+                "findings": "Gutters clear; a small crack above the kitchen window.",
+                "action_required": "Fill the crack before the rains.",
+            },
+            follow_redirects=True,
+        )
+        page = response.get_data(as_text=True)
+        self.assertIn("Check saved", page)
+        self.assertIn("small crack above the kitchen window", page)
+
+        with self.app.app_context():
+            check = query("SELECT * FROM property_checks WHERE id = ?", (check["id"],), one=True)
+        self.assertEqual(check["status"], "completed")
+        self.assertEqual(check["rating"], "fair")
+
+    def test_check_media_is_kept_and_served_to_the_property_owner_only(self):
+        import io
+
+        from db import query
+
+        self.property_login()
+        property_row = self.add_property("Media Test House")
+        token = self.csrf()
+        self.client.post(
+            f"/property/properties/{property_row['id']}/checks",
+            data={"csrf_token": token, "check_type": "routine", "scheduled_for": "2026-11-10"},
+            follow_redirects=True,
+        )
+        with self.app.app_context():
+            check = query(
+                "SELECT * FROM property_checks WHERE property_id = ?",
+                (property_row["id"],),
+                one=True,
+            )
+
+        body = b"\x89PNG\r\n\x1a\n" + b"0" * 64
+        response = self.client.post(
+            f"/property/checks/{check['id']}/complete",
+            data={
+                "csrf_token": token,
+                "conducted_at": "2026-11-10",
+                "rating": "good",
+                "findings": "Walls sound; the gate latch needs tightening.",
+                "media": (io.BytesIO(body), "front-wall.png"),
+            },
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+
+        with self.app.app_context():
+            media = query(
+                "SELECT * FROM attachments WHERE check_id = ?", (check["id"],), one=True
+            )
+        self.assertIsNotNone(media)
+        self.assertEqual(media["property_id"], property_row["id"])
+
+        served = self.client.get(f"/property/media/{media['id']}")
+        self.assertEqual(served.status_code, 200)
+        self.assertEqual(served.data, body)
+
+        # A build-only account cannot reach property media, even with the URL.
+        self.client.post("/logout", data={"csrf_token": self.csrf()})
+        self.login()
+        self.assertEqual(self.client.get(f"/property/media/{media['id']}").status_code, 403)
+
+    def test_the_assistant_answers_from_the_property_side(self):
+        self.property_login()
+        payload = self.client.post(
+            "/api/assistant/ask",
+            json={"question": "What rent is due?", "portal": "property"},
+            headers={"X-CSRF-Token": self.csrf()},
+        ).get_json()
+
+        self.assertTrue(payload["ok"])
+        self.assertIn("signed leases", payload["reply"])
+        self.assertIn("/property/invoices", [href for _label, href in payload["links"]])
+
+        tenants = self.client.post(
+            "/api/assistant/ask",
+            json={"question": "Show my tenants", "portal": "property"},
+            headers={"X-CSRF-Token": self.csrf()},
+        ).get_json()
+        self.assertIn("tenant", tenants["reply"].lower())
+
+    def test_a_build_account_is_told_where_rental_management_lives(self):
+        self.login()  # client, project door
+        payload = self.client.post(
+            "/api/assistant/ask",
+            json={"question": "What rent is due?"},
+            headers={"X-CSRF-Token": self.csrf()},
+        ).get_json()
+
+        self.assertIn("bonus module inside Property Management", payload["reply"])
+        self.assertIn("/property/login", [href for _label, href in payload["links"]])
+
+    def test_the_public_assistant_explains_where_the_bonus_sits(self):
+        payload = self.client.post(
+            "/api/assistant/ask",
+            json={"question": "Do you manage rentals after the build?"},
+            headers={"X-CSRF-Token": self.csrf()},
+        ).get_json()
+
+        self.assertIn("bonus", payload["reply"].lower())
+        self.assertIn("Property Management", payload["reply"])
+        self.assertIn("/property/login", [href for _label, href in payload["links"]])
+
+    def test_the_landing_page_sells_the_second_door(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('id="property"', page)
+        self.assertIn("Rental management is a bonus", page)
+        self.assertIn("/property/login", page)
+
+    def test_enabling_property_management_from_settings(self):
+        from db import execute, query
+
+        self.login(email="manager@yavaka.co.zw")
+        response = self.client.post(
+            "/app/settings/portals",
+            data={"csrf_token": self.csrf(), "portal": "property"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/property")
+        with self.app.app_context():
+            row = query(
+                "SELECT portals FROM users WHERE email = 'manager@yavaka.co.zw'", one=True
+            )
+        self.assertIn("property", row["portals"])
+        # Leave the shared demo account as it was for the other tests.
+        with self.app.app_context():
+            execute(
+                "UPDATE users SET portals = 'project' WHERE email = 'manager@yavaka.co.zw'"
+            )

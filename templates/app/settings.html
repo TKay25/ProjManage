@@ -305,6 +305,38 @@
     </div>
 
     <div class="card">
+      <div class="card-head"><h2>Workspaces</h2></div>
+      <ul class="mini-list">
+        <li>
+          <span class="mini-icon">{{ icon('building', 15) }}</span>
+          <div>
+            <p class="mini-title">Project Management</p>
+            <p class="mini-meta">The main system — stages, funding and receipts for a build.</p>
+          </div>
+        </li>
+        {% if 'property' in user_portals %}
+          <li>
+            <span class="mini-icon">{{ icon('home', 15) }}</span>
+            <div>
+              <p class="mini-title">Property Management</p>
+              <p class="mini-meta">Tenants, leases, rent and periodic property checks.</p>
+            </div>
+          </li>
+        {% endif %}
+      </ul>
+      {% if 'property' in user_portals %}
+        <a class="btn btn-outline btn-block btn-sm" href="/property">{{ icon('home', 14) }} Open Property Management</a>
+      {% else %}
+        <form method="post" action="{{ url_for('settings.add_portal') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="portal" value="property" />
+          <button class="btn btn-outline btn-block btn-sm" type="submit">{{ icon('plus', 14) }} Add Property Management</button>
+        </form>
+        <p class="micro-note pad-x">Rental management is the bonus module inside it. The two workspaces sign in separately.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
       <div class="card-head"><h2>Linked WhatsApp</h2></div>
       {% if contacts %}
         <ul class="mini-list">

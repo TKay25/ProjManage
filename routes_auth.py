@@ -17,6 +17,7 @@ from flask import (
 )
 
 import auth
+import portals
 import team
 import totp
 import web
@@ -96,57 +97,79 @@ def _pending_two_factor():
     return pending
 
 
-def _finish_login(user, next_url: str):
+def _finish_login(user, next_url: str, portal_key: str = portals.PROJECT):
     session.pop(PENDING_2FA_KEY, None)
-    auth.login_user(user["id"])
-    auth.audit_auth("login.success", user["email"], user_id=user["id"])
+    auth.login_user(user["id"], portal_key)
+    auth.audit_auth("login.success", f"{user['email']} ({portal_key})", user_id=user["id"])
     message = f"Welcome back, {user['name'].split()[0]}."
+    destination = next_url or portals.home_path(portal_key)
 
     if web.wants_json():
         # The dialog hands off to a page load, so flash rather than toast.
         flash(message, "success")
-        return web.ok(message, redirect_to=next_url or url_for("dashboard.index"))
+        return web.ok(message, redirect_to=destination)
 
     flash(message, "success")
-    return redirect(next_url)
+    return redirect(destination)
 
 
 def _colour_for(email: str) -> str:
     return AVATAR_COLORS[sum(ord(char) for char in email) % len(AVATAR_COLORS)]
 
 
+def _sign_in_page(portal_key, *, next_value="", email="", error=None, status=200):
+    """Render one of the two sign-in doors.
+
+    Project Management and Property Management are separate front doors on the
+    same account record. The door decides the wording, the accent and where a
+    successful sign-in lands; it never decides what the account may see.
+    """
+    if g.user:
+        return redirect(portals.home_path(portals.default_for(g.user)))
+
+    portal = portals.entry(portal_key)
+    next_url = auth.safe_next(next_value, fallback=portal["home_path"])
+    return (
+        render_template(
+            "auth/login.html",
+            title=f"Sign in · {portal['short']}",
+            email=email,
+            error=error,
+            next=next_url,
+            portal=portal,
+            is_property=portal_key == portals.PROPERTY,
+        ),
+        status,
+    )
+
+
 @bp.get("/login")
 def login():
-    if g.user:
-        return redirect(url_for("dashboard.index"))
-    return render_template(
-        "auth/login.html",
-        title="Welcome back",
-        email="",
-        error=None,
-        next=auth.safe_next(request.args.get("next", "")),
-    )
+    return _sign_in_page(portals.PROJECT, next_value=request.args.get("next", ""))
+
+
+@bp.get("/property/login")
+def property_login():
+    """The Property Management door, where the rental module lives."""
+    return _sign_in_page(portals.PROPERTY, next_value=request.args.get("next", ""))
 
 
 @bp.post("/login")
 def login_post():
+    portal_key = portals.normalise_key(request.form.get("portal"))
+    portal = portals.entry(portal_key)
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
-    next_url = auth.safe_next(request.form.get("next", ""))
-    throttle_key = _client_key("login", email)
+    next_url = auth.safe_next(
+        request.form.get("next", ""), fallback=portal["home_path"]
+    )
+    throttle_key = _client_key(f"login:{portal_key}", email)
 
     def failure(message, status):
         if web.wants_json():
             return web.fail(message, status=status)
-        return (
-            render_template(
-                "auth/login.html",
-                title="Welcome back",
-                email=email,
-                error=message,
-                next=next_url,
-            ),
-            status,
+        return _sign_in_page(
+            portal_key, next_value=next_url, email=email, error=message, status=status
         )
 
     if _is_blocked(throttle_key):
@@ -158,22 +181,37 @@ def login_post():
         _register_failure(throttle_key)
         auth.audit_auth(
             "login.failed",
-            f"{email} from {request.remote_addr}",
+            f"{email} from {request.remote_addr} ({portal_key})",
             user_id=user["id"] if user else None,
         )
         return failure("That email and password do not match.", 401)
 
     _clear_attempts(throttle_key)
 
+    # A correct password is not enough on the wrong door. Saying which door the
+    # account belongs to is more useful than a bare refusal, and it leaks
+    # nothing the person did not just prove they own.
+    if not portals.has(user, portal_key):
+        other = portals.other_than(user, portal_key)
+        message = (
+            f"That account signs in to {other['short']}. Use the "
+            f"{other['short']} sign-in on the other tab."
+            if other
+            else "That account is not enabled for this workspace."
+        )
+        auth.audit_auth("login.wrong_portal", f"{email} asked for {portal_key}", user_id=user["id"])
+        return failure(message, 403)
+
     if int(user["totp_enabled"] or 0):
         session[PENDING_2FA_KEY] = {
             "user_id": user["id"],
             "next": next_url,
+            "portal": portal_key,
             "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
         return redirect(url_for("auth.two_factor"))
 
-    return _finish_login(user, next_url)
+    return _finish_login(user, next_url, portal_key)
 
 
 @bp.route("/login/2fa", methods=["GET", "POST"])
@@ -206,7 +244,9 @@ def two_factor():
             user["totp_secret"] or "", supplied
         ):
             _clear_attempts(throttle_key)
-            return _finish_login(user, pending.get("next") or "")
+            return _finish_login(
+                user, pending.get("next") or "", pending.get("portal") or portals.PROJECT
+            )
         else:
             _register_failure(throttle_key)
             auth.audit_auth("login.2fa_failed", user["email"], user_id=user["id"])
@@ -388,12 +428,15 @@ def reset_password(token):
 @bp.get("/register")
 def register():
     if g.user:
-        return redirect(url_for("dashboard.index"))
+        return redirect(portals.home_path(portals.default_for(g.user)))
+    portal_key = portals.normalise_key(request.args.get("portal"))
     return render_template(
         "auth/register.html",
         title="Create your account",
-        values={"email": request.args.get("email", "").strip().lower()},
+        values={"email": request.args.get("email", "").strip().lower(), "portal": portal_key},
         invite=request.args.get("invite", ""),
+        portal=portals.entry(portal_key),
+        is_property=portal_key == portals.PROPERTY,
         error=None,
     )
 
@@ -406,9 +449,11 @@ def register_post():
         "phone": (request.form.get("phone") or "").strip(),
         "country": request.form.get("country") or "Zimbabwe",
         "role": request.form.get("role") or "client",
+        "portal": portals.normalise_key(request.form.get("portal")),
     }
     invite_token = (request.form.get("invite") or "").strip()
     password = request.form.get("password") or ""
+    portal = portals.entry(values["portal"])
     error = None
 
     if not values["name"] or len(values["name"]) > 90:
@@ -431,6 +476,8 @@ def register_post():
                 title="Create your account",
                 values=values,
                 invite=invite_token,
+                portal=portal,
+                is_property=values["portal"] == portals.PROPERTY,
                 error=error,
             ),
             400,
@@ -440,8 +487,8 @@ def register_post():
     role = "manager" if values["role"] == "manager" else "client"
 
     execute(
-        """INSERT INTO users (id, name, email, password_hash, role, phone, country, avatar_color, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO users (id, name, email, password_hash, role, phone, country, avatar_color, portals, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             user_id,
             values["name"],
@@ -451,6 +498,7 @@ def register_post():
             normalize_phone(values["phone"]) or None,
             values["country"][:80],
             _colour_for(values["email"]),
+            values["portal"],
             now_iso(),
         ),
     )
@@ -483,6 +531,9 @@ def register_post():
         next_url = ""
 
     if web.wants_json():
+        if values["portal"] == portals.PROPERTY:
+            flash(message, "success")
+            return web.ok(message, redirect_to=url_for("auth.property_login"))
         return web.ok(
             message,
             open_modal="modal-login",
@@ -492,6 +543,8 @@ def register_post():
     flash(message, "success")
     if next_url:
         return redirect(url_for("auth.login", next=next_url))
+    if values["portal"] == portals.PROPERTY:
+        return redirect(url_for("auth.property_login"))
     return redirect(url_for("auth.login"))
 
 

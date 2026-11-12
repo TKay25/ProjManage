@@ -274,6 +274,123 @@ STRINGS = {
         "sn": "Zvinongedzo izvi zvinoshanda mazuva 7. Pindura DOCUMENTS chero nguva.",
         "nd": "Lezi zixhumanisi zisebenza izinsuku eziyi-7. Phendula DOCUMENTS noma nini.",
     },
+    # ---------- rental management (the bonus module in Property Management) ----------
+    "rental_unknown": {
+        "en": (
+            "Rental management sits inside Property Management. Save this number "
+            "on your Property Management account and the rent questions answer here."
+        ),
+        "sn": (
+            "Kutarisira rendi kuri muProperty Management. Isa nhamba iyi paakaundi "
+            "yako yeProperty Management kuti mibvunzo yerendi ipindurwe pano."
+        ),
+        "nd": (
+            "Ukuphathwa kwerenti kungaphakathi kweProperty Management. Faka le nombolo "
+            "ku-akhawunti yakho yeProperty Management ukuze imibuzo yerenti iphendulwe lapha."
+        ),
+    },
+    "rental_not_enabled": {
+        "en": (
+            "This account is a Project Management account. Rental management is the "
+            "bonus module inside Property Management, so sign in there to ask about rent."
+        ),
+        "sn": (
+            "Iyi iakaundi yeProject Management. Kutarisira rendi ibhonasi iri muProperty "
+            "Management, saka pinda ikoko kuti ubvunze nezverendi."
+        ),
+        "nd": (
+            "Le yi-akhawunti yeProject Management. Ukuphathwa kwerenti kuyibhonasi "
+            "engaphakathi kweProperty Management, ngakho ngena lapho ukuze ubuze ngerenti."
+        ),
+    },
+    "rental_empty": {
+        "en": "No property is on your record yet, so there is no rent to report.",
+        "sn": "Hapana imba iri parekodhi yako, saka hapana rendi yekutaura.",
+        "nd": "Akukho indlu eserekhodini yakho, ngakho akukho renti yokukhuluma.",
+    },
+    "rental_due": {
+        "en": (
+            "{properties} propert(ies). Rent roll {rent_roll} a month; {collected} "
+            "received in {month}; {outstanding} still outstanding."
+        ),
+        "sn": (
+            "Zvivakwa {properties}. Rendi pamwedzi {rent_roll}; {collected} yawanikwa "
+            "muna {month}; {outstanding} ichiri kunze."
+        ),
+        "nd": (
+            "Izindawo {properties}. Irenti ngenyanga {rent_roll}; {collected} yamukelwe "
+            "ku-{month}; {outstanding} isasele."
+        ),
+    },
+    "rental_collected": {
+        "en": "{amount} received in {month} across {properties} propert(ies).",
+        "sn": "{amount} yawanikwa muna {month} pazvivakwa {properties}.",
+        "nd": "{amount} yamukelwe ku-{month} ezindaweni {properties}.",
+    },
+    "rental_arrears_heading": {
+        "en": "Behind on rent ({total} outstanding):",
+        "sn": "Vasara nerendi (mari inze {total}):",
+        "nd": "Abasemva ngerenti (imali eseleyo {total}):",
+    },
+    "rental_arrears_none": {
+        "en": "Nobody is behind on rent. Every issued invoice is paid or not yet due.",
+        "sn": "Hapana akasara nerendi. Mabhiri ose akabhadharwa kana haasati asvika nguva.",
+        "nd": "Akekho osemva ngerenti. Wonke amabhili akhokhelwe noma awakafiki isikhathi.",
+    },
+    "rental_invoices_heading": {
+        "en": "Rent invoices still to collect:",
+        "sn": "Mabhiri erendi achiri kuda kubhadharwa:",
+        "nd": "Amabhili erenti asathelwe ukukhokhwa:",
+    },
+    "rental_invoices_none": {
+        "en": "Every rent invoice is settled. Raise the next month from the invoices page.",
+        "sn": "Mabhiri ose erendi abhadharwa. Simudza mwedzi unotevera kubva peji remabhiri.",
+        "nd": "Wonke amabhili erenti akhokhelwe. Phakamisa inyanga elandelayo kukhasi lamabhili.",
+    },
+    "rental_receipt_help": {
+        "en": (
+            "{amount} is receipted this month. Receipts are recorded on screen so the "
+            "tenant holds a numbered receipt against the invoice."
+        ),
+        "sn": (
+            "{amount} yabhadharwa mwedzi uno. Marisiti anonyorwa pascreen kuti muroja "
+            "ave nerisiti ine nhamba pamusoro pebhiri."
+        ),
+        "nd": (
+            "{amount} ikhokhelwe kule nyanga. Amarisiqi abhalwa esikrinini ukuze umqashi "
+            "abe nerisidi elinenombolo ebhilini."
+        ),
+    },
+    "rental_tenants_heading": {
+        "en": "Tenants in place:",
+        "sn": "Varoi varipo:",
+        "nd": "Abaqashi abakhona:",
+    },
+    "rental_tenants_empty": {
+        "en": "No tenant is in place. Add one on the property page, then draft the lease.",
+        "sn": "Hapana muroja aripo. Wedzera papeji yeimba, wozogadzira chibvumirano.",
+        "nd": "Akukho mqashi okhona. Engeza kukhasi yendlu, bese wenza isivumelwano.",
+    },
+    "rental_leases": {
+        "en": "{signed} signed, {awaiting} awaiting signature, {ended} ended.",
+        "sn": "{signed} akasainwa, {awaiting} achimirira siginicha, {ended} apera.",
+        "nd": "{signed} asayiniwe, {awaiting} alindele ukusayinwa, {ended} aphelile.",
+    },
+    "rental_checks_none": {
+        "en": "No property check is booked or recorded yet.",
+        "sn": "Hapana cheki yemba yakarongwa kana kunyorwa.",
+        "nd": "Akukho ukuhlolwa kwendlu okuhleliwe noma okubhaliwe.",
+    },
+    "rental_check_next": {
+        "en": "Next check: {property} on {date}.",
+        "sn": "Cheki inotevera: {property} musi wa {date}.",
+        "nd": "Ukuhlolwa okulandelayo: {property} ngo-{date}.",
+    },
+    "rental_check_last": {
+        "en": "Last check: {property} on {date} — {rating}.",
+        "sn": "Cheki yekupedzisira: {property} musi wa {date} — {rating}.",
+        "nd": "Ukuhlolwa kokugcina: {property} ngo-{date} — {rating}.",
+    },
 }
 
 # Words that switch language, in all three languages plus the menu ids.

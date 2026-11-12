@@ -3,6 +3,7 @@
 from flask import Blueprint, g, jsonify, request
 
 import assistant
+import portals
 
 bp = Blueprint("assistant", __name__)
 
@@ -21,6 +22,12 @@ def ask():
     question = str(payload.get("question") or "").strip()[:MAX_QUESTION]
     if not question:
         return jsonify({"ok": False, "error": "Ask me something first."}), 400
+
+    # The page names its door, so "what rent is due?" is answered from the
+    # property side even for an account that also runs builds.
+    portal = str(payload.get("portal") or "").strip().lower()
+    if portal:
+        g.assistant_portal = portal if portal in portals.ALL else portals.PROJECT
 
     if g.user:
         result = assistant.answer(g.user, question)

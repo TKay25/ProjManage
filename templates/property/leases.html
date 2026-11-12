@@ -1,0 +1,70 @@
+{% extends "app/base.html" %}
+{% block title %}Leases · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Leases{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ leases|length }} lease{{ '' if leases|length == 1 else 's' }}
+    <span class="page-tagline">Produce it, sign it on screen, then invoice the rent against it.</span>
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('rentals.new_lease') }}">{{ icon('plus', 15) }} New lease</a>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar filter-bar--single" method="get" action="{{ url_for('rentals.leases') }}">
+  <select class="select select-sm" name="status" data-autosubmit aria-label="Filter by lease status">
+    {% for key, label in [('all', 'All leases')] + lease_statuses %}
+      <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="btn btn-ghost btn-sm" type="submit">Filter</button></noscript>
+</form>
+
+{% if leases %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Reference</th>
+            <th scope="col">Property</th>
+            <th scope="col">Tenant</th>
+            <th scope="col">Term</th>
+            <th scope="col" class="align-right">Rent</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in leases %}
+            <tr>
+              <td><a href="{{ url_for('rentals.lease_detail', lease_id=item.id) }}">{{ item.reference }}</a></td>
+              <td>
+                <a href="{{ url_for('rentals.property_detail', property_id=item.property_id) }}">{{ item.property_name }}</a>
+                <span class="mini-meta">{{ item.property_code }}</span>
+              </td>
+              <td>{{ item.tenant_name }}</td>
+              <td>
+                {{ item.start_date|date }} → {{ item.end_date|date if item.end_date else 'open' }}
+                <span class="mini-meta">Due day {{ item.billing_day }}</span>
+              </td>
+              <td class="align-right">{{ item.rent_cents|money }}</td>
+              <td>{{ badge(item.status) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('pen', 26) }}</span>
+      <h3>No leases yet</h3>
+      <p>A lease is produced from a property and its tenant, filled with the rent and notice period, then signed on screen.</p>
+      <a class="btn btn-primary" href="{{ url_for('rentals.new_lease') }}">{{ icon('plus', 16) }} Draft a lease</a>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

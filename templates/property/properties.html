@@ -1,0 +1,151 @@
+{% extends "app/base.html" %}
+{% block title %}Properties · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Properties{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ properties|length }} propert{{ 'y' if properties|length == 1 else 'ies' }}
+    <span class="page-tagline">Add the building, then add the tenant who lives in it.</span>
+  </p>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar" method="get" action="{{ url_for('rentals.properties') }}">
+  <select class="select select-sm" name="status" data-autosubmit aria-label="Filter by status">
+    {% for key, label in [('all', 'All properties')] + property_statuses %}
+      <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <label class="search-field">
+    {{ icon('search', 16) }}
+    <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search name, code or suburb" aria-label="Search properties" />
+  </label>
+  <button class="btn btn-outline btn-sm" type="submit">Search</button>
+  {% if search %}<a class="link-quiet" href="{{ url_for('rentals.properties') }}">Clear</a>{% endif %}
+</form>
+
+<div class="card">
+  <details class="panel-form" {% if not properties %}open{% endif %}>
+    <summary>{{ icon('plus', 15) }} Add a property</summary>
+    <div class="panel-form-body">
+      <form class="stack-form" method="post" action="{{ url_for('rentals.create_property') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Property name</span>
+            <input class="input" type="text" name="name" required maxlength="120" placeholder="Waterfalls Cottage" />
+          </label>
+          <label class="field">
+            <span class="field-label">Type</span>
+            <select class="select" name="property_type">
+              {% for key, label in property_types %}
+                <option value="{{ key }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Address</span>
+            <input class="input" type="text" name="address" maxlength="200" placeholder="Stand 88, Offsek Road" />
+          </label>
+          <label class="field">
+            <span class="field-label">Suburb</span>
+            <input class="input" type="text" name="suburb" maxlength="80" placeholder="Waterfalls" />
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">City</span>
+            <input class="input" type="text" name="city" value="Harare" maxlength="80" />
+          </label>
+          <label class="field">
+            <span class="field-label">Monthly rent (USD)</span>
+            <input class="input" type="text" name="rent" inputmode="decimal" placeholder="450.00" />
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Bedrooms</span>
+            <input class="input" type="number" name="bedrooms" min="0" max="40" value="2" />
+          </label>
+          <label class="field">
+            <span class="field-label">Bathrooms</span>
+            <input class="input" type="number" name="bathrooms" min="0" max="20" value="1" />
+          </label>
+          <label class="field">
+            <span class="field-label">Deposit (months)</span>
+            <input class="input" type="number" name="deposit_months" min="0" max="12" value="1" />
+          </label>
+          <label class="field">
+            <span class="field-label">Rent due on day</span>
+            <input class="input" type="number" name="billing_day" min="1" max="28" value="1" />
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Finished build (optional)</span>
+            <select class="select" name="project_id">
+              <option value="">Not linked to a build</option>
+              {% for item in project_choices %}
+                <option value="{{ item.id }}">{{ item.name }} ({{ item.code }})</option>
+              {% endfor %}
+            </select>
+            <span class="field-hint">Link the YaVaKa build this property came from, so both records point at each other.</span>
+          </label>
+        </div>
+        <label class="field">
+          <span class="field-label">Notes</span>
+          <textarea class="input textarea" name="notes" rows="3" maxlength="2000" placeholder="Gate code, water tank, caretaker contact…"></textarea>
+        </label>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">{{ icon('plus', 16) }} Add property</button>
+        </div>
+      </form>
+    </div>
+  </details>
+</div>
+
+{% if properties %}
+  <div class="table-wrap card">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Property</th>
+          <th scope="col">Type</th>
+          <th scope="col">Tenant in place</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="align-right">Rent</th>
+          <th scope="col" class="align-right">Open balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in properties %}
+          <tr>
+            <td>
+              <a href="{{ url_for('rentals.property_detail', property_id=item.id) }}">{{ item.name }}</a>
+              <span class="mini-meta">{{ item.code }}{% if item.suburb %} · {{ item.suburb }}{% endif %}</span>
+            </td>
+            <td>{{ item.property_type|replace('_', ' ')|title }}</td>
+            <td>{{ item.current_tenant or '—' }}</td>
+            <td>{{ badge(item.status) }}</td>
+            <td class="align-right">{{ item.rent_cents|money }}</td>
+            <td class="align-right {{ 'neg' if item.open_balance_cents }}">{{ item.open_balance_cents|money }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('home', 26) }}</span>
+      <h3>{{ 'No properties match' if search or status != 'all' else 'No properties yet' }}</h3>
+      <p>{{ 'Try a different search or clear the filter.' if search or status != 'all' else 'Add the building you rent out. Rent invoices, receipts and periodic checks all hang off it.' }}</p>
+      {% if search or status != 'all' %}
+        <a class="btn btn-outline" href="{{ url_for('rentals.properties') }}">Clear filters</a>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

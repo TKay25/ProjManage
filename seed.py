@@ -2,6 +2,7 @@
 
 import json
 import shutil
+from datetime import date, timedelta
 from pathlib import Path
 
 from flask import current_app
@@ -18,7 +19,12 @@ SEED_ASSETS = BASE_DIR / "static" / "img" / "seed"
 # Printed on the sign-in page for demo installs, so it has to match the hashes
 # below and in db.run_migrations.
 DEMO_PASSWORD = "YaVaKa2026!"
-DEMO_ACCOUNTS = ("admin@yavaka.co.zw", "client@yavaka.co.zw", "manager@yavaka.co.zw")
+DEMO_ACCOUNTS = (
+    "admin@yavaka.co.zw",
+    "client@yavaka.co.zw",
+    "manager@yavaka.co.zw",
+    "rentals@yavaka.co.zw",
+)
 
 
 def ensure_seed():
@@ -108,15 +114,17 @@ def _seed_demo():
     password_hash = auth.hash_password(DEMO_PASSWORD)
     client_id = new_id()
     manager_id = new_id()
+    rentals_id = new_id()
 
-    for user_id, name, email, role, phone, country, colour in [
-        (client_id, "Rudo Chikafu", "client@yavaka.co.zw", "client", "263771234567", "United Kingdom", "#24395F"),
-        (manager_id, "Tendai Moyo", "manager@yavaka.co.zw", "manager", "263772555001", "Zimbabwe", "#8F6524"),
+    for user_id, name, email, role, phone, country, colour, doors in [
+        (client_id, "Rudo Chikafu", "client@yavaka.co.zw", "client", "263771234567", "United Kingdom", "#24395F", "project"),
+        (manager_id, "Tendai Moyo", "manager@yavaka.co.zw", "manager", "263772555001", "Zimbabwe", "#8F6524", "project"),
+        (rentals_id, "Nyasha Dube", "rentals@yavaka.co.zw", "manager", "263772555002", "Zimbabwe", "#3F6F63", "property"),
     ]:
         execute(
-            """INSERT INTO users (id, name, email, password_hash, role, phone, country, avatar_color, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (user_id, name, email, password_hash, role, phone, country, colour, "2026-02-20T10:00:00+00:00"),
+            """INSERT INTO users (id, name, email, password_hash, role, phone, country, avatar_color, portals, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, name, email, password_hash, role, phone, country, colour, doors, "2026-02-20T10:00:00+00:00"),
         )
 
     project_id = _create_project(
@@ -214,6 +222,188 @@ def _seed_demo():
     _seed_agreement(project_id, client_id)
     _seed_whatsapp(client_id, project_id)
     _seed_audit(client_id, manager_id, project_id)
+    _seed_rental(rentals_id)
+
+
+def _seed_rental(owner_id):
+    """One let property, so the bonus module is not an empty screen on a demo.
+
+    The story the product tells is on the record: a finished house, a tenant,
+    a signed lease, this month's rent invoiced and receipted, and a periodic
+    check that found the building sound.
+    """
+    import rentals
+
+    today = date.today()
+    month_start = today.replace(day=1)
+    month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    due = month_start.isoformat()
+
+    property_id = new_id()
+    owner = query("SELECT name FROM users WHERE id = ?", (owner_id,), one=True)
+    property_row = {
+        "name": "Belvedere Garden Flat",
+        "code": "PROP-2026-0001",
+        "address": "12 Sunninghill Road",
+        "suburb": "Belvedere",
+        "city": "Harare",
+        "owner_name": owner["name"] if owner else "The account holder",
+    }
+    execute(
+        """INSERT INTO properties
+             (id, owner_id, code, name, address, suburb, city, property_type, bedrooms,
+              bathrooms, rent_cents, currency, deposit_months, billing_day, status, notes,
+              created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'flat', 2, 1, 45000, 'USD', 2, 1, 'occupied', ?, ?, ?)""",
+        (
+            property_id,
+            owner_id,
+            property_row["code"],
+            property_row["name"],
+            property_row["address"],
+            property_row["suburb"],
+            property_row["city"],
+            "Two-bedroom garden flat. Tenant pays water; rates stay with the owner.",
+            "2026-01-05T08:00:00+00:00",
+            "2026-01-05T08:00:00+00:00",
+        ),
+    )
+
+    tenant_id = new_id()
+    execute(
+        """INSERT INTO property_tenants
+             (id, property_id, owner_id, name, email, phone, national_id, status,
+              moved_in, notes, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)""",
+        (
+            tenant_id,
+            property_id,
+            owner_id,
+            "Tarisai Moyo",
+            "tarisai.moyo@example.co.zw",
+            "263771110001",
+            "63-1234567 A 00",
+            "2026-01-01",
+            "Works at a school in Belvedere. Deposit paid in full.",
+            "2026-01-05T08:10:00+00:00",
+            "2026-01-05T08:10:00+00:00",
+        ),
+    )
+
+    lease_id = new_id()
+    terms = rentals.lease_terms(
+        property_row=property_row,
+        tenant={"name": "Tarisai Moyo"},
+        start_date="2026-01-01",
+        end_date="2026-12-31",
+        rent_cents=45_000,
+        deposit_cents=90_000,
+        billing_day=1,
+        notice_days=30,
+    )
+    execute(
+        """INSERT INTO property_leases
+             (id, owner_id, property_id, tenant_id, reference, title, start_date, end_date,
+              rent_cents, deposit_cents, billing_day, notice_days, terms, tenant_name,
+              tenant_signature, signed_at, status, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 30, ?, ?, NULL, ?, 'signed', ?, ?, ?)""",
+        (
+            lease_id,
+            owner_id,
+            property_id,
+            tenant_id,
+            "LEASE-2026-0001",
+            "Lease — Belvedere Garden Flat",
+            "2026-01-01",
+            "2026-12-31",
+            45_000,
+            90_000,
+            terms,
+            "Tarisai Moyo",
+            "2026-01-05T09:00:00+00:00",
+            owner_id,
+            "2026-01-05T08:30:00+00:00",
+            "2026-01-05T09:00:00+00:00",
+        ),
+    )
+
+    invoice_id = new_id()
+    execute(
+        """INSERT INTO property_invoices
+             (id, owner_id, property_id, lease_id, tenant_id, number, period_start,
+              period_end, due_date, amount_cents, currency, status, notes, issued_at,
+              created_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 45000, 'USD', 'paid', NULL, ?, ?, ?)""",
+        (
+            invoice_id,
+            owner_id,
+            property_id,
+            lease_id,
+            tenant_id,
+            "INV-2026-0001",
+            month_start.isoformat(),
+            month_end.isoformat(),
+            due,
+            f"{month_start.isoformat()}T08:00:00+00:00",
+            owner_id,
+            f"{month_start.isoformat()}T08:00:00+00:00",
+        ),
+    )
+
+    execute(
+        """INSERT INTO property_payments
+             (id, owner_id, property_id, lease_id, invoice_id, tenant_id, receipt_number,
+              amount_cents, currency, method, reference, received_at, notes, created_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 45000, 'USD', 'ECOCASH', ?, ?, ?, ?, ?)""",
+        (
+            new_id(),
+            owner_id,
+            property_id,
+            lease_id,
+            invoice_id,
+            tenant_id,
+            "RCPT-2026-0001",
+            "MP2601.0832.A12345",
+            f"{today.isoformat()}T09:20:00+00:00",
+            "Paid on the first, as agreed.",
+            owner_id,
+            f"{today.isoformat()}T09:25:00+00:00",
+        ),
+    )
+
+    execute(
+        """INSERT INTO property_checks
+             (id, owner_id, property_id, check_type, scheduled_for, conducted_at, rating,
+              findings, action_required, status, reported_at, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, 'routine', ?, ?, 'good', ?, NULL, 'completed', ?, ?, ?, ?)""",
+        (
+            new_id(),
+            owner_id,
+            property_id,
+            (today - timedelta(days=20)).isoformat(),
+            (today - timedelta(days=18)).isoformat(),
+            "Roof sound, gutters clear, no damp on the north wall. Tenant keeps the garden tidy.",
+            (today - timedelta(days=18)).isoformat(),
+            owner_id,
+            (today - timedelta(days=18)).isoformat(),
+            (today - timedelta(days=18)).isoformat(),
+        ),
+    )
+
+    execute(
+        """INSERT INTO property_checks
+             (id, owner_id, property_id, check_type, scheduled_for, status, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, 'quarterly', ?, 'scheduled', ?, ?, ?)""",
+        (
+            new_id(),
+            owner_id,
+            property_id,
+            (today + timedelta(days=70)).isoformat(),
+            owner_id,
+            now_iso(),
+            now_iso(),
+        ),
+    )
 
 
 def _create_project(

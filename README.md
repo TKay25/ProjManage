@@ -9,6 +9,20 @@ receipt in one auditable record.
 Built with **Flask + Jinja + vanilla JS** (Python modules in this root folder,
 templates in `templates/`, assets in `static/`).
 
+YaVaKa has two sign-in doors on one account record:
+
+- **YaVaKa Project Management** (`/login`) — the main system: the build, its
+  stages, funding, receipts and handover file.
+- **YaVaKa Property Management** (`/property/login`) — for the building once it
+  is finished, bought or inherited. Its **rental management** module is a bonus
+  to the main system: tenants, leases, rent invoices and numbered receipts, and
+  periodic property checks whose photos and video reach the owner on the system,
+  by email and over WhatsApp.
+
+A property-only account cannot open `/app`, and a build account cannot open
+`/property`; the staff role can open both. Settings can add the property door to
+an existing account.
+
 ---
 
 ## Why it exists
@@ -40,6 +54,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Money | Funding and expense ledger in integer US cents, stage tagging, category/method/reference, live balance preview, receipts, and manager-recorded payment tracking |
 | Documents | Receipts, statutory documents and site photos, image thumbnails, download, delete, access-checked file serving |
 | Agreements | Scope, terms, milestone payment schedule, on-screen signature capture, print/PDF view, void |
+| **Property Management** | A second sign-in door at `/property/login` for a building that is already standing. **Rental management is the bonus module inside it**: properties (optionally linked to the finished build), tenants, leases produced from the property and tenant with on-screen signature and a print view, rent invoices (one per lease per month, raised singly or for the whole portfolio), numbered rent receipts that settle or part-pay an invoice, arrears, and periodic property checks with findings, photos and video that are kept on the property and sent to the owner by email and WhatsApp. Accounts are portal-scoped: `/property` refuses a build-only account and `/app` refuses a property-only one |
 | Suppliers | Directory of Zimbabwean material suppliers with links out to their own catalogues |
 | WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), conversation history (newest 200 per thread), human takeover (pause/resume the assistant per conversation, with an Updates notification when the client replies while paused), in-app simulator |
 | PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons; a project can be saved as an explicit read-only offline copy that survives a signal drop |
@@ -101,7 +116,14 @@ $env:SEED_DEMO="true"; python app.py
 | --- | --- | --- |
 | Client | `client@yavaka.co.zw` | `YaVaKa2026!` |
 | Build manager | `manager@yavaka.co.zw` | `YaVaKa2026!` |
+| Property manager | `rentals@yavaka.co.zw` | `YaVaKa2026!` |
 | YaVaKa staff | `admin@yavaka.co.zw` | `YaVaKa2026!` |
+
+The client and build manager sign in at `/login` (Project Management). The
+property manager signs in at `/property/login`, and lands on a seeded portfolio:
+a let flat in Belvedere with a tenant, a signed lease, this month's rent invoiced
+and receipted, and one completed check plus the next one scheduled. The staff
+account can open both doors.
 
 Set `SEED_DEMO=false` to start with an empty workspace (the supplier directory is
 always seeded). On a fresh install with demo seeding enabled, a staff account is
@@ -205,7 +227,10 @@ routes_suppliers.py     In-app supplier directory
 routes_whatsapp.py      WhatsApp inbox, simulator, webhook
 routes_notifications.py Protected notification outbox dispatcher
 routes_reports.py       Portfolio report and printable project pack
-routes_settings.py      Profile, password, display preferences, backups
+routes_settings.py      Profile, password, display preferences, backups, add the property door
+routes_rentals.py       Property Management: properties, tenants, leases, rent invoices, receipts, checks
+portals.py              The two sign-in doors and who may open them
+rentals.py              Rental read models, reference numbers, lease terms, check delivery
 notifications.py        Email + WhatsApp outbox, retries and delivery claims
 observability.py        Request ids, Server-Timing, slow-query and error logging
 onboarding.py           First-run checklist derived from real activity
@@ -220,6 +245,7 @@ templates/              Jinja templates
   app/base.html         Workspace shell (sidebar, topbar, mobile tab bar)
   partials/             Header, footer, sidebar, flash, transaction row
   app/                  Dashboard, projects, money, documents, agreements, suppliers, WhatsApp, settings
+  property/             Property Management: dashboard, properties, tenants, leases, invoices, receipts
   invite.html           Public invitation landing page (sign in / register / accept)
   auth/                 Login, register
   errors/               Error page
@@ -238,6 +264,100 @@ static/img/seed/        Demo receipt images
 tests/test_app.py       Smoke and behaviour tests
 desktop/                Electron shell, build config and packaging notes
 ```
+
+---
+
+## Property Management and rental management
+
+Project Management is the main product: a build, its stages, funding and proof.
+Property Management is a second door for the building once it is standing, and
+**rental management is the bonus module that comes with it** — not a replacement
+for the project system and not a separate product line.
+
+The story it tells: when YaVaKa has finished managing the build (or a
+renovation, extension or fit-out), the same record keeps going. The tenant, the
+lease, the rent and a periodic look at the building all hang off the property,
+and the owner receives the check — findings, photos and video — on the system, by
+email and over WhatsApp.
+
+### The two doors
+
+| Door | Signs in at | Holds |
+| --- | --- | --- |
+| Project Management | `/login` | Builds, stages, funding, expenses, receipts, agreements, documents |
+| Property Management | `/property/login` | Properties, tenants, leases, rent invoices, rent receipts, property checks |
+
+- `users.portals` records which doors an account may open (`project`,
+  `property` or both). Staff accounts open both. Existing rows default to
+  `project`, which is what they were created for.
+- The wrong door refuses a correct password: a build account at
+  `/property/login` is told to use Project Management, and vice versa. A
+  signed-in account that only holds the other door gets a `403` on the URLs, so
+  a bookmarked link cannot cross workspaces.
+- `/app/settings` stays reachable from either side. It carries **Add Property
+  Management**, the deliberate bridge for a client who finishes a build without
+  wanting a second account.
+- Registration takes a `portal` value, so `/register?portal=property` creates a
+  property account from the property door.
+
+### What the rental module does
+
+| Task | Where |
+| --- | --- |
+| Add a property, optionally linked to the finished build | `/property/properties` |
+| Add a tenant to a property | Property page → Add a tenant |
+| Produce a lease, then sign it on screen | `/property/leases/new` → Sign this lease |
+| Raise one rent invoice, or the whole month across signed leases | `/property/invoices` |
+| Receipt a payment against an invoice (or on account) | `/property/payments` |
+| Record and send a periodic check with photos and video | Property page → Schedule a check → Complete the check |
+| See arrears, rent roll, collected and outstanding | `/property` |
+
+Rules the code enforces:
+
+- An invoice belongs to a **signed** lease, and `(lease_id, period_start)` is
+  unique, so "raise this month" cannot double-bill. The batch run skips leases
+  that already have that month.
+- The full amount received is recorded; the invoice becomes `part_paid` or
+  `paid` from the payments that point at it. A void invoice with payments
+  against it is refused.
+- Rent invoice (`INV-YYYY-NNNN`), rent receipt (`RCPT-YYYY-NNNN`), lease
+  (`LEASE-YYYY-NNNN`) and property (`PROP-YYYY-NNNN`) numbers are generated per
+  year and retried once if two writers collide, rather than a counter that a
+  restore would reset.
+- A lease stores the finished terms text, so editing the template later cannot
+  change a lease somebody already signed. The standard terms are a starting
+  point, not legal advice.
+- A tenant marked as moved out ends their signed lease and releases the property
+  back to available. Marking a property "under maintenance" survives the
+  automatic occupied/available sync.
+- Check photos and video reuse the attachment vault: bytes in the database row,
+  served only to an account that may open that property, and reachable from a
+  WhatsApp message through the same expiring `/d/<token>` link as a build file.
+
+### The assistant
+
+`detect_intent` now claims rental phrasing before the build intents, so "how
+much rent is due" is not read as the project balance and "show my invoices" in a
+property thread means rent. The intents are `rent_due`, `rent_arrears`,
+`rent_collected`, `rent_invoices`, `rent_receipt`, `tenants`, `leases` and
+`property_checks`.
+
+- The floating assistant names its door on every question (`data-portal` on the
+  widget), so an account that holds both doors gets a rental answer while
+  standing in `/property`.
+- A build-only account asking about rent is told where rental management lives
+  and offered Settings, rather than being shown an empty portfolio.
+- The public assistant explains the after-the-build story and links to the
+  property sign-in.
+- The WhatsApp bot answers the same questions from the owner's own rows in
+  English, Shona and Ndebele.
+
+### Tables
+
+`properties`, `property_tenants`, `property_leases`, `property_invoices`,
+`property_payments`, `property_checks`, plus `attachments.property_id` and
+`attachments.check_id`. SQLite migrations are versioned in `db.run_migrations`;
+Postgres picks the same columns up through `SCHEMA` and `POSTGRES_UPGRADES`.
 
 ---
 

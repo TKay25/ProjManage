@@ -1,0 +1,251 @@
+{% extends "app/base.html" %}
+{% block title %}Property Management · YaVaKa{% endblock %}
+
+{% block page_title %}Property Management{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    Your properties, tenants and rent
+    <span class="page-tagline">When the build is finished, this is where it keeps earning.</span>
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('rentals.properties') }}">{{ icon('plus', 15) }} Add a property</a>
+{% endblock %}
+
+{% block content %}
+<div class="card module-note">
+  <div class="module-note-body">
+    <span class="module-note-icon">{{ icon('sparkles', 20) }}</span>
+    <div>
+      <p class="module-note-title">Rental management is a bonus to the main system</p>
+      <p class="module-note-text">
+        Project Management runs the build: the stages, the funding and the receipts.
+        Property Management picks the building up at handover — tenants, leases and
+        rent — and adds the periodic checks that keep it standing. Same record,
+        same login, second door.
+      </p>
+    </div>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('rentals.properties') }}">{{ icon('home', 14) }} Properties</a>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-top">
+      <span class="kpi-label">Properties</span>
+      <span class="kpi-icon">{{ icon('home', 17) }}</span>
+    </div>
+    <p class="kpi-value">{{ totals.properties }}</p>
+    <p class="kpi-sub">{{ totals.occupied }} occupied · {{ totals.vacant }} available</p>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-top">
+      <span class="kpi-label">Rent roll</span>
+      <span class="kpi-icon">{{ icon('trending-up', 17) }}</span>
+    </div>
+    <p class="kpi-value">{{ totals.rent_roll|money }}</p>
+    <p class="kpi-sub">per month on signed leases</p>
+  </div>
+
+  <a class="kpi card-hover" href="{{ url_for('rentals.payments') }}">
+    <div class="kpi-top">
+      <span class="kpi-label">Collected</span>
+      <span class="kpi-icon kpi-icon-positive">{{ icon('wallet', 17) }}</span>
+    </div>
+    <p class="kpi-value">{{ totals.collected|money }}</p>
+    <p class="kpi-sub">{{ totals.month_label }}</p>
+  </a>
+
+  <a class="kpi card-hover" href="{{ url_for('rentals.invoices') }}">
+    <div class="kpi-top">
+      <span class="kpi-label">Outstanding</span>
+      <span class="kpi-icon {{ 'kpi-icon-negative' if totals.outstanding else '' }}">{{ icon('receipt', 17) }}</span>
+    </div>
+    <p class="kpi-value {{ 'is-negative' if totals.outstanding }}">{{ totals.outstanding|money }}</p>
+    <p class="kpi-sub">open invoices and part payments</p>
+  </a>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-main">
+    <div class="card">
+      <div class="card-head">
+        <h2>Your properties</h2>
+        <a class="link-quiet" href="{{ url_for('rentals.properties') }}">All properties {{ icon('arrow-right', 13) }}</a>
+      </div>
+      {% if properties %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Property</th>
+                <th scope="col">Tenant</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="align-right">Open balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in properties %}
+                <tr>
+                  <td>
+                    <a href="{{ url_for('rentals.property_detail', property_id=item.id) }}">{{ item.name }}</a>
+                    <span class="mini-meta">{{ item.code }} · {{ item.suburb or item.city }}</span>
+                  </td>
+                  <td>{{ item.current_tenant or '—' }}</td>
+                  <td>{{ badge(item.status) }}</td>
+                  <td class="align-right {{ 'neg' if item.open_balance_cents }}">{{ item.open_balance_cents|money }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">
+          <span class="empty-icon">{{ icon('home', 26) }}</span>
+          <h3>No properties yet</h3>
+          <p>Add the building you rent out — a finished YaVaKa build, an inherited house or a buy-to-let.</p>
+          <a class="btn btn-primary" href="{{ url_for('rentals.properties') }}">{{ icon('plus', 16) }} Add a property</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Money to collect</h2>
+        <a class="link-quiet" href="{{ url_for('rentals.invoices') }}">Rent invoices {{ icon('arrow-right', 13) }}</a>
+      </div>
+      {% if arrears %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Property</th>
+                <th scope="col">Tenant</th>
+                <th scope="col">Due</th>
+                <th scope="col" class="align-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in arrears %}
+                <tr>
+                  <td>{{ item.property_name }}<span class="mini-meta">{{ item.number }}</span></td>
+                  <td>{{ item.tenant_name or '—' }}</td>
+                  <td>{{ item.due_date|date }}</td>
+                  <td class="align-right neg">{{ item.balance_cents|money }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted small" style="padding:0 18px 18px">Nothing is overdue. Every issued invoice is paid or not yet due.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Recent rent receipts</h2>
+        <a class="link-quiet" href="{{ url_for('rentals.payments') }}">All receipts {{ icon('arrow-right', 13) }}</a>
+      </div>
+      {% if recent_payments %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Receipt</th>
+                <th scope="col">Property</th>
+                <th scope="col">Tenant</th>
+                <th scope="col">Received</th>
+                <th scope="col" class="align-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in recent_payments %}
+                <tr>
+                  <td><a href="{{ url_for('rentals.payment_receipt', payment_id=item.id) }}">{{ item.receipt_number }}</a></td>
+                  <td>{{ item.property_name }}</td>
+                  <td>{{ item.tenant_name or '—' }}</td>
+                  <td>{{ item.received_at|date }}</td>
+                  <td class="align-right">{{ item.amount_cents|money }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted small" style="padding:0 18px 18px">No rent has been receipted yet. Record the first payment from Receipts.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <aside class="detail-side">
+    <div class="card">
+      <div class="card-head">
+        <h2>Checks due</h2>
+        <a class="link-quiet" href="{{ url_for('rentals.properties') }}">Schedule</a>
+      </div>
+      {% if checks %}
+        <ul class="side-list">
+          {% for item in checks %}
+            <li class="side-row">
+              <span class="side-icon">{{ icon('calendar', 15) }}</span>
+              <span>
+                <a href="{{ url_for('rentals.property_detail', property_id=item.property_id) }}">{{ item.property_name }}</a>
+                <span class="mini-meta">{{ item.check_type|replace('_', ' ')|title }} · {{ item.scheduled_for|date if item.scheduled_for else 'No date' }}</span>
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted small" style="padding:0 18px 18px">No checks booked. A quarterly look at the building is what keeps small repairs small.</p>
+      {% endif %}
+    </div>
+
+    {% if recent_checks %}
+      <div class="card">
+        <div class="card-head"><h2>Latest checks</h2></div>
+        <ul class="side-list">
+          {% for item in recent_checks %}
+            <li class="side-row">
+              <span class="side-icon">{{ icon('camera', 15) }}</span>
+              <span>
+                <a href="{{ url_for('rentals.property_detail', property_id=item.property_id) }}">{{ item.property_name }}</a>
+                <span class="mini-meta">{{ item.conducted_at|date if item.conducted_at else item.created_at|date }} · {{ item.media_count }} file{{ '' if item.media_count == 1 else 's' }}</span>
+              </span>
+              {{ badge(item.rating) }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-head"><h2>Leases to sign</h2></div>
+      {% if unsigned_leases %}
+        <ul class="side-list">
+          {% for item in unsigned_leases %}
+            <li class="side-row">
+              <span class="side-icon">{{ icon('pen', 15) }}</span>
+              <span>
+                <a href="{{ url_for('rentals.lease_detail', lease_id=item.id) }}">{{ item.property_name }}</a>
+                <span class="mini-meta">{{ item.tenant_name }} · {{ item.reference }}</span>
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted small" style="padding:0 18px 18px">No lease is waiting for a signature.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Ask the assistant</h2></div>
+      <div class="stack-sm" style="padding:0 18px 18px">
+        <p class="muted small">The assistant reads this portfolio back to you. Try:</p>
+        <p class="mini-meta">“Which tenants are behind on rent?”<br />“How much did I collect this month?”<br />“When is the next property check?”</p>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

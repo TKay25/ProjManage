@@ -9,6 +9,7 @@ from flask import abort, current_app, g, redirect, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from db import execute, log_event, query
+import portals
 
 CSRF_EXEMPT_ENDPOINTS = {
     # Server-to-server calls that carry their own shared secret instead of a
@@ -33,6 +34,7 @@ AUTH_PATHS = (
 
 def init_app(app):
     app.before_request(load_user)
+    app.before_request(enforce_portal)
     app.before_request(verify_csrf)
 
 
@@ -45,7 +47,7 @@ def load_user():
     user = query(
         """SELECT id, name, email, role, phone, country, avatar_color,
                   density, page_size, session_epoch, onboarded_at,
-                  totp_enabled, palette, created_at
+                  totp_enabled, palette, portals, created_at
            FROM users WHERE id = ?""",
         (user_id,),
         one=True,
@@ -65,6 +67,35 @@ def load_user():
         return
 
     g.user = user
+
+
+def enforce_portal():
+    """Keeps the two doors honest even when a URL is typed directly.
+
+    The sign-in pages are the front door, but a bookmark or a shared link can
+    still arrive at the other workspace. Settings stays reachable from either
+    side: it is where an account changes its password and adds the other door.
+    """
+    user = getattr(g, "user", None)
+    if not user:
+        return
+
+    path = request.path or ""
+    # The sign-in page itself must stay reachable: a signed-in account that
+    # follows the other door's link is redirected by the view, not refused here.
+    if path == "/property/login":
+        return
+
+    if path == "/property" or path.startswith("/property/"):
+        if not portals.has(user, portals.PROPERTY):
+            abort(403)
+        return
+
+    if path == "/app" or path.startswith("/app/"):
+        if path.startswith("/app/settings"):
+            return
+        if not portals.has(user, portals.PROJECT):
+            abort(403)
 
 
 def csrf_token() -> str:
@@ -98,6 +129,31 @@ def login_required(view):
     return wrapped
 
 
+def portal_required(portal: str):
+    """Guards one of the two sign-in doors.
+
+    A signed-out visitor is sent to that door's own sign-in page, so someone
+    opening a rental link gets the Property Management form rather than the
+    build one. A signed-in account that only holds the other door is refused:
+    the two workspaces are separate on purpose.
+    """
+
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if g.user is None:
+                return redirect(
+                    url_for(portals.entry(portal)["login_endpoint"], next=request.full_path.rstrip("?"))
+                )
+            if not portals.has(g.user, portal):
+                abort(403)
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
 def admin_required(view):
     """YaVaKa staff only — the admin portal manages every workspace."""
 
@@ -112,13 +168,16 @@ def admin_required(view):
     return wrapped
 
 
-def login_user(user_id: str):
+def login_user(user_id: str, portal: str = portals.PROJECT):
     row = query("SELECT session_epoch FROM users WHERE id = ?", (user_id,), one=True)
     session.clear()
     session["uid"] = user_id
     session.permanent = True
     session["csrf"] = secrets.token_urlsafe(32)
     session["epoch"] = int((row["session_epoch"] if row else 0) or 0)
+    # Remember the door, so the sidebar and post-login redirects land in the
+    # workspace the person actually signed in to.
+    session["portal"] = (portal or portals.PROJECT).strip().lower()
 
 
 def logout_user():
@@ -317,6 +376,45 @@ def require_project(project_id: str):
     if not project or not can_manage_project(g.user, project):
         abort(404)
     return project
+
+
+def can_manage_property(user, rental_property) -> bool:
+    if not user or not rental_property:
+        return False
+    if user["role"] == "admin":
+        return True
+    if not portals.has(user, portals.PROPERTY):
+        return False
+    return rental_property["owner_id"] == user["id"]
+
+
+def accessible_properties(user):
+    """Properties this account may see, memoised for the life of one request."""
+    if not user or not portals.has(user, portals.PROPERTY):
+        return []
+
+    cached = getattr(g, "_accessible_properties", None)
+    if cached is not None:
+        return cached
+
+    if user["role"] == "admin":
+        properties = query("SELECT * FROM properties ORDER BY created_at DESC")
+    else:
+        properties = query(
+            "SELECT * FROM properties WHERE owner_id = ? ORDER BY created_at DESC",
+            (user["id"],),
+        )
+
+    g._accessible_properties = properties
+    return properties
+
+
+def require_property(property_id: str):
+    """Loads a rental property this account may access, or aborts 404."""
+    rental_property = query("SELECT * FROM properties WHERE id = ?", (property_id,), one=True)
+    if not rental_property or not can_manage_property(g.user, rental_property):
+        abort(404)
+    return rental_property
 
 
 def initials(name: str) -> str:

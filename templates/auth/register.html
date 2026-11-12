@@ -4,6 +4,7 @@
 {% block body_class %}auth-body{% endblock %}
 {% block chrome %}{% endblock %}
 {% block footer %}{% endblock %}
+{% set portal_key = values.get('portal', 'project') %}
 
 {% block content %}
 <section class="auth">
@@ -11,35 +12,65 @@
     <aside class="auth-aside">
       <a class="auth-brand" href="/">
         {{ logo_mark(44) }}
-        <span><strong>YaVaKa</strong><small>Build from anywhere</small></span>
+        <span><strong>YaVaKa</strong><small>{{ portal.tagline }}</small></span>
       </a>
 
       <div class="auth-quote">
-        <p class="eyebrow eyebrow-light">Built for the diaspora</p>
-        <blockquote class="auth-quote-statement">From first land check to front-door keys, keep the whole build in view.</blockquote>
-        <p class="auth-quote-sub">
-          Bring your family, build manager and project records together around
-          one clear plan.
-        </p>
+        {% if portal_key == 'property' %}
+          <p class="eyebrow eyebrow-light">After the build</p>
+          <blockquote class="auth-quote-statement">Manage the rent from the same record that built the house.</blockquote>
+          <p class="auth-quote-sub">
+            Tenants, leases, rent invoices and receipts, plus periodic property
+            checks with photos and video that reach you on the system and on WhatsApp.
+          </p>
+        {% else %}
+          <p class="eyebrow eyebrow-light">Built for the diaspora</p>
+          <blockquote class="auth-quote-statement">From first land check to front-door keys, keep the whole build in view.</blockquote>
+          <p class="auth-quote-sub">
+            Bring your family, build manager and project records together around
+            one clear plan.
+          </p>
+        {% endif %}
       </div>
 
       <ul class="auth-points">
-        <li>{{ icon('shield', 17) }} Council &amp; statutory stage gates</li>
-        <li>{{ icon('wallet', 17) }} USD funding vs spend, with receipts</li>
-        <li>{{ icon('message', 17) }} Progress and balance updates by email &amp; WhatsApp</li>
-        <li>{{ icon('folder', 17) }} Agreement, plans and handover file</li>
+        {% if portal_key == 'property' %}
+          <li>{{ icon('users', 17) }} Tenants and signed leases</li>
+          <li>{{ icon('receipt', 17) }} Rent invoices and receipts</li>
+          <li>{{ icon('camera', 17) }} Periodic checks with photos and video</li>
+          <li>{{ icon('message', 17) }} Updates by email &amp; WhatsApp</li>
+        {% else %}
+          <li>{{ icon('shield', 17) }} Council &amp; statutory stage gates</li>
+          <li>{{ icon('wallet', 17) }} USD funding vs spend, with receipts</li>
+          <li>{{ icon('message', 17) }} Progress and balance updates by email &amp; WhatsApp</li>
+          <li>{{ icon('folder', 17) }} Agreement, plans and handover file</li>
+        {% endif %}
       </ul>
     </aside>
 
     <div class="auth-card">
       <div class="auth-head">
         <p class="eyebrow">Create your account</p>
-        <h1>Start your build file</h1>
-        <p class="muted">Start a clear project record. Invite your manager—or ask YaVaKa to manage the build on the ground.</p>
+        {% if portal_key == 'property' %}
+          <h1>Start your property file</h1>
+          <p class="muted">Add the property, the tenant and the lease. Rental management is the bonus module inside Property Management.</p>
+        {% else %}
+          <h1>Start your build file</h1>
+          <p class="muted">Start a clear project record. Invite your manager—or ask YaVaKa to manage the build on the ground.</p>
+        {% endif %}
       </div>
 
       <form class="form" method="post" action="{{ url_for('auth.register_post') }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <label class="field">
+          <span class="field-label">Which workspace is this account for?</span>
+          <select class="select" name="portal">
+            <option value="project" {% if portal_key != 'property' %}selected{% endif %}>Project Management — I am building</option>
+            <option value="property" {% if portal_key == 'property' %}selected{% endif %}>Property Management — I rent out property</option>
+          </select>
+          <span class="field-hint">The two sign in separately. One email can hold an account on each.</span>
+        </label>
 
         {% if error %}
           <div class="form-error">{{ icon('alert', 17) }}<span>{{ error }}</span></div>
@@ -72,10 +103,17 @@
           </label>
           <label class="field">
             <span class="field-label">I am a…</span>
-            <select class="select" name="role">
-              <option value="client" {% if values.get('role') != 'manager' %}selected{% endif %}>Client / project owner</option>
-              <option value="manager" {% if values.get('role') == 'manager' %}selected{% endif %}>Build manager / contractor</option>
-            </select>
+            {% if portal_key == 'property' %}
+              <input type="hidden" name="role" value="client" />
+              <select class="select" name="property_role_display" disabled>
+                <option selected>Landlord / property owner</option>
+              </select>
+            {% else %}
+              <select class="select" name="role">
+                <option value="client" {% if values.get('role') != 'manager' %}selected{% endif %}>Client / project owner</option>
+                <option value="manager" {% if values.get('role') == 'manager' %}selected{% endif %}>Build manager / contractor</option>
+              </select>
+            {% endif %}
           </label>
         </div>
 
@@ -87,14 +125,19 @@
 
         <label class="checkbox">
           <input type="checkbox" name="terms" value="yes" required />
-          <span>I understand YaVaKa is a project management tool, not a bank, lender or legal adviser.</span>
+          <span>I understand YaVaKa is a {{ 'property and rental management' if portal_key == 'property' else 'project management' }} tool, not a bank, lender or legal adviser.</span>
         </label>
 
-        <button class="btn btn-primary btn-block btn-lg" type="submit">Create workspace {{ icon('arrow-right', 17) }}</button>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">
+          {{ 'Create property workspace' if portal_key == 'property' else 'Create workspace' }} {{ icon('arrow-right', 17) }}
+        </button>
       </form>
 
       <div class="auth-foot">
-        <p>Already have an account? <a href="{{ url_for('auth.login') }}" data-modal-open="modal-login">Sign in</a></p>
+        <p>Already have an account?
+          <a href="{{ url_for('auth.property_login' if portal_key == 'property' else 'auth.login') }}"
+             data-modal-open="modal-login">Sign in</a>
+        </p>
       </div>
     </div>
   </div>

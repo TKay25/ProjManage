@@ -9,6 +9,7 @@
       <a class="site-nav-link" href="/#stages" data-spy="stages">Build stages</a>
       <a class="site-nav-link" href="/#money" data-spy="money">Money</a>
       <a class="site-nav-link" href="/#whatsapp" data-spy="whatsapp">WhatsApp</a>
+      <a class="site-nav-link" href="/#property" data-spy="property">Property Management</a>
       <a class="site-nav-link {% if current_path == '/suppliers' %}is-active{% endif %}"
          href="/suppliers"
          {% if current_path == '/suppliers' %}aria-current="page"{% endif %}>Suppliers</a>
@@ -16,7 +17,7 @@
 
     <div class="header-actions">
       {% if user %}
-        <a class="btn btn-primary btn-sm" href="/app">
+        <a class="btn btn-primary btn-sm" href="{{ home_path }}">
           Open dashboard {{ icon('arrow-right', 15) }}
         </a>
       {% else %}
@@ -36,11 +37,12 @@
       <a href="/#stages" data-spy="stages">Build stages</a>
       <a href="/#money" data-spy="money">Money</a>
       <a href="/#whatsapp" data-spy="whatsapp">WhatsApp</a>
+      <a href="/#property" data-spy="property">Property Management</a>
       <a href="/suppliers">Suppliers</a>
     </nav>
     <div class="site-menu-actions">
       {% if user %}
-        <a class="btn btn-primary btn-block" href="/app">Open dashboard</a>
+        <a class="btn btn-primary btn-block" href="{{ home_path }}">Open dashboard</a>
       {% else %}
         <a class="btn btn-outline btn-block" href="/login" data-modal-open="modal-login">Sign in</a>
         <a class="btn btn-primary btn-block" href="/register" data-modal-open="modal-register">Get started</a>

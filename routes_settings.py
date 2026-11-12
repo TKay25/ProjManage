@@ -24,6 +24,7 @@ from flask import (
 )
 
 import auth
+import portals
 import team
 import totp
 from auth import accessible_projects, admin_required, login_required
@@ -67,6 +68,33 @@ def index():
         team_invites=[] if is_manager else team.pending_for_client(g.user["id"]),
         invite_url=team.invite_url,
     )
+
+
+@bp.post("/app/settings/portals")
+@login_required
+def add_portal():
+    """Opens the Property Management door on an existing account.
+
+    The two products sign in separately, so this is the one deliberate bridge:
+    a client who finishes a build can add the property workspace without
+    creating a second account.
+    """
+    key = portals.normalise_key(request.form.get("portal"))
+    if key != portals.PROPERTY:
+        flash("That workspace is already part of every account.", "error")
+        return redirect(url_for("settings.index"))
+
+    if key in portals.for_user(g.user):
+        return redirect("/property")
+
+    portals.grant(g.user["id"], key)
+    auth.audit_auth("portal.added", portals.PROPERTY)
+    flash(
+        "Property Management added. Rental management comes with it — tenants, "
+        "leases, rent and periodic property checks.",
+        "success",
+    )
+    return redirect("/property")
 
 
 @bp.post("/app/settings/profile")

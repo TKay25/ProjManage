@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS users (
   totp_secret TEXT,
   totp_enabled INTEGER NOT NULL DEFAULT 0,
   palette TEXT NOT NULL DEFAULT 'forest',
+  -- Which sign-in doors this account may open: 'project', 'property' or both.
+  -- Property Management is where the rental module lives.
+  portals TEXT NOT NULL DEFAULT 'project',
   created_at TEXT NOT NULL
 );
 
@@ -105,7 +108,11 @@ CREATE TABLE IF NOT EXISTS attachments (
   stage_key TEXT,
   created_at TEXT NOT NULL,
   data BLOB,
-  category TEXT
+  category TEXT,
+  -- Property media (a check's photos and video) reuses this vault, but hangs
+  -- off a rental property rather than a build.
+  property_id TEXT,
+  check_id TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_att_project ON attachments(project_id);
 CREATE INDEX IF NOT EXISTS idx_att_tx ON attachments(transaction_id);
@@ -128,6 +135,144 @@ CREATE TABLE IF NOT EXISTS agreements (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_agreements_project ON agreements(project_id);
+
+-- ---------------------------------------------------------------------
+-- Property Management and its rental module
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS properties (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  address TEXT,
+  suburb TEXT,
+  city TEXT NOT NULL DEFAULT 'Harare',
+  property_type TEXT NOT NULL DEFAULT 'house',
+  bedrooms INTEGER NOT NULL DEFAULT 2,
+  bathrooms INTEGER NOT NULL DEFAULT 1,
+  rent_cents INTEGER NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  deposit_months INTEGER NOT NULL DEFAULT 1,
+  billing_day INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'available',
+  -- A completed build can become the rental property, which is the point where
+  -- the main system hands over to the bonus module.
+  project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_properties_owner ON properties(owner_id);
+CREATE INDEX IF NOT EXISTS idx_properties_project ON properties(project_id);
+
+CREATE TABLE IF NOT EXISTS property_tenants (
+  id TEXT PRIMARY KEY,
+  property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  national_id TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  moved_in TEXT,
+  moved_out TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_property_tenants_property ON property_tenants(property_id);
+CREATE INDEX IF NOT EXISTS idx_property_tenants_owner ON property_tenants(owner_id);
+
+CREATE TABLE IF NOT EXISTS property_leases (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  tenant_id TEXT NOT NULL REFERENCES property_tenants(id) ON DELETE CASCADE,
+  reference TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  start_date TEXT NOT NULL,
+  end_date TEXT,
+  rent_cents INTEGER NOT NULL,
+  deposit_cents INTEGER NOT NULL DEFAULT 0,
+  billing_day INTEGER NOT NULL DEFAULT 1,
+  notice_days INTEGER NOT NULL DEFAULT 30,
+  terms TEXT NOT NULL,
+  tenant_name TEXT NOT NULL,
+  tenant_signature TEXT,
+  signed_at TEXT,
+  status TEXT NOT NULL DEFAULT 'awaiting_signature',
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_property_leases_property ON property_leases(property_id);
+CREATE INDEX IF NOT EXISTS idx_property_leases_owner ON property_leases(owner_id);
+CREATE INDEX IF NOT EXISTS idx_property_leases_status ON property_leases(owner_id, status);
+
+CREATE TABLE IF NOT EXISTS property_invoices (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  lease_id TEXT REFERENCES property_leases(id) ON DELETE SET NULL,
+  tenant_id TEXT REFERENCES property_tenants(id) ON DELETE SET NULL,
+  number TEXT NOT NULL UNIQUE,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  due_date TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  status TEXT NOT NULL DEFAULT 'issued',
+  notes TEXT,
+  issued_at TEXT,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_property_invoices_owner ON property_invoices(owner_id, status);
+CREATE INDEX IF NOT EXISTS idx_property_invoices_property ON property_invoices(property_id);
+-- One rent invoice per lease per month, so "raise this month" cannot double-bill.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_property_invoices_period
+  ON property_invoices(lease_id, period_start);
+
+CREATE TABLE IF NOT EXISTS property_payments (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  lease_id TEXT REFERENCES property_leases(id) ON DELETE SET NULL,
+  invoice_id TEXT REFERENCES property_invoices(id) ON DELETE SET NULL,
+  tenant_id TEXT REFERENCES property_tenants(id) ON DELETE SET NULL,
+  receipt_number TEXT NOT NULL UNIQUE,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  method TEXT NOT NULL DEFAULT 'ECOCASH',
+  reference TEXT,
+  received_at TEXT NOT NULL,
+  notes TEXT,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_property_payments_owner ON property_payments(owner_id, received_at);
+CREATE INDEX IF NOT EXISTS idx_property_payments_invoice ON property_payments(invoice_id);
+
+CREATE TABLE IF NOT EXISTS property_checks (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  check_type TEXT NOT NULL DEFAULT 'routine',
+  scheduled_for TEXT,
+  conducted_at TEXT,
+  rating TEXT,
+  findings TEXT,
+  action_required TEXT,
+  status TEXT NOT NULL DEFAULT 'scheduled',
+  reported_at TEXT,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_property_checks_property
+  ON property_checks(property_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_property_checks_owner
+  ON property_checks(owner_id, status);
 
 CREATE TABLE IF NOT EXISTS suppliers (
   id TEXT PRIMARY KEY,
@@ -302,6 +447,8 @@ ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS file_url TEXT;
 ALTER TABLE notification_outbox ADD COLUMN IF NOT EXISTS file_name TEXT;
 ALTER TABLE attachments ADD COLUMN IF NOT EXISTS data BYTEA;
 ALTER TABLE attachments ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE attachments ADD COLUMN IF NOT EXISTS property_id TEXT;
+ALTER TABLE attachments ADD COLUMN IF NOT EXISTS check_id TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_at TEXT;
 ALTER TABLE whatsapp_contacts ADD COLUMN IF NOT EXISTS handoff_by TEXT REFERENCES users(id);
@@ -311,6 +458,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS palette TEXT NOT NULL DEFAULT 'forest';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS portals TEXT NOT NULL DEFAULT 'project';
 -- The random-id duplicates came from the old seeding; collapse them if an
 -- existing SQLite database was copied across by tools/migrate_to_postgres.py.
 DELETE FROM suppliers a USING suppliers b
@@ -872,6 +1020,27 @@ def run_migrations(connection):
             connection.execute("ALTER TABLE attachments ADD COLUMN category TEXT")
         connection.execute("PRAGMA user_version = 21")
 
+    if version < 22:
+        # Property Management signs in through its own door and carries the
+        # rental module. Existing accounts keep Project Management only, which
+        # is what they were created for.
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
+        if "portals" not in columns:
+            connection.execute(
+                "ALTER TABLE users ADD COLUMN portals TEXT NOT NULL DEFAULT 'project'"
+            )
+        connection.execute("PRAGMA user_version = 22")
+
+    if version < 23:
+        # A property check (the periodic look at a rented building) files its
+        # photos and video against the property, not a build.
+        existing = {row[1] for row in connection.execute("PRAGMA table_info(attachments)")}
+        if "property_id" not in existing:
+            connection.execute("ALTER TABLE attachments ADD COLUMN property_id TEXT")
+        if "check_id" not in existing:
+            connection.execute("ALTER TABLE attachments ADD COLUMN check_id TEXT")
+        connection.execute("PRAGMA user_version = 23")
+
     # Always run: adopt the current prefix. Rewriting only old-prefix rows keeps
     # this safe to repeat, and catches codes that arrive from a restored backup.
     connection.execute(
@@ -952,6 +1121,12 @@ DUMP_ORDER = [
     "users",
     "workspaces",
     "projects",
+    "properties",
+    "property_tenants",
+    "property_leases",
+    "property_invoices",
+    "property_payments",
+    "property_checks",
     "stages",
     "transactions",
     "attachments",

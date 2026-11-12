@@ -31,6 +31,7 @@ from money import (
 from paging import page_list
 from queries import attention_counts
 import observability
+import portals
 import project_kinds
 import storage
 import updates
@@ -46,6 +47,7 @@ from stages import (
     stage_by_key,
     stage_name,
 )
+from whatsapp import display_phone
 from ui import badge, brand, icon, logo_mark, progress_bar, progress_ring, wa_format
 from workspaces import workspaces_for
 
@@ -62,6 +64,17 @@ NAV_ITEMS = [
     {"key": "suppliers", "href": "/app/suppliers", "label": "Suppliers", "icon": "store"},
     {"key": "whatsapp", "href": "/app/whatsapp", "label": "WhatsApp", "icon": "message"},
     {"key": "settings", "href": "/app/settings", "label": "Settings", "icon": "settings"},
+]
+
+# The Property Management door. Rental management is the bonus module inside it,
+# so it gets the first-class links; builds stay behind their own door.
+PROPERTY_NAV_ITEMS = [
+    {"key": "property_dashboard", "href": "/property", "label": "Dashboard", "icon": "dashboard"},
+    {"key": "properties", "href": "/property/properties", "label": "Properties", "icon": "home"},
+    {"key": "tenants", "href": "/property/tenants", "label": "Tenants", "icon": "users"},
+    {"key": "leases", "href": "/property/leases", "label": "Leases", "icon": "pen"},
+    {"key": "rent_invoices", "href": "/property/invoices", "label": "Rent invoices", "icon": "receipt"},
+    {"key": "rent_payments", "href": "/property/payments", "label": "Receipts", "icon": "wallet"},
 ]
 
 
@@ -240,6 +253,7 @@ def create_app(config_object=Config):
     from routes_notifications import bp as notifications_bp
     from routes_projects import bp as projects_bp
     from routes_public import bp as public_bp
+    from routes_rentals import bp as rentals_bp
     from routes_reports import bp as reports_bp
     from routes_search import bp as search_bp
     from routes_settings import bp as settings_bp
@@ -255,6 +269,7 @@ def create_app(config_object=Config):
         attention_bp,
         projects_bp,
         money_bp,
+        rentals_bp,
         notifications_bp,
         updates_bp,
         documents_bp,
@@ -293,6 +308,7 @@ def create_app(config_object=Config):
         progress_bar=progress_bar,
         progress_ring=progress_ring,
         nav_items=NAV_ITEMS,
+        portal_catalogue=portals.PORTALS,
         project_kinds=project_kinds.PROJECT_KINDS,
         kind_label=project_kinds.kind_label,
         kind_noun=project_kinds.kind_noun,
@@ -341,11 +357,14 @@ def create_app(config_object=Config):
         percent=percent,
         initials=auth.initials,
         wa=wa_format,
+        phone=display_phone,
     )
 
     @app.context_processor
     def inject_globals():
         user = getattr(g, "user", None)
+        current_portal = portals.current_from_path(request.path)
+        portal_switch = portals.other_than(user, current_portal) if user else None
         attention = (
             attention_counts([project["id"] for project in auth.accessible_projects(user)])
             if user
@@ -358,6 +377,18 @@ def create_app(config_object=Config):
         recent_updates = updates.feed(user["id"], limit=6) if user else []
         return {            "user": user,
             "current_path": request.path,
+            # Which of the two doors this page belongs to. The sidebar, the
+            # tab bar and the topbar brand all read it, so the workspace never
+            # shows the other product's links.
+            "current_portal": current_portal,
+            "current_portal_meta": portals.entry(current_portal),
+            "portal_switch": portal_switch,
+            "user_portals": portals.for_user(user),
+            # Where a signed-in person lands: a property-only account must not
+            # be handed a build dashboard link it cannot open.
+            "home_path": portals.home_path(portals.default_for(user)) if user else "/app",
+            "property_nav_items": PROPERTY_NAV_ITEMS,
+            "property_tab_items": [item for item in PROPERTY_NAV_ITEMS if item["key"] in {"property_dashboard", "properties", "rent_invoices"}],
             # Copy addresses whoever is signed in: a client with a manager reads
             # about what they receive, everyone else about what they record.
             "runs_build": auth.runs_build(user),

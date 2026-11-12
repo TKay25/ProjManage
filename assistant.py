@@ -11,7 +11,9 @@ phrase works in a chat it works in the window, and vice versa.
 
 from auth import accessible_projects, runs_build
 from db import query
+import portals
 import queries
+import rentals
 import updates
 from whatsapp import detect_intent
 
@@ -29,10 +31,40 @@ MANAGER_SUGGESTIONS = (
     "How do I take over a chat?",
 )
 
+# Rental management is the bonus module inside Property Management, so an
+# account standing in that workspace is asked about rent, not about stages.
+PROPERTY_SUGGESTIONS = (
+    "What rent is due?",
+    "Which tenants are behind?",
+    "Show my leases",
+    "When is the next property check?",
+)
+
+
+def property_context(user) -> bool:
+    """True when the person is working in the property workspace."""
+    if not user:
+        return False
+    try:
+        from flask import g, request
+
+        # The window names its door on every question, which is the only signal
+        # that survives the POST to /api/assistant/ask.
+        declared = getattr(g, "assistant_portal", None)
+        if declared:
+            return declared == portals.PROPERTY
+        if request.path.startswith("/property"):
+            return True
+    except RuntimeError:
+        pass
+    return portals.for_user(user) == [portals.PROPERTY]
+
 
 def suggestions_for(user) -> tuple:
     if not user:
         return PUBLIC_SUGGESTIONS
+    if property_context(user):
+        return PROPERTY_SUGGESTIONS
     return MANAGER_SUGGESTIONS if runs_build(user) else SUGGESTIONS
 
 
@@ -49,6 +81,14 @@ def _projects(user):
 
 
 def _help(user) -> dict:
+    if property_context(user):
+        return _reply(
+            "I can read your rental portfolio back to you. Ask about rent due, tenants, "
+            "leases, receipts or the next property check. Anything that needs a person "
+            "is better asked of your property manager.",
+            [("Open the property dashboard", "/property")],
+            PROPERTY_SUGGESTIONS,
+        )
     if runs_build(user):
         body = (
             "I can read your portfolio back to you. Ask about a balance, a stage, "
@@ -65,6 +105,9 @@ def _help(user) -> dict:
 
 
 def _balance(user) -> dict:
+    if property_context(user):
+        return _rent_due(user)
+
     projects = _projects(user)
     if not projects:
         return _reply(
@@ -263,12 +306,227 @@ def _update(user) -> dict:
 
 
 def _fallback(user) -> dict:
+    if property_context(user):
+        return _reply(
+            "I did not follow that one. In this workspace I can answer questions about "
+            "rent due, tenants, leases, receipts and property checks — anything else is "
+            "better asked of your property manager.",
+            [("Open the property dashboard", "/property")],
+            suggestions_for(user),
+        )
     return _reply(
         "I did not follow that one. I can answer questions about a balance, a stage, "
         "documents, pending approvals or updates -- anything else is better asked of "
         "your build manager.",
         [("Open the dashboard", "/app")],
         suggestions_for(user),
+    )
+
+
+# ----------------------------------------------------------------------
+# Rental management (the bonus module inside Property Management)
+# ----------------------------------------------------------------------
+
+
+def _rental_scope(user):
+    return None if user["role"] == "admin" else user["id"]
+
+
+def _rent_not_enabled(user) -> dict:
+    return _reply(
+        "Rental management is the bonus module inside Property Management, and this "
+        "account signs in to Project Management. Add the Property Management door in "
+        "Settings, then sign in there to work with tenants, leases and rent.",
+        [("Open settings", "/app/settings"), ("Property Management sign-in", "/property/login")],
+        suggestions_for(user),
+    )
+
+
+def _rent_due(user) -> dict:
+    if not portals.has(user, portals.PROPERTY):
+        return _rent_not_enabled(user)
+
+    totals = rentals.dashboard_totals(_rental_scope(user))
+    if not totals["properties"]:
+        return _reply(
+            "No property is on your record yet, so there is no rent to report. Add the "
+            "building you rent out and the rent starts being tracked against it.",
+            [("Add a property", "/property/properties")],
+            PROPERTY_SUGGESTIONS,
+        )
+    return _reply(
+        "%d propert%s, %s a month on signed leases. %s came in during %s and %s is "
+        "still outstanding."
+        % (
+            totals["properties"],
+            "y" if totals["properties"] == 1 else "ies",
+            _money(totals["rent_roll"]),
+            _money(totals["collected"]),
+            totals["month_label"],
+            _money(totals["outstanding"]),
+        ),
+        [
+            ("Open rent invoices", "/property/invoices"),
+            ("Open receipts", "/property/payments"),
+        ],
+    )
+
+
+def _rent_arrears(user) -> dict:
+    if not portals.has(user, portals.PROPERTY):
+        return _rent_not_enabled(user)
+
+    rows = rentals.arrears(_rental_scope(user), limit=5)
+    if not rows:
+        return _reply(
+            "Nobody is behind on rent. Every issued invoice is paid or not yet due.",
+            [("Open rent invoices", "/property/invoices")],
+        )
+    lines = []
+    for row in rows:
+        lines.append(
+            "%s — %s owes %s (due %s)."
+            % (
+                row["property_name"],
+                row["tenant_name"] or "the tenant",
+                _money(row["balance_cents"]),
+                str(row["due_date"] or "")[:10],
+            )
+        )
+    if len(rows) == 5:
+        lines.append("(The five oldest are listed.)")
+    return _reply(
+        " ".join(lines),
+        [("Open rent invoices", "/property/invoices")],
+    )
+
+
+def _rent_collected(user) -> dict:
+    if not portals.has(user, portals.PROPERTY):
+        return _rent_not_enabled(user)
+
+    totals = rentals.dashboard_totals(_rental_scope(user))
+    if not totals["properties"]:
+        return _reply(
+            "There is no property on the record yet, so nothing has been collected.",
+            [("Add a property", "/property/properties")],
+        )
+    return _reply(
+        "%s has been receipted in %s against %s a month in rent."
+        % (
+            _money(totals["collected"]),
+            totals["month_label"],
+            _money(totals["rent_roll"]),
+        ),
+        [("Open receipts", "/property/payments")],
+    )
+
+
+def _tenants(user) -> dict:
+    if not portals.has(user, portals.PROPERTY):
+        return _rent_not_enabled(user)
+
+    scope = _rental_scope(user)
+    rows = query(
+        """SELECT t.name, t.status, p.name AS property_name, p.id AS property_id
+           FROM property_tenants t
+           JOIN properties p ON p.id = t.property_id
+           WHERE t.status IN ('active', 'notice') AND (? IS NULL OR t.owner_id = ?)
+           ORDER BY p.name LIMIT 5""",
+        (scope, scope),
+    )
+    if not rows:
+        return _reply(
+            "No tenant is in place. Add one on the property page, then draft the lease.",
+            [("Open properties", "/property/properties")],
+        )
+    links = [
+        ("%s — %s" % (row["property_name"], row["name"]), "/property/properties/%s" % row["property_id"])
+        for row in rows
+    ]
+    return _reply(
+        "You have %d tenant%s in place%s."
+        % (
+            len(rows),
+            "" if len(rows) == 1 else "s",
+            " (five shown)" if len(rows) == 5 else "",
+        ),
+        links,
+    )
+
+
+def _leases(user) -> dict:
+    if not portals.has(user, portals.PROPERTY):
+        return _rent_not_enabled(user)
+
+    scope = _rental_scope(user)
+    rows = query(
+        """SELECT status, COUNT(*) AS total FROM property_leases
+           WHERE (? IS NULL OR owner_id = ?) GROUP BY status""",
+        (scope, scope),
+    )
+    seen = {row["status"]: int(row["total"] or 0) for row in rows}
+    if not seen:
+        return _reply(
+            "No lease has been produced yet. A lease is drafted from a property and its "
+            "tenant, then signed on screen.",
+            [("Open leases", "/property/leases")],
+            PROPERTY_SUGGESTIONS,
+        )
+    return _reply(
+        "%d signed, %d awaiting signature and %d ended."
+        % (
+            seen.get("signed", 0),
+            seen.get("awaiting_signature", 0),
+            seen.get("ended", 0),
+        ),
+        [("Open leases", "/property/leases")],
+    )
+
+
+def _property_checks(user) -> dict:
+    if not portals.has(user, portals.PROPERTY):
+        return _rent_not_enabled(user)
+
+    scope = _rental_scope(user)
+    due = rentals.open_checks(scope, limit=1)
+    done = rentals.recent_checks(scope, limit=1)
+
+    if not due and not done:
+        return _reply(
+            "No property check is booked or recorded. A periodic look at the building "
+            "is what keeps small repairs small — schedule one on the property page.",
+            [("Open properties", "/property/properties")],
+        )
+    parts = []
+    if due:
+        parts.append(
+            "The next check is %s on %s."
+            % (due[0]["property_name"], str(due[0]["scheduled_for"] or "an unrecorded date")[:10])
+        )
+    if done:
+        parts.append(
+            "The last one was %s on %s: %s."
+            % (
+                done[0]["property_name"],
+                str(done[0]["conducted_at"] or done[0]["created_at"] or "")[:10],
+                (done[0]["rating"] or "not rated"),
+            )
+        )
+    return _reply(
+        " ".join(parts),
+        [("Open properties", "/property/properties")],
+    )
+
+
+def _rent_receipt(user) -> dict:
+    if not portals.has(user, portals.PROPERTY):
+        return _rent_not_enabled(user)
+    return _reply(
+        "Rent is receipted against an invoice, so the tenant ends up with a numbered "
+        "receipt and the invoice shows part paid or settled. Record it on the Receipts "
+        "page rather than sending it to me.",
+        [("Open receipts", "/property/payments")],
     )
 
 
@@ -284,7 +542,7 @@ PUBLIC_SUGGESTIONS = (
     "What is YaVaKa?",
     "How does it work?",
     "What are the 19 stages?",
-    "How do I start?",
+    "Do you manage rentals after the build?",
 )
 
 PUBLIC_TOPICS = (
@@ -356,6 +614,15 @@ PUBLIC_TOPICS = (
         [("Sign in", "/login"), ("Reset a password", "/forgot-password")],
     ),
     (
+        ("rent", "rental", "rentals", "tenant", "lease", "landlord", "property management"),
+        "When the build is finished, YaVaKa Property Management takes over: the tenant, "
+        "the lease, rent invoices and numbered receipts, plus periodic property checks "
+        "with photos and video that reach you on the system and on WhatsApp. Rental "
+        "management is a bonus module inside Property Management — Project Management "
+        "remains the main system.",
+        [("Property Management sign-in", "/property/login"), ("Read the site", "/")],
+    ),
+    (
         ("contact", "talk", "human", "person", "call", "email", "support"),
         "Email hello@yavaka.co.zw and a person will pick it up. Once you have an "
         "account, the WhatsApp tab puts you in a conversation with whoever runs "
@@ -382,6 +649,7 @@ def _looks_personal(text: str) -> bool:
     project_words = (
         "balance", "project", "stage", "receipt", "document", "payment",
         "budget", "money", "account", "build", "invoice", "agreement",
+        "rent", "tenant", "lease", "property",
     )
     return owns and any(word in text for word in project_words)
 
@@ -420,6 +688,15 @@ HANDLERS = {
     "escalate": _escalate,
     "update": _update,
     "deposit": _deposit,
+    # Rental management, answered from the property side of the account.
+    "rent_due": _rent_due,
+    "rent_invoices": _rent_due,
+    "rent_arrears": _rent_arrears,
+    "rent_collected": _rent_collected,
+    "rent_receipt": _rent_receipt,
+    "tenants": _tenants,
+    "leases": _leases,
+    "property_checks": _property_checks,
 }
 
 

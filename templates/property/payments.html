@@ -1,0 +1,142 @@
+{% extends "app/base.html" %}
+{% block title %}Rent receipts · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Rent receipts{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ payments|length }} receipt{{ '' if payments|length == 1 else 's' }}
+    <span class="page-tagline">Every payment gets a number the tenant can quote and the invoice can be settled against.</span>
+  </p>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <h2>Receipt a rent payment</h2>
+    <span class="mini-meta">{{ open_invoices|length }} open invoice{{ '' if open_invoices|length == 1 else 's' }}</span>
+  </div>
+  <div class="panel-form-body">
+    {% if open_invoices %}
+      <form class="stack-form" method="post" action="{{ url_for('rentals.create_payment') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Against invoice</span>
+            <select class="select" name="invoice_id" required>
+              {% for item in open_invoices %}
+                <option value="{{ item.id }}">{{ item.number }} · {{ item.property_name }} · {{ item.balance_cents|money }} due</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Amount received (USD)</span>
+            <input class="input" type="text" name="amount" inputmode="decimal" required placeholder="450.00" />
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Method</span>
+            <select class="select" name="method">
+              {% for key, label in payment_methods %}
+                <option value="{{ key }}" {% if key == 'ECOCASH' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Reference</span>
+            <input class="input" type="text" name="reference" maxlength="80" placeholder="EcoCash ref / transfer ref" />
+          </label>
+          <label class="field">
+            <span class="field-label">Received on</span>
+            <input class="input" type="date" name="received_at" value="{{ today }}" />
+          </label>
+        </div>
+        <label class="field">
+          <span class="field-label">Notes</span>
+          <textarea class="input textarea" name="notes" rows="2" maxlength="500"></textarea>
+        </label>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">{{ icon('receipt', 16) }} Record receipt</button>
+        </div>
+      </form>
+    {% else %}
+      <div class="all-clear">
+        <span>{{ icon('check', 16) }}</span>
+        <p>Nothing is outstanding. When the next month is invoiced, it appears here to receipt against.</p>
+      </div>
+      {% if properties %}
+        <form class="stack-form" method="post" action="{{ url_for('rentals.create_payment') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <p class="muted small">Or receipt money on account before an invoice exists:</p>
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Property</span>
+              <select class="select" name="property_id" required>
+                {% for item in properties %}
+                  <option value="{{ item.id }}">{{ item.name }} ({{ item.code }})</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Amount received (USD)</span>
+              <input class="input" type="text" name="amount" inputmode="decimal" required placeholder="450.00" />
+            </label>
+            <label class="field">
+              <span class="field-label">Method</span>
+              <select class="select" name="method">
+                {% for key, label in payment_methods %}
+                  <option value="{{ key }}" {% if key == 'ECOCASH' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-outline" type="submit">{{ icon('receipt', 16) }} Receipt on account</button>
+          </div>
+        </form>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if payments %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Receipt</th>
+            <th scope="col">Property</th>
+            <th scope="col">Tenant</th>
+            <th scope="col">Invoice</th>
+            <th scope="col">Received</th>
+            <th scope="col">Method</th>
+            <th scope="col" class="align-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in payments %}
+            <tr>
+              <td><a href="{{ url_for('rentals.payment_receipt', payment_id=item.id) }}">{{ item.receipt_number }}</a></td>
+              <td>{{ item.property_name }}<span class="mini-meta">{{ item.property_code }}</span></td>
+              <td>{{ item.tenant_name or '—' }}</td>
+              <td>{{ item.invoice_number or 'On account' }}</td>
+              <td>{{ item.received_at|date }}</td>
+              <td>{{ method_label(item.method) }}</td>
+              <td class="align-right">{{ item.amount_cents|money }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('receipt', 26) }}</span>
+      <h3>No rent receipted yet</h3>
+      <p>Receipt the first payment above. It prints as a numbered receipt the tenant can keep.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

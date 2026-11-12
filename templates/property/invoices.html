@@ -1,0 +1,145 @@
+{% extends "app/base.html" %}
+{% block title %}Rent invoices · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Rent invoices{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ invoices|length }} invoice{{ '' if invoices|length == 1 else 's' }}
+    <span class="page-tagline">One rent invoice per lease per month. Raise them in a batch, or one at a time.</span>
+  </p>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar filter-bar--single" method="get" action="{{ url_for('rentals.invoices') }}">
+  <select class="select select-sm" name="status" data-autosubmit aria-label="Filter by invoice status">
+    {% for key, label in [('all', 'All invoices')] + invoice_statuses %}
+      <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="btn btn-ghost btn-sm" type="submit">Filter</button></noscript>
+</form>
+
+{% if lease_options %}
+  <div class="card">
+    <div class="card-head">
+      <h2>Raise this month's rent</h2>
+      <span class="mini-meta">{{ lease_options|length }} signed lease{{ '' if lease_options|length == 1 else 's' }}</span>
+    </div>
+    <div class="panel-form-body">
+      <form class="stack-form" method="post" action="{{ url_for('rentals.generate_invoices') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="form-row">
+          <label class="field">
+            <span class="field-label">Month</span>
+            <input class="input" type="month" name="period" value="{{ period }}" />
+            <span class="field-hint">Every signed lease gets one invoice for the month. Leases already invoiced are skipped.</span>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">{{ icon('receipt', 16) }} Raise rent invoices</button>
+        </div>
+      </form>
+    </div>
+
+    <details class="panel-form">
+      <summary>{{ icon('plus', 15) }} Raise one invoice by hand</summary>
+      <div class="panel-form-body">
+        <form class="stack-form" method="post" action="{{ url_for('rentals.create_invoice') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Signed lease</span>
+              <select class="select" name="lease_id">
+                {% for item in lease_options %}
+                  <option value="{{ item.id }}">{{ item.property_name }} · {{ item.tenant_name }} · {{ item.rent_cents|money }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Month</span>
+              <input class="input" type="month" name="period" value="{{ period }}" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">Amount (USD)</span>
+              <input class="input" type="text" name="amount" inputmode="decimal" placeholder="Leave blank for the lease rent" />
+            </label>
+            <label class="field">
+              <span class="field-label">Due date</span>
+              <input class="input" type="date" name="due_date" />
+              <span class="field-hint">Defaults to the lease billing day.</span>
+            </label>
+          </div>
+          <label class="field">
+            <span class="field-label">Note on the invoice</span>
+            <input class="input" type="text" name="notes" maxlength="500" placeholder="Rent plus water share" />
+          </label>
+          <div class="form-actions">
+            <button class="btn btn-outline" type="submit">{{ icon('plus', 16) }} Raise invoice</button>
+          </div>
+        </form>
+      </div>
+    </details>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="all-clear">
+      <span>{{ icon('pen', 16) }}</span>
+      <p>No signed lease yet. Rent invoices are raised against a signed lease, so sign one first.</p>
+    </div>
+  </div>
+{% endif %}
+
+{% if invoices %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Invoice</th>
+            <th scope="col">Property</th>
+            <th scope="col">Tenant</th>
+            <th scope="col">Period</th>
+            <th scope="col">Due</th>
+            <th scope="col" class="align-right">Invoiced</th>
+            <th scope="col" class="align-right">Balance</th>
+            <th scope="col">Status</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in invoices %}
+            <tr>
+              <td><a href="{{ url_for('rentals.invoice_print', invoice_id=item.id) }}" target="_blank" rel="noopener">{{ item.number }}</a></td>
+              <td>{{ item.property_name }}<span class="mini-meta">{{ item.property_code }}</span></td>
+              <td>{{ item.tenant_name or '—' }}</td>
+              <td>{{ item.period_start|date }}</td>
+              <td>{{ item.due_date|date }}</td>
+              <td class="align-right">{{ item.amount_cents|money }}</td>
+              <td class="align-right {{ 'neg' if item.balance_cents }}">{{ item.balance_cents|money }}</td>
+              <td>{{ badge(item.status) }}</td>
+              <td>
+                {% if item.status in ['issued', 'part_paid'] %}
+                  <form method="post" action="{{ url_for('rentals.void_invoice', invoice_id=item.id) }}" data-confirm="Void invoice {{ item.number }}?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button class="btn btn-ghost btn-sm" type="submit">Void</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% elif lease_options %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('receipt', 26) }}</span>
+      <h3>No invoices yet</h3>
+      <p>Raise the month above. Each signed lease gets one invoice, due on its billing day.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Sign in · YaVaKa{% endblock %}
+{% block title %}Sign in · {{ portal.short }}{% endblock %}
 {% block body_class %}auth-body{% endblock %}
 {% block chrome %}{% endblock %}
 {% block footer %}{% endblock %}
@@ -10,36 +10,70 @@
     <aside class="auth-aside">
       <a class="auth-brand" href="/">
         {{ logo_mark(44) }}
-        <span><strong>YaVaKa</strong><small>Build from anywhere</small></span>
+        <span><strong>YaVaKa</strong><small>{{ portal.tagline }}</small></span>
       </a>
 
       <div class="auth-quote">
-        <p class="eyebrow eyebrow-light">Built for the diaspora</p>
-        <blockquote class="auth-quote-statement">I stopped asking for photos of the receipt. I could see it.</blockquote>
-        <p class="auth-quote-sub">
-          Track the work, money and proof from wherever you are. Your distance
-          should not leave you guessing.
-        </p>
+        {% if is_property %}
+          <p class="eyebrow eyebrow-light">When the build is finished</p>
+          <blockquote class="auth-quote-statement">The house is done. The record keeps going.</blockquote>
+          <p class="auth-quote-sub">
+            Property Management picks up where Project Management stopped: the tenant,
+            the lease, the rent and a periodic look at the building — with photos and
+            video landing in the same record and on WhatsApp.
+          </p>
+        {% else %}
+          <p class="eyebrow eyebrow-light">Built for the diaspora</p>
+          <blockquote class="auth-quote-statement">I stopped asking for photos of the receipt. I could see it.</blockquote>
+          <p class="auth-quote-sub">
+            Track the work, money and proof from wherever you are. Your distance
+            should not leave you guessing.
+          </p>
+        {% endif %}
       </div>
 
       <ul class="auth-points">
-        <li>{{ icon('shield', 17) }} Council &amp; statutory stage gates</li>
-        <li>{{ icon('wallet', 17) }} USD funding vs spend, with receipts</li>
-        <li>{{ icon('message', 17) }} Progress and balance updates by email &amp; WhatsApp</li>
-        <li>{{ icon('folder', 17) }} Agreement, plans and handover file</li>
+        {% if is_property %}
+          <li>{{ icon('users', 17) }} Tenants, leases and signed tenancy records</li>
+          <li>{{ icon('receipt', 17) }} Rent invoices, receipting and arrears in one place</li>
+          <li>{{ icon('camera', 17) }} Periodic property checks with photos and video</li>
+          <li>{{ icon('message', 17) }} Check updates on the system, email and WhatsApp</li>
+        {% else %}
+          <li>{{ icon('shield', 17) }} Council &amp; statutory stage gates</li>
+          <li>{{ icon('wallet', 17) }} USD funding vs spend, with receipts</li>
+          <li>{{ icon('message', 17) }} Progress and balance updates by email &amp; WhatsApp</li>
+          <li>{{ icon('folder', 17) }} Agreement, plans and handover file</li>
+        {% endif %}
       </ul>
     </aside>
 
     <div class="auth-card">
+      <div class="portal-door" role="group" aria-label="Choose a workspace">
+        <a class="portal-door-link {% if not is_property %}is-active{% endif %}" href="{{ url_for('auth.login') }}"
+           {% if not is_property %}aria-current="page"{% endif %}>
+          {{ icon('building', 15) }} Project Management
+        </a>
+        <a class="portal-door-link {% if is_property %}is-active{% endif %}" href="{{ url_for('auth.property_login') }}"
+           {% if is_property %}aria-current="page"{% endif %}>
+          {{ icon('home', 15) }} Property Management
+        </a>
+      </div>
+
       <div class="auth-head">
-        <p class="eyebrow">Welcome back</p>
-        <h1>Sign in to your build</h1>
-        <p class="muted">Your build is at home. Your view of it can be anywhere.</p>
+        <p class="eyebrow">{{ portal.short }}</p>
+        {% if is_property %}
+          <h1>Sign in to your properties</h1>
+          <p class="muted">Rental management is the bonus module inside Property Management.</p>
+        {% else %}
+          <h1>Sign in to your build</h1>
+          <p class="muted">Your build is at home. Your view of it can be anywhere.</p>
+        {% endif %}
       </div>
 
       <form class="form" method="post" action="{{ url_for('auth.login_post') }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input type="hidden" name="next" value="{{ next }}" />
+        <input type="hidden" name="portal" value="{{ portal.key }}" />
 
         {% if error %}
           <div class="form-error">{{ icon('alert', 17) }}<span>{{ error }}</span></div>
@@ -69,6 +103,9 @@
             Client · <code>client@yavaka.co.zw</code><br />
             Manager · <code>manager@yavaka.co.zw</code><br />
             Staff · <code>admin@yavaka.co.zw</code><br />
+            {% if is_property %}
+              Property · <code>rentals@yavaka.co.zw</code><br />
+            {% endif %}
             Password · <code>YaVaKa2026!</code>
           </p>
         </div>
@@ -77,8 +114,8 @@
       <div class="auth-foot">
         <p>
           <span>New to YaVaKa?</span>
-          <a class="btn btn-outline btn-sm" href="{{ url_for('auth.register') }}"
-             data-modal-open="modal-register">Create an account</a>
+          <a class="btn btn-outline btn-sm" href="{{ url_for('auth.register', portal=portal.key) }}"
+             data-modal-open="modal-register">{{ 'Create a property account' if is_property else 'Create an account' }}</a>
         </p>
       </div>
     </div>

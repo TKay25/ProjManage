@@ -54,6 +54,26 @@ QUICK_REPLIES = {
     "receipt": ("BALANCE", "STATUS"),
     "help": ("BALANCE", "STATUS", "PROJECTS", "PAY 500"),
     "unknown": ("BALANCE", "STATUS", "PROJECTS", "PAY 500"),
+    "rent_due": ("RENT ARREARS", "RENTAL TENANTS"),
+    "rent_arrears": ("RENT RECEIVED", "RENTAL LEASES"),
+    "rent_collected": ("RENT DUE", "RENT INVOICES"),
+    "rent_invoices": ("RENT DUE", "RENT RECEIVED"),
+    "rent_receipt": ("RENT DUE", "RENT INVOICES"),
+    "tenants": ("RENT DUE", "RENTAL LEASES"),
+    "leases": ("RENTAL TENANTS", "RENT DUE"),
+    "property_checks": ("RENT DUE", "RENTAL TENANTS"),
+}
+
+# Every intent answered from the rental side of a property account.
+RENTAL_INTENTS = {
+    "rent_due",
+    "rent_arrears",
+    "rent_collected",
+    "rent_invoices",
+    "rent_receipt",
+    "tenants",
+    "leases",
+    "property_checks",
 }
 
 
@@ -246,6 +266,39 @@ def detect_intent(body: str):
 
     if re.match(r"^(hi|hello|hey|start|menu|help|0|mhoro|mauya|sawubona)\b", text):
         return "help", None
+
+    # "How much did I collect this month?" names no noun the build intents own,
+    # but in this product it can only mean rent.
+    if re.search(r"\b(collect|collected|collection)\b", text):
+        return "rent_collected", None
+
+    # Rental management is the bonus module inside Property Management. These
+    # phrases are claimed before the build intents because "how much rent is
+    # due" must not be read as the project balance, and "show my invoices" in a
+    # property thread means rent, not a build document.
+    if re.search(
+        r"\b(rent|rents|rental|rentals|tenant|tenants|lease|leases|tenancy|"
+        r"tenancies|landlord|property|properties|inspection|inspections)\b",
+        text,
+    ):
+        if re.search(r"\b(behind|arrears|overdue|late|unpaid|owed)\b", text):
+            return "rent_arrears", None
+        if re.search(
+            r"\b(collect|collected|collection|received|income|this month|month)\b", text
+        ):
+            return "rent_collected", None
+        if re.search(r"\b(invoices?|bill|billed|raise)\b", text):
+            return "rent_invoices", None
+        if re.search(r"\b(check|checks|inspections?|inspect)\b", text):
+            return "property_checks", None
+        if re.search(r"\b(tenants?|who lives)\b", text):
+            return "tenants", None
+        if re.search(r"\b(leases?|tenancy|tenancies|sign)\b", text):
+            return "leases", None
+        if re.search(r"\b(receipts?|paid)\b", text):
+            return "rent_receipt", None
+        return "rent_due", None
+
     if re.search(r"\b(balance|how much|funds|money left|account|mari|imali)\b", text):
         return "balance", None
     if re.search(r"\b(status|progress|stage|where|nhanho|isigaba)\b", text):
@@ -480,6 +533,10 @@ def handle_inbound(phone: str, body: str, profile_name: str = "") -> dict:
         if intent == "unknown":
             opening = f"{tr('unknown', language)}\n\n{opening}"
         return _menu(contact, role, language, opening, intent)
+
+    # ---- rental management (the bonus module in Property Management) ----
+    if intent in RENTAL_INTENTS:
+        return _rental_reply(contact, intent, language)
 
     # ---- client intents ----
     if intent == "documents":
@@ -739,3 +796,155 @@ def _attention_items(contact):
         for stage in blocked:
             items.append((item["name"], stage["name"]))
     return items
+
+def _rental_reply(contact, intent, language):
+    """Answer a rent question from the owner's own portfolio.
+
+    Rental management lives inside Property Management, so an account that has
+    not enabled that door is told plainly instead of being shown empty figures.
+    """
+    import portals as portal_catalogue
+    import rentals
+
+    if not contact["user_id"]:
+        return _reply(contact, tr("rental_unknown", language), intent, language)
+
+    user = query("SELECT * FROM users WHERE id = ?", (contact["user_id"],), one=True)
+    if not user or not portal_catalogue.has(user, portal_catalogue.PROPERTY):
+        return _reply(contact, tr("rental_not_enabled", language), intent, language)
+
+    owner_id = user["id"]
+    totals = rentals.dashboard_totals(owner_id)
+    if not totals["properties"]:
+        return _reply(contact, tr("rental_empty", language), intent, language)
+
+    if intent == "rent_collected":
+        return _reply(
+            contact,
+            tr(
+                "rental_collected",
+                language,
+                amount=format_money(totals["collected"]),
+                month=totals["month_label"],
+                properties=totals["properties"],
+            ),
+            intent,
+            language,
+        )
+
+    if intent == "rent_arrears":
+        rows = rentals.arrears(owner_id, limit=5)
+        if not rows:
+            return _reply(contact, tr("rental_arrears_none", language), intent, language)
+        lines = [
+            tr("rental_arrears_heading", language, total=format_money(totals["outstanding"]))
+        ]
+        for row in rows:
+            lines.append(
+                "- %s - %s: %s (%s)"
+                % (
+                    row["property_name"],
+                    row["tenant_name"] or "tenant",
+                    format_money(row["balance_cents"]),
+                    str(row["due_date"] or "")[:10],
+                )
+            )
+        return _reply(contact, "\n".join(lines), intent, language)
+
+    if intent == "rent_invoices":
+        rows = rentals.open_invoices(owner_id, limit=5)
+        if not rows:
+            return _reply(contact, tr("rental_invoices_none", language), intent, language)
+        lines = [tr("rental_invoices_heading", language)]
+        for row in rows:
+            lines.append(
+                "- %s %s: %s" % (row["number"], row["property_name"], format_money(row["balance_cents"]))
+            )
+        return _reply(contact, "\n".join(lines), intent, language)
+
+    if intent == "rent_receipt":
+        return _reply(
+            contact,
+            tr("rental_receipt_help", language, amount=format_money(totals["collected"])),
+            intent,
+            language,
+        )
+
+    if intent == "tenants":
+        rows = query(
+            """SELECT t.name, t.status, p.name AS property_name
+               FROM property_tenants t
+               JOIN properties p ON p.id = t.property_id
+               WHERE t.owner_id = ? AND t.status IN ('active', 'notice')
+               ORDER BY p.name LIMIT 6""",
+            (owner_id,),
+        )
+        if not rows:
+            return _reply(contact, tr("rental_tenants_empty", language), intent, language)
+        lines = [tr("rental_tenants_heading", language)]
+        for row in rows:
+            lines.append("- %s: %s (%s)" % (row["property_name"], row["name"], row["status"]))
+        return _reply(contact, "\n".join(lines), intent, language)
+
+    if intent == "leases":
+        counts = query(
+            """SELECT status, COUNT(*) AS total FROM property_leases
+               WHERE owner_id = ? GROUP BY status""",
+            (owner_id,),
+        )
+        seen = {row["status"]: int(row["total"] or 0) for row in counts}
+        return _reply(
+            contact,
+            tr(
+                "rental_leases",
+                language,
+                signed=seen.get("signed", 0),
+                awaiting=seen.get("awaiting_signature", 0),
+                ended=seen.get("ended", 0),
+            ),
+            intent,
+            language,
+        )
+
+    if intent == "property_checks":
+        due = rentals.open_checks(owner_id, limit=1)
+        done = rentals.recent_checks(owner_id, limit=1)
+        if not due and not done:
+            return _reply(contact, tr("rental_checks_none", language), intent, language)
+        parts = []
+        if due:
+            parts.append(
+                tr(
+                    "rental_check_next",
+                    language,
+                    property=due[0]["property_name"],
+                    date=str(due[0]["scheduled_for"] or "not dated")[:10],
+                )
+            )
+        if done:
+            parts.append(
+                tr(
+                    "rental_check_last",
+                    language,
+                    property=done[0]["property_name"],
+                    rating=done[0]["rating"] or "not rated",
+                    date=str(done[0]["conducted_at"] or done[0]["created_at"] or "")[:10],
+                )
+            )
+        return _reply(contact, "\n".join(parts), intent, language)
+
+    # rent_due and anything else rental: the one-paragraph position.
+    return _reply(
+        contact,
+        tr(
+            "rental_due",
+            language,
+            properties=totals["properties"],
+            rent_roll=format_money(totals["rent_roll"]),
+            collected=format_money(totals["collected"]),
+            outstanding=format_money(totals["outstanding"]),
+            month=totals["month_label"],
+        ),
+        intent,
+        language,
+    )

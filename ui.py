@@ -83,6 +83,21 @@ BADGES = {
     "awaiting_signature": ("warn", "Awaiting signature"),
     "signed": ("success", "Signed"),
     "void": ("muted", "Void"),
+    # Property Management and the rental module.
+    "available": ("muted", "Available"),
+    "occupied": ("success", "Occupied"),
+    "maintenance": ("warn", "Under maintenance"),
+    "active": ("success", "In place"),
+    "notice": ("warn", "On notice"),
+    "former": ("muted", "Moved out"),
+    "ended": ("muted", "Ended"),
+    "issued": ("warn", "Issued"),
+    "part_paid": ("warn", "Part paid"),
+    "paid": ("success", "Paid"),
+    "scheduled": ("muted", "Scheduled"),
+    "good": ("success", "Good"),
+    "fair": ("warn", "Fair"),
+    "poor": ("danger", "Action needed"),
 }
 
 
@@ -115,12 +130,12 @@ def logo_mark(size: int = 40, css_class: str = "") -> Markup:
     )
 
 
-def brand(href: str = "/", tone: str = "dark") -> Markup:
+def brand(href: str = "/", tone: str = "dark", tagline: str = "Build from anywhere") -> Markup:
     return Markup(
         f'<a class="brand brand--{tone}" href="{href}">{logo_mark(38)}'
         '<span class="brand-text">'
         '<span class="brand-name">YaVaKa</span>'
-        '<span class="brand-tag">Build from anywhere</span>'
+        f'<span class="brand-tag">{escape(tagline)}</span>'
         "</span></a>"
     )
 

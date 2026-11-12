@@ -1,7 +1,7 @@
 {# The floating assistant. Closed it is a launcher; open it is a small window
    that answers from the page's own data. It is a native <details> so it still
    opens, closes and reads correctly if the script never arrives. #}
-<details class="aide" data-aide>
+<details class="aide" data-aide data-portal="{{ current_portal }}">
   <summary class="aide-launcher">
     <span class="aide-launcher-icon" aria-hidden="true">{{ icon('message', 20) }}</span>
     <span class="aide-launcher-label">Ask</span>

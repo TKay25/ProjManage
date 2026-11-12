@@ -1,0 +1,90 @@
+{% extends "app/base.html" %}
+{% block title %}Tenants · YaVaKa Property Management{% endblock %}
+
+{% block page_title %}Tenants{% endblock %}
+{% block page_subtitle %}
+  <p class="page-subtitle">
+    {{ tenants|length }} tenant{{ '' if tenants|length == 1 else 's' }} on record
+    <span class="page-tagline">A tenant is added from their property, so the lease and the rent always point at a building.</span>
+  </p>
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('rentals.properties') }}">{{ icon('home', 15) }} Properties</a>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar filter-bar--single" method="get" action="{{ url_for('rentals.tenants') }}">
+  <select class="select select-sm" name="status" data-autosubmit aria-label="Filter by tenant status">
+    {% for key, label in [('all', 'All tenants')] + tenant_statuses %}
+      <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="btn btn-ghost btn-sm" type="submit">Filter</button></noscript>
+</form>
+
+{% if tenants %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Tenant</th>
+            <th scope="col">Property</th>
+            <th scope="col">Contact</th>
+            <th scope="col">Lease</th>
+            <th scope="col">Status</th>
+            <th scope="col">Update</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in tenants %}
+            <tr>
+              <td>
+                {{ item.name }}
+                <span class="mini-meta">{{ item.moved_in|date if item.moved_in else 'Move-in not recorded' }}</span>
+              </td>
+              <td>
+                <a href="{{ url_for('rentals.property_detail', property_id=item.property_id) }}">{{ item.property_name }}</a>
+                <span class="mini-meta">{{ item.property_code }}</span>
+              </td>
+              <td>
+                {{ item.phone|phone if item.phone else '—' }}
+                <span class="mini-meta">{{ item.email or '' }}</span>
+              </td>
+              <td>
+                {% if item.lease_id %}
+                  <a href="{{ url_for('rentals.lease_detail', lease_id=item.lease_id) }}">View lease</a>
+                  <span class="mini-meta">{{ badge(item.lease_status) }}</span>
+                {% else %}
+                  <a href="{{ url_for('rentals.new_lease', property=item.property_id, tenant=item.id) }}">Draft lease</a>
+                {% endif %}
+              </td>
+              <td>{{ badge(item.status) }}</td>
+              <td>
+                <form class="inline-form" method="post" action="{{ url_for('rentals.set_tenant_status', tenant_id=item.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <select class="select select-sm" name="status" aria-label="Tenant status for {{ item.name }}">
+                    {% for key, label in tenant_statuses %}
+                      <option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="btn btn-outline btn-sm" type="submit">Save</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{{ icon('users', 26) }}</span>
+      <h3>No tenants yet</h3>
+      <p>Tenants are added on the property they live in. Open a property and add the person, then draft their lease.</p>
+      <a class="btn btn-primary" href="{{ url_for('rentals.properties') }}">{{ icon('home', 16) }} Open properties</a>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
