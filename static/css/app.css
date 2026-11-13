@@ -1027,53 +1027,63 @@ p {
   height: calc(var(--header-h) - 8px);
 }
 
+/* The links sit in one soft rail so the header reads as three clear objects:
+   the brand, the sections, and the actions. The current section is the only
+   one that gets a raised pill — one signal, not four competing ones. */
 .site-nav {
   display: flex;
+  align-items: center;
   gap: 2px;
-  margin-left: 14px;
+  margin-left: 10px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(var(--brand-rgb), 0.045);
+  box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb), 0.06);
 }
 
 .site-nav-link {
   position: relative;
-  padding: 9px 13px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 550;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 560;
+  letter-spacing: 0.002em;
   color: var(--ink-soft);
-  transition: color 160ms ease, background 160ms ease;
+  white-space: nowrap;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
-/* The underline is drawn, not a border, so it can animate in from the left. */
-.site-nav-link::after {
-  content: "";
-  position: absolute;
-  left: 13px;
-  right: 13px;
-  bottom: 3px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--forest-500);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 200ms ease;
-}
-
-.site-nav-link:hover {
-  color: var(--forest-800);
-  background: rgba(var(--brand-rgb), 0.055);
-}
-
-.site-nav-link:hover::after {
-  transform: scaleX(1);
+.site-nav-link:hover,
+.site-nav-link:focus-visible {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .site-nav-link.is-active {
   color: var(--forest-800);
-  background: rgba(var(--brand-rgb), 0.07);
+  font-weight: 640;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(var(--shadow-rgb), 0.12),
+    inset 0 0 0 1px rgba(var(--brand-rgb), 0.08);
 }
 
-.site-nav-link.is-active::after {
-  transform: scaleX(1);
+/* The directory is a page, not a section of the landing page: a hairline sets
+   it apart from the scroll-spy links without a second control. */
+.site-nav-link--page {
+  margin-left: 7px;
+}
+
+.site-nav-link--page::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 9px;
+  bottom: 9px;
+  width: 1px;
+  background: rgba(var(--brand-rgb), 0.16);
 }
 
 .header-actions {
@@ -3740,7 +3750,11 @@ p {
   margin-top: 6px;
 }
 
-/* Suppliers */
+/* ---------- Supplier directory ----------
+
+   A shelf of shops, not a wall of identical cards: every category carries its
+   own tone, so a glance down the grid reads "cement, roofing, steel" before a
+   single name is read. */
 
 .supplier-preview,
 .supplier-grid {
@@ -3751,29 +3765,72 @@ p {
 
 .supplier-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
 
+/* Category tones. --tone paints the mark, the label and the hover edge;
+   --tone-soft is the wash behind them. All clear AA on their own wash.
+   Declared after .supplier-card so the class wins over its defaults. */
 .supplier-card {
   min-width: 0;
-  padding: 20px;
+  --tone: #2f4a7a;
+  --tone-soft: #edf1f8;
+  --tone-edge: rgba(47, 74, 122, 0.3);
+  position: relative;
+  padding: 20px 20px 18px;
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-xs);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  overflow: hidden;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
-.supplier-card:hover {
-  border-color: var(--line-strong);
-  box-shadow: var(--shadow);
+.tone-clay  { --tone: #a8552f; --tone-soft: #fbeee7; --tone-edge: rgba(168, 85, 47, 0.35); }
+.tone-stone { --tone: #5c6472; --tone-soft: #f0f1f3; --tone-edge: rgba(92, 100, 114, 0.32); }
+.tone-terra { --tone: #97432a; --tone-soft: #fcefe9; --tone-edge: rgba(151, 67, 42, 0.32); }
+.tone-slate { --tone: #2f4a7a; --tone-soft: #edf1f8; --tone-edge: rgba(47, 74, 122, 0.3); }
+.tone-amber { --tone: #8a6116; --tone-soft: #fcf4e2; --tone-edge: rgba(138, 97, 22, 0.32); }
+.tone-aqua  { --tone: #276269; --tone-soft: #e9f4f4; --tone-edge: rgba(39, 98, 105, 0.3); }
+.tone-plum  { --tone: #6f3f61; --tone-soft: #f7edf3; --tone-edge: rgba(111, 63, 97, 0.3); }
+.tone-sage  { --tone: #46663d; --tone-soft: #eef5eb; --tone-edge: rgba(70, 102, 61, 0.3); }
+
+/* The tone shows as a hairline across the top, coloured on hover. */
+.supplier-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--tone);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+@media (hover: hover) {
+  .supplier-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--tone-edge);
+  }
+
+  .supplier-card:hover::before {
+    opacity: 1;
+  }
+
+  .supplier-card:hover .supplier-mark {
+    background: var(--tone);
+    color: #fff;
+  }
+
+  .supplier-card:hover .supplier-link .icon {
+    transform: translate(1px, -1px);
+  }
 }
 
 .supplier-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
   margin-bottom: 14px;
 }
 
@@ -3781,26 +3838,50 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
-  background: var(--forest-50);
-  color: var(--forest-800);
-  box-shadow: inset 0 0 0 1px var(--forest-100);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--tone-soft);
+  color: var(--tone);
+  box-shadow: inset 0 0 0 1px var(--tone-edge);
   font-family: var(--font-display);
-  font-size: var(--text-sm);
+  font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1;
   flex: none;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
-.supplier-top .badge:last-child {
+.supplier-id {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.supplier-cat {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tone);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.supplier-verified {
   margin-left: auto;
+  flex: none;
+  align-self: flex-start;
 }
 
 .supplier-card h3 {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  margin-bottom: 3px;
+  font-size: 1.02rem;
+  font-weight: 680;
+  letter-spacing: -0.012em;
+  margin-bottom: 4px;
+  text-wrap: balance;
 }
 
 /* The shop's own name is the link people reach for, so it behaves like one. */
@@ -3813,8 +3894,8 @@ p {
 
 .supplier-name a:hover,
 .supplier-name a:focus-visible {
-  color: var(--forest-700);
-  border-bottom-color: var(--forest-300);
+  color: var(--tone);
+  border-bottom-color: var(--tone-edge);
 }
 
 .supplier-city {
@@ -3826,11 +3907,75 @@ p {
   margin-bottom: 9px;
 }
 
+/* Two short lines of copy keep a row of cards even, however much each shop
+   has to say. */
 .supplier-desc {
   font-size: var(--text-xs);
   color: var(--ink-soft);
-  line-height: 1.6;
+  line-height: 1.62;
   flex: 1;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.supplier-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.supplier-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  color: var(--tone);
+  text-decoration: none;
+}
+
+.supplier-link .icon {
+  transition: transform 160ms ease;
+}
+
+.supplier-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.supplier-host {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The workspace can ring a counter straight from the card. */
+.supplier-call {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--sand-100);
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.supplier-call:hover {
+  background: var(--tone);
+  color: #fff;
 }
 
 .link-arrow {
@@ -3847,11 +3992,242 @@ p {
   gap: 9px;
 }
 
-.supplier-actions {
+/* ---------- Directory masthead ---------- */
+
+.dir-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(52px, 7.5vh, 92px) 0 clamp(44px, 6.5vh, 76px);
+  background:
+    radial-gradient(115% 85% at 8% -15%, rgba(214, 152, 110, 0.32), transparent 52%),
+    radial-gradient(85% 75% at 96% -5%, rgba(58, 92, 148, 0.6), transparent 58%),
+    linear-gradient(168deg, #131f33 0%, #1b2b45 52%, #24395f 100%);
+  color: #fff;
+}
+
+/* A site-plan grid, faint and faded out before it reaches the copy. */
+.dir-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(70% 60% at 78% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(70% 60% at 78% 0%, #000 0%, transparent 72%);
+}
+
+.dir-hero .eyebrow {
+  color: var(--brass-300);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.dir-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.05rem, 1.35rem + 2.6vw, 3.35rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+  margin-bottom: 18px;
+  max-width: 20ch;
+  text-wrap: balance;
+  color: #fff;
+}
+
+.dir-hero .lead {
+  max-width: 60ch;
+  font-size: clamp(0.98rem, 0.94rem + 0.2vw, 1.08rem);
+  line-height: 1.68;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 26px;
+}
+
+.dir-stats {
   display: flex;
-  gap: 8px;
-  margin-top: 14px;
   flex-wrap: wrap;
+  gap: 12px 34px;
+  margin-top: 34px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.dir-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dir-stats dt {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.dir-stats dd {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  white-space: nowrap;
+}
+
+/* ---------- Directory toolbar ---------- */
+
+.dir-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 288px) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  margin-top: -64px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px -30px rgba(var(--shadow-rgb), 0.55);
+  position: relative;
+  z-index: 1;
+}
+
+.dir-toolbar .search-field {
+  border: 1px solid transparent;
+  background: var(--sand-100);
+  border-radius: 10px;
+}
+
+.dir-toolbar .search-field:focus-within {
+  border-color: rgba(var(--brand-rgb), 0.24);
+  background: #fff;
+}
+
+.dir-toolbar .select {
+  border-radius: 10px;
+  background: var(--sand-100);
+  border-color: transparent;
+}
+
+.dir-toolbar .select:hover {
+  background: var(--sand-200);
+}
+
+.dir-toolbar .link-quiet {
+  padding-inline: 8px;
+}
+
+.dir-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 16px;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.dir-count strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.dir-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--sand-100);
+  border: 1px solid var(--line);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.dir-filter a {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+
+.dir-filter a:hover {
+  background: var(--sand-300);
+  color: var(--ink);
+}
+
+/* ---------- The "how to buy well" note ---------- */
+
+.dir-note {
+  display: flex;
+  gap: 12px;
+  margin-top: 34px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--sand-100);
+  border: 1px solid var(--line);
+  font-size: var(--text-xs);
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+.dir-note .icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--brass-500);
+}
+
+.dir-note strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/* Stacked toolbar on a phone: the overlap would eat the search box. */
+@media (max-width: 760px) {
+  .dir-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: -40px;
+    padding: 10px;
+  }
+
+  .dir-toolbar .link-quiet {
+    padding: 8px;
+  }
+
+  .dir-stats {
+    gap: 10px 26px;
+    margin-top: 26px;
+    padding-top: 18px;
+  }
+
+  .dir-stats dt {
+    font-size: 1.25rem;
+  }
+
+  .dir-hero {
+    padding-bottom: 52px;
+  }
+}
+
+/* Narrow desktops: the rail has to give up padding before it gives up links. */
+@media (min-width: 901px) and (max-width: 1120px) {
+  .site-nav {
+    margin-left: 4px;
+  }
+
+  .site-nav-link {
+    padding: 7px 10px;
+    font-size: 0.83rem;
+  }
 }
 
 /* PWA & final CTA */
@@ -4486,7 +4862,10 @@ p {
   }
 }
 
-@media (max-width: 900px) {
+/* Below 1000px the rail cannot hold six links beside the brand and the two
+   actions without spilling out of the container, so the same links move into
+   the drawer rather than wrapping or shrinking to an unreadable size. */
+@media (max-width: 1000px) {
   .site-nav {
     display: none;
   }
@@ -4498,7 +4877,9 @@ p {
   .header-inner {
     gap: 14px;
   }
+}
 
+@media (max-width: 900px) {
   .section {
     padding: 64px 0;
   }
@@ -4829,7 +5210,6 @@ p {
 @media (prefers-reduced-motion: reduce) {
   .site-header,
   .site-header .header-inner,
-  .site-nav-link::after,
   .site-menu-bars span,
   .card-hover,
   .btn {
@@ -4977,6 +5357,7 @@ html:not([data-theme="dark"]) .feature-icon {
 .site-nav-link:nth-child(3) { animation-delay: 170ms; }
 .site-nav-link:nth-child(4) { animation-delay: 210ms; }
 .site-nav-link:nth-child(5) { animation-delay: 250ms; }
+.site-nav-link:nth-child(6) { animation-delay: 290ms; }
 
 /* ---------- Scroll progress hairline ---------- */
 
@@ -4995,100 +5376,10 @@ html:not([data-theme="dark"]) .feature-icon {
   pointer-events: none;
 }
 
-@keyframes nav-breathe {
-  0%,
-  100% {
-    opacity: 0.18;
-    transform: scale(0.96);
-  }
-  50% {
-    opacity: 0.42;
-    transform: scale(1);
-  }
-}
-
-.site-nav-link.is-active::before {
-  content: "";
-  position: absolute;
-  inset: 2px 4px;
-  border-radius: 9px;
-  background: rgba(var(--brand-rgb), 0.08);
-  animation: nav-breathe 4.6s ease-in-out infinite;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.site-nav-link {
-  isolation: isolate;
-}
-
-/* A brass inner edge marks the current section before anything is hovered. */
-.site-nav-link.is-active {
-  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.22);
-}
-
-/* ---------- Underline: grows from the centre, sheen travels when current ---------- */
-
-.site-nav-link::after {
-  left: 50%;
-  right: auto;
-  width: calc(100% - 26px);
-  transform: translateX(-50%) scaleX(0);
-  transform-origin: center;
-  transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.site-nav-link:hover::after,
-.site-nav-link:focus-visible::after {
-  transform: translateX(-50%) scaleX(1);
-}
-
-.site-nav-link.is-active::after {
-  transform: translateX(-50%) scaleX(1);
-}
-
-@keyframes underline-sheen {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.site-nav-link.is-active::after {
-  animation: underline-sheen 3.4s ease-in-out infinite;
-}
-
-/* ---------- Hover and focus lift ---------- */
-
-.site-nav-link {
-  transition: color 180ms ease, background 180ms ease, transform 180ms ease;
-}
-
-.site-nav-link:hover,
-.site-nav-link:focus-visible {
-  transform: translateY(-1px);
-  background: rgba(var(--brand-rgb), 0.06);
-}
-
-.site-nav-link:active {
-  transform: translateY(0);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .site-header,
-  .site-nav-link,
-  .site-nav-link.is-active::before,
-  .site-nav-link.is-active::after {
+  .site-nav-link {
     animation: none;
-  }
-
-  .site-nav-link:hover,
-  .site-nav-link:focus-visible,
-  .site-nav-link:active {
-    transform: none;
   }
 
   .site-header::after {

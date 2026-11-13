@@ -948,18 +948,7 @@
 
     <div class="supplier-preview">
       {% for supplier in suppliers %}
-        <article class="supplier-card">
-          <div class="supplier-top">
-            <span class="supplier-mark">{{ supplier.name[0] }}</span>
-            <span class="badge badge-soft">{{ supplier.category }}</span>
-          </div>
-          <h3>{{ supplier.name }}</h3>
-          <p class="supplier-city">{{ icon('map-pin', 13) }} {{ supplier.city }}</p>
-          <p class="supplier-desc">{{ supplier.description }}</p>
-          <a class="link-arrow" href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">
-            View catalogue {{ icon('external', 14) }}
-          </a>
-        </article>
+        {% include "partials/supplier_card.html" %}
       {% endfor %}
     </div>
   </div>

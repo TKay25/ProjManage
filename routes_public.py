@@ -7,7 +7,7 @@ from pathlib import Path
 
 from flask import Blueprint, current_app, jsonify, render_template, request, send_from_directory
 
-from suppliers import SUPPLIER_CATEGORIES, SUPPLIERS
+from suppliers import SUPPLIER_CATEGORIES, SUPPLIERS, category_tone
 
 bp = Blueprint("public", __name__)
 
@@ -16,7 +16,7 @@ STARTED_AT = time.time()
 
 @bp.get("/")
 def landing():
-    return render_template("landing.html", suppliers=SUPPLIERS[:4])
+    return render_template("landing.html", suppliers=SUPPLIERS[:4], tone=category_tone)
 
 
 # Photography used on the site. Images under a Creative Commons licence are
@@ -64,6 +64,8 @@ def suppliers_directory():
         category_counts=_category_counts(SUPPLIERS),
         category=category,
         search=search,
+        total=len(SUPPLIERS),
+        tone=category_tone,
     )
 
 

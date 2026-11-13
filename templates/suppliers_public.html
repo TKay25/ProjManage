@@ -3,26 +3,34 @@
 {% block body_class %}public{% endblock %}
 
 {% block content %}
-<section class="page-hero">
+<section class="dir-hero">
   <div class="container">
     <p class="eyebrow">{{ icon('store', 14) }} Supplier directory</p>
-    <h1 class="page-hero-title">Source it locally, record it properly.</h1>
+    <h1>Source it locally,<br />record it properly.</h1>
     <p class="lead">
-      Find Zimbabwean suppliers for cement, roof sheets, rebar, tiles and more.
-      Get a current written quote and confirm stock and delivery. If YaVaKa is
-      managing your build, our team coordinates contractors and project
-      purchases; otherwise, use the directory to manage sourcing yourself.
+      Cement, roof sheets, rebar, tiles and the trades behind them — a starting
+      list of Zimbabwean suppliers with the one rule that matters: get a current
+      written quote, confirm stock and delivery, then pay against a receipt.
+      When YaVaKa manages your build our team coordinates contractors and
+      purchases; otherwise this directory is yours to source with.
     </p>
     <div class="hero-actions">
       <a class="btn btn-primary" href="/register" data-modal-open="modal-register">Track quotes in your project {{ icon('arrow-right', 16) }}</a>
-      <a class="btn btn-outline" href="/#money">See the money controls</a>
+      <a class="btn btn-outline hero-btn-glass" href="/#money">See the money controls</a>
     </div>
+
+    <dl class="dir-stats">
+      <div><dt>{{ total }}</dt><dd>Suppliers listed</dd></div>
+      <div><dt>{{ categories|length }}</dt><dd>Material categories</dd></div>
+      <div><dt>{{ category_counts|length }}</dt><dd>Branches nationwide</dd></div>
+      <div><dt>0</dt><dd>Commission taken</dd></div>
+    </dl>
   </div>
 </section>
 
 <section class="section section-tight">
   <div class="container">
-    <form class="filter-bar filter-bar-lg" method="get" action="/suppliers">
+    <form class="dir-toolbar" method="get" action="/suppliers">
       <label class="search-field">
         {{ icon('search', 16) }}
         <input class="input" type="search" name="q" value="{{ search }}" placeholder="Search cement, roofing, paint…" aria-label="Search suppliers" />
@@ -42,40 +50,24 @@
       {% if search or category %}<a class="link-quiet" href="/suppliers">Clear</a>{% endif %}
     </form>
 
-    {% if category %}
-      <p class="filter-summary">
-        Showing <strong>{{ category }}</strong>
-        <a class="link-quiet" href="/suppliers?q={{ search }}">Clear category</a>
-      </p>
-    {% endif %}
+    <p class="dir-count" role="status">
+      <strong>{{ suppliers|length }}</strong> {{ 'supplier' if suppliers|length == 1 else 'suppliers' }}
+      {%- if category and search %} in <strong>{{ category }}</strong> matching “{{ search }}”
+      {%- elif category %} in <strong>{{ category }}</strong>
+      {%- elif search %} matching “{{ search }}”
+      {%- else %} across {{ categories|length }} categories{% endif %}
+      {% if category %}
+        <span class="dir-filter">
+          {{ category }}
+          <a href="/suppliers?q={{ search }}" aria-label="Clear the {{ category }} filter">{{ icon('close', 11) }}</a>
+        </span>
+      {% endif %}
+    </p>
 
     {% if suppliers %}
       <div class="supplier-grid">
         {% for supplier in suppliers %}
-          <article class="supplier-card">
-            <div class="supplier-top">
-              <span class="supplier-mark">{{ supplier.name[0] }}</span>
-              {% if supplier.verified %}<span class="badge badge-success">{{ icon('check', 12) }} Verified</span>{% endif %}
-              <span class="badge badge-soft">{{ supplier.category }}</span>
-            </div>
-            <h3 class="supplier-name">
-              {% if supplier.website %}
-                <a href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">{{ supplier.name }}</a>
-              {% else %}
-                {{ supplier.name }}
-              {% endif %}
-            </h3>
-            <p class="supplier-city">{{ icon('map-pin', 13) }} {{ supplier.city }}</p>
-            <p class="supplier-desc">{{ supplier.description }}</p>
-            <div class="tag-row">
-              {% for tag in supplier.tags %}
-                <span class="tag">{{ tag }}</span>
-              {% endfor %}
-            </div>
-            {% if supplier.website %}
-              <a class="link-arrow" href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">View catalogue {{ icon('external', 14) }}</a>
-            {% endif %}
-          </article>
+          {% include "partials/supplier_card.html" %}
         {% endfor %}
       </div>
     {% else %}
@@ -89,13 +81,17 @@
       </div>
     {% endif %}
 
-    <p class="micro-note">
-      {{ icon('alert', 14) }}       Supplier details are provided for convenience and may change. YaVaKa does
-      not earn supplier commission. For self-managed projects, you pay suppliers
-      directly; when YaVaKa manages your build, project payments are made on
-      your behalf as agreed and recorded against the correct stage. Always
-      verify the business, get a written quote and keep the receipt.
-    </p>
+    <div class="dir-note">
+      {{ icon('alert', 15) }}
+      <p>
+        <strong>Buy well.</strong> Supplier details are provided for convenience
+        and may change, and YaVaKa earns no commission from any of them. On a
+        self-managed project you pay suppliers directly; when YaVaKa manages your
+        build, payments are made on your behalf as agreed and recorded against
+        the correct stage. Always verify the business, get a written quote and
+        keep the receipt.
+      </p>
+    </div>
   </div>
 </section>
 {% endblock %}

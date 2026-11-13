@@ -4,7 +4,7 @@ from flask import Blueprint, g, render_template, request
 
 from auth import accessible_projects, login_required
 from db import query
-from suppliers import SUPPLIER_CATEGORIES
+from suppliers import SUPPLIER_CATEGORIES, category_tone
 
 bp = Blueprint("suppliers", __name__)
 
@@ -31,6 +31,13 @@ def index():
         params,
     )
 
+    # Tags are stored as one comma-separated string; the card renders a chip
+    # per tag, and iterating the raw string would make a chip per character.
+    for supplier in suppliers:
+        supplier["tags"] = [
+            tag.strip() for tag in (supplier.get("tags") or "").split(",") if tag.strip()
+        ]
+
     # Counts come from the whole directory, not the filtered slice, so the
     # dropdown shows how much sits behind each option.
     category_counts = {
@@ -50,4 +57,6 @@ def index():
         category_counts=category_counts,
         category=category,
         search=search,
+        total=sum(category_counts.values()),
+        tone=category_tone,
     )

@@ -1,0 +1,51 @@
+{# One entry in the supplier directory. Shared by the public page and the
+   workspace so the two can never drift apart.
+
+   The category tone is what makes the grid readable at a glance: it paints the
+   monogram, the category label and the hover edge, and it comes from
+   suppliers.category_tone(). #}
+<article class="supplier-card tone-{{ tone(supplier.category) }}">
+  <div class="supplier-top">
+    <span class="supplier-mark" aria-hidden="true">{{ supplier.name[0] }}</span>
+    <div class="supplier-id">
+      <p class="supplier-cat">{{ supplier.category }}</p>
+      <p class="supplier-city">{{ icon('map-pin', 12) }} {{ supplier.city }}</p>
+    </div>
+    {% if supplier.verified %}
+      <span class="badge badge-success supplier-verified">{{ icon('shield', 11) }} Verified</span>
+    {% endif %}
+  </div>
+
+  <h3 class="supplier-name">
+    {% if supplier.website %}
+      <a href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">{{ supplier.name }}</a>
+    {% else %}
+      {{ supplier.name }}
+    {% endif %}
+  </h3>
+
+  <p class="supplier-desc">{{ supplier.description }}</p>
+
+  <div class="tag-row">
+    {% for tag in supplier.tags %}
+      <span class="tag">{{ tag }}</span>
+    {% endfor %}
+  </div>
+
+  {% if supplier.website or supplier.phone %}
+    <div class="supplier-foot">
+      {% if supplier.website %}
+        <a class="supplier-link" href="{{ supplier.website }}" target="_blank" rel="noopener noreferrer">
+          View catalogue {{ icon('external', 13) }}
+        </a>
+      {% endif %}
+      {% if supplier.phone %}
+        <a class="supplier-call" href="tel:{{ supplier.phone }}" aria-label="Call {{ supplier.name }}">
+          {{ icon('phone', 13) }}
+        </a>
+      {% else %}
+        <span class="supplier-host">{{ supplier.website|replace('https://', '')|replace('http://', '')|replace('www.', '')|trim('/') }}</span>
+      {% endif %}
+    </div>
+  {% endif %}
+</article>

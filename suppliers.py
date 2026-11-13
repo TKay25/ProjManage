@@ -15,6 +15,23 @@ SUPPLIER_CATEGORIES = [
     "Doors, windows & aluminium",
 ]
 
+# One tone per category, so the directory reads as a colour-coded shelf rather
+# than a wall of identical cards. The tints themselves live in app.css.
+SUPPLIER_CATEGORY_TONES = {
+    "General hardware": "clay",
+    "Cement & concrete": "stone",
+    "Roofing & tiles": "terra",
+    "Steel & reinforcement": "slate",
+    "Electrical": "amber",
+    "Plumbing & sanitary": "aqua",
+    "Paint & finishes": "plum",
+    "Doors, windows & aluminium": "sage",
+}
+
+
+def category_tone(name):
+    return SUPPLIER_CATEGORY_TONES.get(name, "slate")
+
 SUPPLIERS = [
     {
         "name": "Halsted Builders Express",

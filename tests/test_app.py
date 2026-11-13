@@ -4884,9 +4884,12 @@ class HeaderMotion(unittest.TestCase):
         self.assertIn("animation-delay", self.css)
 
     def test_current_section_has_an_idle_cue(self):
-        # A breathing glow plus an inset edge, not hover-only styling.
-        self.assertIn("@keyframes nav-breathe", self.css)
-        self.assertIn(".site-nav-link.is-active::before", self.css)
+        # The current section is a raised pill — its own surface and edge, not
+        # hover-only styling that vanishes the moment the pointer moves away.
+        block = self.css[
+            self.css.index(".site-nav-link.is-active {"):].split("}", 1)[0]
+        self.assertIn("background: #fff", block)
+        self.assertIn("box-shadow", block)
 
     def test_header_motion_is_disabled_for_reduced_motion(self):
         block = self.css[self.css.index("Public header: life before hover"):]
