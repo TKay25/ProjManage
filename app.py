@@ -392,6 +392,9 @@ def create_app(config_object=Config):
             "home_path": portals.home_path(portals.default_for(user)) if user else "/app",
             "property_nav_items": PROPERTY_NAV_ITEMS,
             "property_tab_items": [item for item in PROPERTY_NAV_ITEMS if item["key"] in {"property_dashboard", "properties", "rent_invoices"}],
+            # Each workspace page wears the icon of the section it belongs to,
+            # so the header band says where you are before the title is read.
+            "section_icons": {item["key"]: item["icon"] for item in NAV_ITEMS + PROPERTY_NAV_ITEMS},
             # Copy addresses whoever is signed in: a client with a manager reads
             # about what they receive, everyone else about what they record.
             "runs_build": auth.runs_build(user),

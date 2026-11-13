@@ -8149,3 +8149,308 @@ td.align-right,
     margin-bottom: 12px;
   }
 }
+
+/* ============================================================
+   Workspace identity
+
+   A signed-in page used to look like every other page: one grey title line
+   over a field of identical white cards. Each area now wears its own colour
+   and its own icon, so moving between Money and Documents feels like moving
+   between rooms instead of reloading the same room.
+
+   Every tone is built from tokens that flip with the theme (--brand-rgb,
+   --accent-rgb, --success, --brick), so dark mode needs no second set.
+   ============================================================ */
+
+.shell {
+  --section-tone: rgb(var(--brand-rgb));
+  --section-wash: rgba(var(--brand-rgb), 0.1);
+}
+
+.shell[data-section="money"],
+.shell[data-section="property_dashboard"],
+.shell[data-section="properties"],
+.shell[data-section="tenants"],
+.shell[data-section="leases"],
+.shell[data-section="rent_invoices"],
+.shell[data-section="rent_payments"] {
+  --section-tone: var(--success);
+  --section-wash: var(--success-soft);
+}
+
+.shell[data-section="updates"],
+.shell[data-section="reports"],
+.shell[data-section="suppliers"] {
+  --section-tone: rgb(var(--accent-rgb));
+  --section-wash: rgba(var(--accent-rgb), 0.14);
+}
+
+.shell[data-section="attention"] {
+  --section-tone: var(--brick);
+  --section-wash: var(--brick-soft);
+}
+
+.shell[data-section="settings"] {
+  --section-tone: var(--ink-faint);
+  --section-wash: var(--sand-200);
+}
+
+/* A little daylight behind the content, so the cards sit on something. */
+.content {
+  background:
+    radial-gradient(1100px 380px at 50% -220px, var(--section-wash), transparent 72%);
+}
+
+/* ---------- Page head as a band ---------- */
+
+/* The work area is a flex column (so the sidebar can pin its footer), which
+   means every direct child is a flex item that may be squeezed when the page
+   is taller than the window. A 70px header collapsing to 32px is exactly what
+   that looks like; only the dashboard was guarded against it. */
+.content > * {
+  flex: 0 0 auto;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 15px 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(var(--brand-rgb), 0.035);
+  position: relative;
+  overflow: hidden;
+}
+
+/* The section's colour enters as a soft wedge rather than a hard stripe. */
+.page-head::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(320px, 42%);
+  height: auto;
+  background: linear-gradient(100deg, var(--section-wash), transparent);
+  pointer-events: none;
+}
+
+.page-head-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  position: relative;
+}
+
+.page-head-text {
+  min-width: 0;
+}
+
+.page-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 13px;
+  background: var(--section-wash);
+  color: var(--section-tone);
+  box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb), 0.12);
+}
+
+.page-head .page-title {
+  margin-bottom: 2px;
+}
+
+.page-head .page-actions {
+  position: relative;
+  margin-left: auto;
+}
+
+/* ---------- Today: the only to-do on the dashboard ---------- */
+
+.today {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(var(--brand-rgb), 0.035);
+}
+
+.today-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  flex: none;
+}
+
+.today-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.today-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 7px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.today-chip:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-xs);
+}
+
+.today-chip .icon {
+  color: var(--ink-faint);
+}
+
+.today-chip-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--brand-rgb), 0.12);
+  color: rgb(var(--brand-rgb));
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-chip--warn .today-chip-count {
+  background: var(--amber-soft);
+  color: rgb(var(--accent-rgb));
+}
+
+.today-chip--alert .today-chip-count {
+  background: var(--brick-soft);
+  color: var(--brick);
+}
+
+.today-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-soft);
+  flex: none;
+  margin-left: 3px;
+}
+
+.today--clear {
+  border-color: rgba(var(--brand-rgb), 0.14);
+}
+
+.today--clear .today-label {
+  color: var(--success);
+}
+
+.today-clear-text {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+/* ---------- KPI tiles: one colour per metric ----------
+   Position, not label, decides the tone — the same four-up grid then reads as
+   four different things instead of four white boxes with grey icons. The
+   semantic modifiers (positive/negative/warn) still win where a metric really
+   is in credit or in the red. */
+
+.kpi-grid > .kpi:nth-child(4n + 1) .kpi-icon:not(.kpi-icon-positive):not(.kpi-icon-negative):not(.kpi-icon-warn) {
+  background: var(--amber-soft);
+  color: rgb(var(--accent-rgb));
+}
+
+.kpi-grid > .kpi:nth-child(4n + 2) .kpi-icon:not(.kpi-icon-positive):not(.kpi-icon-negative):not(.kpi-icon-warn) {
+  background: rgba(var(--brand-rgb), 0.1);
+  color: rgb(var(--brand-rgb));
+}
+
+.kpi-grid > .kpi:nth-child(4n + 3) .kpi-icon:not(.kpi-icon-positive):not(.kpi-icon-negative):not(.kpi-icon-warn) {
+  background: rgba(var(--accent-rgb), 0.14);
+  color: rgb(var(--accent-rgb));
+}
+
+.kpi-grid > .kpi:nth-child(4n) .kpi-icon:not(.kpi-icon-positive):not(.kpi-icon-negative):not(.kpi-icon-warn) {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+/* ---------- Sidebar: fewer blocks, calmer rhythm ---------- */
+
+.sidebar-section {
+  margin-top: 18px;
+}
+
+.sidebar-label {
+  margin-bottom: 6px;
+}
+
+.side-project--all {
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.side-project--all .side-project-name {
+  margin-left: 2px;
+}
+
+.nav-link.is-active .icon {
+  color: var(--section-tone);
+}
+
+@media (max-width: 640px) {
+  .page-head {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .page-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .page-head .page-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .today {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .today-actions {
+    width: 100%;
+  }
+
+  .today-chip {
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+}

@@ -83,6 +83,42 @@
   {% set funded_percent = ((totals.spent / totals.funded) * 100)|round|int if totals.funded else 0 %}
   {% set max_value = ([1] + flow|map(attribute='funded')|list + flow|map(attribute='spent')|list)|max %}
 
+  {# One line that answers "what now?" before the numbers. Everything else on
+     this page is history or detail; this is the only part that is a to-do. #}
+  {% if missing or alerts or current %}
+    <div class="today">
+      <p class="today-label">{{ icon('sparkles', 14) }} Today</p>
+      <div class="today-actions">
+        {% if missing %}
+          <a class="today-chip today-chip--warn" href="{{ url_for('money.index', project=project.id, filter='missing') }}">
+            <span class="today-chip-count">{{ missing|length }}</span>
+            receipt{{ '' if missing|length == 1 else 's' }} to chase
+            {{ icon('chevron-right', 13) }}
+          </a>
+        {% endif %}
+        {% if alerts %}
+          <a class="today-chip today-chip--alert" href="{{ url_for('attention.index') }}">
+            <span class="today-chip-count">{{ alerts|length }}</span>
+            thing{{ '' if alerts|length == 1 else 's' }} need{{ 's' if alerts|length == 1 }} you
+            {{ icon('chevron-right', 13) }}
+          </a>
+        {% endif %}
+        {% if current %}
+          <a class="today-chip" href="{{ url_for('projects.detail', project_id=project.id) }}#stage-{{ current.key }}">
+            <span class="today-chip-dot" aria-hidden="true"></span>
+            Stage {{ current.position or '' }} {{ current.name }}
+            {{ icon('chevron-right', 13) }}
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="today today--clear">
+      <p class="today-label">{{ icon('check', 14) }} Today</p>
+      <p class="today-clear-text">Nothing is waiting on you. The record is up to date.</p>
+    </div>
+  {% endif %}
+
   <div class="kpi-grid">
     <a class="kpi card-hover" href="{{ url_for('money.index', project=project.id) }}">
       <div class="kpi-top">

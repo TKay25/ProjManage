@@ -61,38 +61,32 @@
   <div class="sidebar-section">
     <p class="sidebar-label">Tools</p>
     <nav class="sidebar-nav" aria-label="Tools">
-      {% for item in nav_items[6:] %}
+      {# Search lives in the topbar and the palette, settings in the profile
+         card: neither needs a second door in the sidebar. #}
+      {% for item in nav_items[6:] if item.key not in ('search', 'settings') %}
         <a class="nav-link {% if active == item.key %}is-active{% endif %}" href="{{ item.href }}"
            {% if active == item.key %}aria-current="page"{% endif %}>
           {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>
         </a>
-      {% endfor %}    </nav>
-  </div>
-
-  <div class="sidebar-section">
-    <p class="sidebar-label">Workspaces</p>
-    <nav class="sidebar-nav" aria-label="Workspaces">
-      {% for item in sidebar_workspaces[:4] %}
-        <a class="side-project" href="{{ url_for('projects.index', workspace=item.id) }}">
-          <span class="project-dot tone-{{ loop.index0 % 4 + 1 }}"></span>
-          <span class="side-project-name">{{ item.name }}</span>
-        </a>
       {% endfor %}
-      <a class="side-project" href="{{ url_for('projects.index') }}" data-modal-open="modal-workspace">
-        {{ icon('plus', 14) }}<span class="side-project-name">New workspace</span>
-      </a>
     </nav>
   </div>
 
   <div class="sidebar-section sidebar-projects">
     <p class="sidebar-label">Your projects</p>
     {% if sidebar_projects %}
-      {% for item in sidebar_projects[:4] %}
+      {% for item in sidebar_projects[:3] %}
         <a class="side-project" href="{{ url_for('projects.detail', project_id=item.id) }}">
           <span class="project-dot tone-{{ loop.index0 % 4 + 1 }}"></span>
           <span class="side-project-name">{{ item.name }}</span>
         </a>
       {% endfor %}
+      {% if sidebar_projects|length > 3 %}
+        <a class="side-project side-project--all" href="{{ url_for('projects.index') }}">
+          <span class="side-project-name">All {{ sidebar_projects|length }} projects</span>
+          {{ icon('chevron-right', 14) }}
+        </a>
+      {% endif %}
     {% else %}
       <p class="sidebar-empty">No projects yet.</p>
     {% endif %}

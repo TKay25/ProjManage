@@ -4,7 +4,7 @@
 {% block body_content %}
 <div class="drawer-overlay" data-drawer-close></div>
 
-<div class="shell">
+<div class="shell" data-section="{{ active }}">
   {% include "partials/sidebar.html" %}
 
   <div class="shell-main">
@@ -89,10 +89,13 @@
       {% include "partials/flash.html" %}
 
       <div class="page-head">
-        <div>
-          {% if eyebrow is defined and eyebrow %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
-          <h1 class="page-title">{% block page_title %}{{ title }}{% endblock %}</h1>
-          {% block page_subtitle %}{% endblock %}
+        <div class="page-head-main">
+          <span class="page-icon" aria-hidden="true">{{ icon(section_icons.get(active, 'layout'), 21) }}</span>
+          <div class="page-head-text">
+            {% if eyebrow is defined and eyebrow %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
+            <h1 class="page-title">{% block page_title %}{{ title }}{% endblock %}</h1>
+            {% block page_subtitle %}{% endblock %}
+          </div>
         </div>
         <div class="page-actions">{% block page_actions %}{% endblock %}</div>
       </div>
