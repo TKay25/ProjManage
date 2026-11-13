@@ -40,15 +40,15 @@
             </label>
 
             {% if demo_mode %}
-              <div class="demo-box">
-                <p class="demo-box-title">{{ icon('sparkles', 15) }} Demo workspace</p>
-                <p>
+              <details class="demo-box">
+                <summary class="demo-box-title">{{ icon('sparkles', 15) }} Demo workspace</summary>
+                <div class="demo-credentials">
                   Client · <code>client@yavaka.co.zw</code><br />
                   Manager · <code>manager@yavaka.co.zw</code><br />
                   Staff · <code>admin@yavaka.co.zw</code><br />
                   Password · <code>YaVaKa2026!</code>
-                </p>
-              </div>
+                </div>
+              </details>
             {% endif %}
           </div>
         </div>

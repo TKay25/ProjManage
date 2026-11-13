@@ -3911,6 +3911,10 @@ p {
 
 /* ============================================================
    Auth
+
+   The sign-in page is a single screen: the whole card has to be visible
+   without scrolling on a laptop. Every vertical measure is therefore tied to
+   the viewport height, and the demo credentials fold away until asked for.
    ============================================================ */
 
 .auth-body {
@@ -3919,9 +3923,18 @@ p {
 
 .auth {
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
+  /* `safe center` keeps the top of an over-tall page (the register form)
+     reachable instead of clipping it above the viewport. */
   align-items: center;
-  padding: 32px 0;
+  padding: clamp(10px, 2.4vh, 32px) 0;
+}
+
+@supports (align-items: safe center) {
+  .auth {
+    align-items: safe center;
+  }
 }
 
 .auth-grid {
@@ -3938,7 +3951,7 @@ p {
 
 .auth-aside {
   position: relative;
-  padding: 44px;
+  padding: clamp(18px, 4.2vh, 44px);
   color: rgba(255, 255, 255, 0.75);
   background: var(--forest-950);
   display: flex;
@@ -3950,6 +3963,11 @@ p {
   align-items: center;
   gap: 12px;
   color: #fff;
+}
+
+.auth-brand .logo-mark {
+  width: clamp(32px, 4.6vh, 44px);
+  height: clamp(32px, 4.6vh, 44px);
 }
 
 .auth-brand strong {
@@ -3966,18 +3984,18 @@ p {
 }
 
 .auth-quote {
-  margin: 52px 0 32px;
+  margin: clamp(12px, 4.6vh, 52px) 0 clamp(10px, 2.6vh, 32px);
 }
 
 .auth-quote-statement {
   position: relative;
-  margin: 0 0 16px;
-  padding: 20px 4px 0;
+  margin: 0 0 clamp(8px, 1.6vh, 16px);
+  padding: clamp(10px, 1.9vh, 20px) 4px 0;
   color: #fff;
   font-family: var(--font-serif);
   font-style: italic;
   font-weight: 500;
-  font-size: clamp(1.45rem, 1.2rem + 0.7vw, 1.9rem);
+  font-size: clamp(1.2rem, 1.02rem + 0.75vw, 1.9rem);
   line-height: 1.24;
   letter-spacing: -0.025em;
 }
@@ -4005,17 +4023,17 @@ p {
 }
 
 .auth-quote-sub {
-  font-size: 0.87rem;
-  line-height: 1.6;
+  font-size: 0.84rem;
+  line-height: 1.55;
   color: rgba(255, 255, 255, 0.66);
 }
 
 .auth-points {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: clamp(7px, 1.3vh, 12px);
   margin-top: auto;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .auth-points li {
@@ -4031,34 +4049,85 @@ p {
 
 .auth-card {
   background: #fff;
-  padding: 44px;
+  padding: clamp(18px, 4.2vh, 44px);
   display: flex;
   flex-direction: column;
 }
 
+.auth .portal-door {
+  margin-bottom: clamp(10px, 2vh, 18px);
+}
+
 .auth-head {
-  margin-bottom: 26px;
+  margin-bottom: clamp(12px, 2.6vh, 26px);
 }
 
 .auth-head h1 {
-  font-size: 1.5rem;
+  font-size: clamp(1.24rem, 1.1rem + 0.45vw, 1.5rem);
   letter-spacing: -0.02em;
-  margin-bottom: 8px;
+  margin-bottom: clamp(4px, 0.9vh, 8px);
 }
 
 .auth-head .muted {
-  font-size: 0.87rem;
+  font-size: 0.85rem;
 }
 
+.auth .form {
+  gap: clamp(9px, 1.7vh, 16px);
+}
+
+.auth .micro-note {
+  margin-top: clamp(4px, 1.2vh, 16px);
+}
+
+/* Demo credentials: reference material, so one row until opened. */
 .demo-box {
-  margin-top: 22px;
-  padding: 14px 16px;
+  margin-top: clamp(10px, 1.9vh, 22px);
+  padding: 0 16px;
   border-radius: var(--radius-sm);
   background: var(--sand-100);
   border: 1px dashed var(--sand-400);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--ink-soft);
   line-height: 1.8;
+}
+
+.demo-box > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.demo-box > summary::-webkit-details-marker {
+  display: none;
+}
+
+.demo-box > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  opacity: 0.6;
+  transition: transform 0.18s ease;
+}
+
+.demo-box[open] > summary::after {
+  transform: rotate(-135deg) translateY(-2px);
+}
+
+.demo-box[open] > summary {
+  border-bottom: 1px solid var(--sand-300);
+}
+
+.demo-credentials {
+  padding: 8px 0 10px;
+  line-height: 1.6;
 }
 
 .demo-box-title {
@@ -4067,15 +4136,14 @@ p {
   gap: 6px;
   font-weight: 650;
   color: var(--forest-800);
-  margin-bottom: 6px;
   font-size: 0.76rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .auth-foot {
-  margin-top: 24px;
-  padding-top: 18px;
+  margin-top: clamp(10px, 2vh, 24px);
+  padding-top: clamp(8px, 1.5vh, 18px);
   border-top: 1px solid var(--line);
   font-size: 0.84rem;
   color: var(--ink-soft);
@@ -4092,6 +4160,42 @@ p {
 
 .auth-foot a {
   font-weight: 650;
+}
+
+/* Shorter windows: the aside keeps its headline and its four promises, and
+   gives up the paragraph under the quote so the card still fits. The quote
+   then centres itself between the brand and the promises instead of leaving a
+   hole beneath the logo. */
+@media (max-height: 820px) {
+  .auth-quote-sub {
+    display: none;
+  }
+
+  .auth-quote {
+    margin: auto 0;
+  }
+
+  .auth .field {
+    gap: 4px;
+  }
+}
+
+/* Very short (a 720p laptop with browser chrome): the promise list goes too,
+   leaving the sign-in card as the whole screen. */
+@media (max-height: 660px) {
+  .auth-points {
+    display: none;
+  }
+
+  .auth-quote-statement {
+    font-size: 1.16rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-box > summary::after {
+    transition: none;
+  }
 }
 
 /* ============================================================
@@ -4280,16 +4384,14 @@ p {
     max-width: 520px;
   }
 
+  /* One column: the sign-in card is the page, so the aside shrinks to the
+     brand row instead of pushing the form halfway down a phone screen. */
   .auth-aside {
-    padding: 30px 32px;
+    padding: 22px 26px;
   }
 
   .auth-quote {
-    margin: 28px 0 8px;
-  }
-
-  .auth-quote-statement {
-    font-size: 1.35rem;
+    display: none;
   }
 
   .auth-points {

@@ -1000,6 +1000,24 @@ class ProductionSafety(unittest.TestCase):
         # The supplier directory is reference data, not an account.
         self.assertGreater(suppliers, 0)
 
+    def test_the_demo_credentials_fold_away_so_the_sign_in_fits_one_screen(self):
+        """The sign-in page is a single screen; the credentials are reference
+        material and must not add height until they are asked for."""
+        config = isolated_config(
+            SEED_DEMO=True,
+            DEMO_MODE=True,
+            DATABASE=str(Path(_TEMP_DIR) / "demo-fold.db"),
+            UPLOAD_FOLDER=str(Path(_TEMP_DIR) / "demo-fold-uploads"),
+        )
+        client = create_app(config).test_client()
+
+        for path in ("/login", "/property/login"):
+            page = client.get(path).get_data(as_text=True)
+            self.assertRegex(page, r'<details class="demo-box">\s*<summary class="demo-box-title">')
+            self.assertIn("YaVaKa2026!", page)
+            # No `open` attribute: the box is one row until it is opened.
+            self.assertNotRegex(page, r'<details class="demo-box" open>')
+
     def test_login_page_hides_credentials_when_demo_is_off(self):
         config = isolated_config(
             SEED_DEMO=False,

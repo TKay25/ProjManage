@@ -7195,6 +7195,21 @@ td.align-right,
   color: #fff;
 }
 
+/* Two doors side by side on a phone leave no room for two words each; the
+   labels stay on one line and the icons drop out. */
+@media (max-width: 430px) {
+  .portal-door-link {
+    gap: 0;
+    padding: 7px 6px;
+    font-size: 0.73rem;
+    white-space: nowrap;
+  }
+
+  .portal-door-link .icon {
+    display: none;
+  }
+}
+
 .module-note {
   margin-bottom: 18px;
   border-left: 3px solid var(--brass-500, #BA7044);
