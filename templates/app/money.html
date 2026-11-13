@@ -126,11 +126,15 @@
       </form>
 
       {% if transactions %}
-        <ul class="ledger-list" data-ledger-list>
-          {% for tx in transactions %}
-            {% include "partials/ledger_row.html" %}
-          {% endfor %}
-        </ul>
+        {# A working list, not a document: a long history scrolls inside this
+           box so the count, the filters and the summary above stay put. #}
+        <div class="ledger-scroll" tabindex="0" role="region" aria-label="Ledger entries">
+          <ul class="ledger-list" data-ledger-list>
+            {% for tx in transactions %}
+              {% include "partials/ledger_row.html" %}
+            {% endfor %}
+          </ul>
+        </div>
         {% include "partials/pager.html" %}
       {% else %}
         <div class="empty">

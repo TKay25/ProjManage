@@ -750,6 +750,30 @@ body.app {
   flex-direction: column;
 }
 
+/* The ledger is a working list, not a document. A build with a long history
+   would otherwise turn the money page into an endless scroll, pushing the
+   summary, the filters and the pager out of reach. It scrolls inside its own
+   box instead, and stays keyboard-scrollable because it can take focus. */
+.ledger-scroll {
+  max-height: min(62vh, 680px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 8px;
+  scrollbar-gutter: stable;
+  border-radius: var(--radius-sm);
+}
+
+.ledger-scroll:focus-visible {
+  outline: 2px solid rgb(var(--brand-rgb));
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .ledger-scroll {
+    max-height: 58vh;
+  }
+}
+
 .tx-row,
 .ledger-row {
   display: flex;
