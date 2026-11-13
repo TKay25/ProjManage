@@ -8541,3 +8541,104 @@ td.align-right,
     justify-content: space-between;
   }
 }
+
+/* ============================================================
+   Minimal pass
+
+   Less decoration, the same furniture. Nothing that carries information is
+   removed — every link, count, badge, filter, warning and action stays. What
+   goes is the second surface (shadow on top of a border), the third accent,
+   the shouting capitals, and the quoted line under every page title.
+   ============================================================ */
+
+/* A card is a bordered box, not a floating object. */
+.card,
+.kpi,
+.today,
+.supplier-card,
+.project-card,
+.feature-card {
+  box-shadow: none;
+}
+
+/* The quoted tagline repeated under every title was decoration. */
+.page-tagline,
+.page-tagline::before,
+.page-tagline::after {
+  display: none;
+  content: none;
+}
+
+/* The header stops being a tinted band and becomes a plain heading with a
+   hairline: still the icon, the title, the subtitle and the actions. */
+.page-head {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0 0 12px;
+  margin-bottom: 18px;
+}
+
+.page-head::before {
+  display: none;
+}
+
+.page-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  color: var(--ink-faint);
+}
+
+/* No wash behind the work area: the surfaces carry the hierarchy. */
+.content {
+  background: none;
+}
+
+/* One accent for metrics. Red, amber and green still mean what they meant. */
+.kpi-grid > .kpi .kpi-icon:not(.kpi-icon-positive):not(.kpi-icon-negative):not(.kpi-icon-warn) {
+  background: var(--sand-100);
+  color: var(--ink-soft);
+}
+
+/* Labels stop shouting: capitals in every tile made the page noisy. */
+.kpi-label,
+.sidebar-label,
+.update-day-label,
+.eyebrow {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 650;
+}
+
+.eyebrow::before {
+  display: none;
+}
+
+/* Neutral badges lose their fill; status badges keep their colour, because
+   that colour is the information. */
+.badge-soft,
+.badge-muted {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-faint);
+}
+
+/* The note boxes keep their words and lose their box. */
+.dir-note,
+.module-note-body,
+.side-note {
+  background: transparent;
+  border: 0;
+  border-left: 2px solid var(--line);
+  border-radius: 0;
+  padding-left: 14px;
+}
+
+/* A little less air between blocks, so a page reads as one thing. */
+.section-block {
+  margin-top: 26px;
+}
