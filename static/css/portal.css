@@ -3747,6 +3747,15 @@ button.card-trigger {
     cursor: pointer;
   }
 
+  /* "Rent invoices" wrapped onto a second line and made the whole bar 84px
+     tall on a 360px phone. One line, or an ellipsis if it truly cannot fit. */
+  .tab span {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
   .tab.is-active {
     color: var(--forest-700);
   }
@@ -7064,6 +7073,15 @@ td.align-right,
   }
 }
 
+/* On a phone-width workspace the tab bar owns the bottom edge, so the launcher
+   rides above it — parked in the corner it covered the "More" tab. The height
+   is measured in app.js; the fallback covers the first paint. */
+@media (max-width: 1024px) {
+  body.app .aide {
+    bottom: calc(var(--tabbar-h, 66px) + 10px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aide-window {
     animation: none;
@@ -8051,6 +8069,14 @@ td.align-right,
 
   .tab span {
     font-size: 0.7rem;
+  }
+
+  /* Five tabs on a 320px-wide phone: the longest label needs the smaller size
+     to stay on one line instead of truncating. */
+  @media (max-width: 380px) {
+    .tab span {
+      font-size: 0.62rem;
+    }
   }
 
   .badge {

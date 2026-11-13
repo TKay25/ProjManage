@@ -7,6 +7,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
   let installPrompt = null;
+  let stopWatchingTabbar = null;
 
   function enhancePasswordField(input) {
     if (input.dataset.pwReady === "1") return;
@@ -114,6 +115,28 @@
 
     $$("[data-drawer-open]").forEach((el) => el.addEventListener("click", openDrawer));
     $$("[data-drawer-close]").forEach((el) => el.addEventListener("click", closeDrawer));
+
+    /* The floating assistant has to clear the tab bar, and the bar changes
+       height when a label wraps or the safe-area inset changes. Measure it
+       instead of guessing, so the launcher never sits on the last tab. */
+    if (stopWatchingTabbar) stopWatchingTabbar();
+    stopWatchingTabbar = null;
+    const tabbar = $(".tabbar");
+    if (tabbar) {
+      const measureTabbar = () => {
+        const height = Math.round(tabbar.getBoundingClientRect().height);
+        if (height > 0) document.documentElement.style.setProperty("--tabbar-h", `${height}px`);
+      };
+      measureTabbar();
+      if ("ResizeObserver" in window) {
+        const observer = new ResizeObserver(measureTabbar);
+        observer.observe(tabbar);
+        stopWatchingTabbar = () => observer.disconnect();
+      } else {
+        window.addEventListener("resize", measureTabbar);
+        stopWatchingTabbar = () => window.removeEventListener("resize", measureTabbar);
+      }
+    }
     /* ---------- Notices ---------- */
 
     const dismiss = (notice) => {
