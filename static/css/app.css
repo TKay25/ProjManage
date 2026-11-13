@@ -1877,30 +1877,117 @@ p {
   }
 }
 
-/* With the panel beside it, the copy runs in a narrower column: tighten the
-   vertical rhythm so the photograph, the panel and the gallery bar all fit
-   one screen. */
+/* With the panel beside it, the copy runs in a narrower column. The whole
+   hero is a first-screen promise — the headline, the buttons, the proof and
+   the gallery bar — so every measure here is tied to the height of the window.
+   A 720px laptop gets a tighter hero than a 1080px monitor, and nothing is
+   dropped to get there. */
 @media (min-width: 1081px) {
+  .hero {
+    /* Exactly the first screen: the sticky header, its hairline, and the hero
+       under it. The gallery bar then sits on the fold, not below it. Capped so
+       a very tall monitor still shows the top of the next section. */
+    min-height: min(calc(100svh - var(--header-h) - 1px), 940px);
+  }
+
   .hero-inner {
-    padding-top: clamp(40px, 7vh, 76px);
+    /* Take the slack, centre the copy and the panel in it, and leave the
+       gallery bar on the bottom edge. `safe` keeps the top from being pushed
+       out of view on a window too short to hold everything. */
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    justify-content: safe center;
+    padding-top: clamp(16px, 6vh, 72px);
     padding-bottom: 8px;
   }
 
+  .hero-grid .hero-pill {
+    margin-bottom: clamp(10px, 2.2vh, 24px);
+  }
+
   .hero-grid .hero-title {
-    font-size: clamp(2.3rem, 1.4rem + 3.4vw, 4rem);
+    /* Height-aware: the long headline slides have to stay on two lines, or the
+       tallest one silently reserves space the active one never uses. */
+    font-size: clamp(2rem, 3.2vh + 1.4vw, 4rem);
+    margin-bottom: clamp(10px, 2.2vh, 24px);
   }
 
   .hero-grid .hero-lead {
-    margin-bottom: 20px;
+    font-size: clamp(0.95rem, 1.15vh + 0.22vw, 1.12rem);
+    line-height: 1.55;
+    margin-bottom: clamp(10px, 2vh, 20px);
   }
 
   .hero-grid .hero-actions {
-    margin-bottom: 12px;
+    margin-bottom: clamp(8px, 1.5vh, 12px);
+  }
+
+  .hero-grid .demo-hint {
+    margin-bottom: clamp(8px, 1.8vh, 24px);
   }
 
   .hero-grid .hero-stats {
-    margin-top: 16px;
-    padding-top: 14px;
+    margin-top: clamp(10px, 1.8vh, 16px);
+    padding-top: clamp(8px, 1.6vh, 14px);
+  }
+
+  .hero-bar {
+    padding-bottom: clamp(10px, 2.4vh, 26px);
+  }
+}
+
+/* A short desktop window — a laptop with the browser's own chrome showing —
+   cannot hold the hero at its full rhythm. The demo credentials are repeated on
+   the sign-in screen, so the hero gives them up rather than pushing the gallery
+   bar below the fold. */
+@media (min-width: 1081px) and (max-height: 700px) {
+  .hero-inner {
+    padding-top: 8px;
+  }
+
+  .hero-grid .demo-hint {
+    display: none;
+  }
+
+  .hero-grid .hero-stats dt {
+    font-size: 1.2rem;
+  }
+
+  .hero-bar {
+    padding-bottom: 10px;
+  }
+}
+
+/* The demo panel is the tallest thing left on a short window: tighten its own
+   rhythm rather than shrink the photograph it sits on. */
+@media (min-width: 1081px) and (max-height: 660px) {
+  .hero-visual--hero .mock-project {
+    padding: 15px 16px;
+  }
+
+  .hero-visual--hero .mock-project-head {
+    margin-bottom: 11px;
+  }
+
+  .hero-visual--hero .mock-kpis,
+  .hero-visual--hero .mock-progress {
+    margin-top: 11px;
+  }
+
+  .hero-visual--hero .mock-ledger {
+    margin-top: 11px;
+    padding-top: 10px;
+  }
+}
+
+/* Very short windows: those three pills restate the paragraph above them
+   ("vetting the builder, approving every payment... watch it from anywhere"),
+   so they are the first thing the hero can spare. */
+@media (min-width: 1081px) and (max-height: 620px) {
+  .hero-grid .hero-trust {
+    display: none;
   }
 }
 
