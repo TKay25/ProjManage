@@ -533,6 +533,29 @@
     }
   });
 
+  /* Accordion forms open below the fold: tapping the summary expands a form
+     that starts under the thumb and runs off the screen. If the opened panel
+     does not fit in what is left of the viewport, bring its heading to the
+     top so the first field is the thing you are looking at. */
+  document.addEventListener(
+    "toggle",
+    (event) => {
+      const details = event.target;
+      if (!(details instanceof HTMLDetailsElement) || !details.open) return;
+      if (!details.matches("details.panel-form, details.fold-card, details.fold-section")) return;
+
+      const rect = details.getBoundingClientRect();
+      if (rect.top >= 0 && rect.bottom <= window.innerHeight) return;
+
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      (details.querySelector("summary") || details).scrollIntoView({
+        block: "start",
+        behavior: reduced ? "auto" : "smooth",
+      });
+    },
+    true,
+  );
+
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/sw.js").catch(() => {

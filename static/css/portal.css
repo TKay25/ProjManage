@@ -3171,6 +3171,10 @@ dialog.modal[open] {
   display: flex;
   flex-direction: column;
   max-height: min(92vh, 900px);
+  /* dvh tracks the *visible* viewport, so an open keyboard shrinks the sheet
+     instead of hiding the buttons behind it. Browsers without dvh keep the
+     line above. */
+  max-height: min(92vh, 92dvh, 900px);
   background: #fff;
   border-radius: var(--radius-lg);
   box-shadow: 0 40px 90px -40px rgba(var(--shadow-rgb), 0.6), 0 2px 6px rgba(var(--shadow-rgb), 0.08);
@@ -3352,6 +3356,9 @@ dialog.modal[open] {
 .modal-body {
   padding: 20px 24px;
   overflow-y: auto;
+  /* Scrolling inside the sheet must not chain to the page behind it. */
+  overscroll-behavior: contain;
+  scroll-padding-block: 12px;
   flex: 1;
 }
 
@@ -3396,6 +3403,7 @@ dialog.modal[open] {
     margin-top: auto;
     border-radius: var(--radius-lg);
     max-height: 92vh;
+    max-height: 92dvh;
   }
 
   dialog.modal[open] {
@@ -3405,6 +3413,7 @@ dialog.modal[open] {
   .modal-panel {
     border-radius: var(--radius-lg);
     max-height: 92vh;
+    max-height: 92dvh;
   }
 
   .modal-head {
@@ -3960,9 +3969,13 @@ button.card-trigger {
    that push the actual work below the fold. */
 
 @media (max-width: 420px) {
-  /* Same specificity as the wider grid rules, so this wins by order. */
+  /* Same specificity as the wider grid rules, so this wins by order. Every
+     KPI set — three, four or the default — becomes one compact row per
+     metric instead of a tall card, so the work below stays in view. */
+  .kpi-grid,
   .kpi-grid:not(.kpi-grid--3),
-  .kpi-grid--3 {
+  .kpi-grid--3,
+  .kpi-grid--four {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -7891,5 +7904,222 @@ td.align-right,
 @media (max-width: 620px) {
   .kpi-grid--four {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ============================================================
+   Small screens — forms and type
+
+   A phone is not a narrow desktop. Three rules drive everything below:
+
+   1. A control under 16px makes iOS zoom the page the moment it is focused,
+      so every field a thumb can land on is 16px.
+   2. A control under 44px is a miss with a thumb, so targets are 44px tall.
+   3. Labels and metadata tuned for a desk (11px) are unreadable at arm's
+      length, so the small end of the scale moves up, not down.
+
+   Applies at 640px and under; the desktop layout is untouched.
+   ============================================================ */
+
+@media (max-width: 640px) {
+  /* ---------- Controls ---------- */
+
+  .input,
+  .select,
+  .textarea,
+  .input-sm,
+  .select-sm,
+  .input-file,
+  .input-mono,
+  .copy-field .input {
+    font-size: 16px;
+    line-height: 1.3;
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  .select,
+  .select-sm {
+    padding-right: 34px;
+  }
+
+  .input-file {
+    line-height: 1.5;
+    padding-block: 9px;
+  }
+
+  .textarea {
+    min-height: 84px;
+  }
+
+  .textarea-tall {
+    min-height: 150px;
+  }
+
+  /* A date or number control renders its own picker; keep it from clipping. */
+  .input[type="date"],
+  .input[type="month"],
+  .input[type="number"] {
+    padding-right: 8px;
+  }
+
+  .field {
+    gap: 5px;
+  }
+
+  .field-label {
+    font-size: 0.82rem;
+  }
+
+  .field-hint {
+    font-size: 0.78rem;
+  }
+
+  .checkbox {
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .checkbox input {
+    width: 20px;
+    height: 20px;
+    margin-top: 0;
+  }
+
+  .form-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .form-error {
+    font-size: 0.88rem;
+  }
+
+  /* An opened accordion form starts under the heading it belongs to. */
+  details.panel-form,
+  details.fold-card,
+  details.fold-section {
+    scroll-margin-top: 12px;
+  }
+
+  /* ---------- Type ---------- */
+
+  .kpi-label,
+  .kpi-sub,
+  .mini-meta,
+  .chart-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+  }
+
+  .kpi-value {
+    font-size: 1.24rem;
+  }
+
+  .card-head h2,
+  .fold-head h2,
+  .fold-section-head h2 {
+    font-size: 1rem;
+  }
+
+  .card-sub,
+  .page-subtitle {
+    font-size: 0.86rem;
+  }
+
+  .page-title {
+    font-size: 1.3rem;
+  }
+
+  .btn {
+    font-size: 0.9rem;
+  }
+
+  .btn-sm {
+    font-size: 0.84rem;
+    padding: 8px 12px;
+  }
+
+  .btn-xs {
+    font-size: 0.78rem;
+    padding: 5px 9px;
+  }
+
+  .btn-lg {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .tab span {
+    font-size: 0.7rem;
+  }
+
+  .badge {
+    font-size: 0.72rem;
+  }
+
+  .table th {
+    font-size: 0.72rem;
+  }
+
+  .table td {
+    font-size: 0.84rem;
+  }
+
+  .table th,
+  .table td {
+    padding-inline: 10px;
+  }
+
+  /* ---------- Space that was spent on nothing ---------- */
+
+  .kpi-grid {
+    gap: 10px;
+  }
+
+  .kpi-grid--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The bonus-module explainer is a paragraph, not a page: hide the tile and
+     tighten the box so it stops taking the first screen. */
+  .module-note {
+    margin-bottom: 12px;
+  }
+
+  .module-note-body {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .module-note-icon {
+    display: none;
+  }
+
+  .module-note-body > div {
+    flex: 1 1 100%;
+  }
+
+  .module-note-title {
+    font-size: 0.95rem;
+    line-height: 1.3;
+  }
+
+  .module-note-text {
+    font-size: 0.84rem;
+    line-height: 1.5;
+  }
+
+  /* A card with no photograph should not spend 40% of its height on the gap
+     where one would have been. */
+  .property-card-media {
+    aspect-ratio: 16 / 7;
+  }
+
+  .card {
+    padding: 14px 16px;
+  }
+
+  .page-head {
+    margin-bottom: 12px;
   }
 }
