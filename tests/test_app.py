@@ -2557,6 +2557,27 @@ class UpdateNotifications(VakaTestCase):
 
         self.assertFalse([row for row in self._notifications(owner["id"]) if row["action"] == "digest.sent"])
 
+    def test_your_own_actions_appear_in_your_own_feed(self):
+        """The inbox is the record of the build, not a mailbox for other people.
+
+        Notifications are only created for stakeholders other than the actor, so
+        a client working on their own build used to open Updates and read
+        "Nothing here yet" after completing the very stage they had just done.
+        """
+        from db import log_event
+
+        project = self._project()
+        owner, _manager = self._people()
+
+        with self.app.app_context():
+            log_event(owner["id"], project["id"], "stage.completed", "Roof structure signed off")
+
+        self.login()
+        page = self.client.get("/app/updates").get_data(as_text=True)
+
+        self.assertIn("Stage completed", page)
+        self.assertIn("Roof structure signed off", page)
+
     def test_the_updates_page_shows_new_items_then_clears_the_badge(self):
         from db import log_event
 

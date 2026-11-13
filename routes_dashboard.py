@@ -127,7 +127,7 @@ def index():
             "alerts": alerts,
             "upcoming": upcoming,
             "runway": burn_rate(project["id"]),
-            "updates": update_feed.feed(g.user["id"], limit=5),
+            "updates": update_feed.history([project["id"]], limit=5),
             "current": current,
             "current_definition": stage_by_key(current["key"]) if current else None,
             "completed_count": len([stage for stage in stages if stage["status"] == "complete"]),

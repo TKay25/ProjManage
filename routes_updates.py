@@ -46,15 +46,20 @@ def index():
 
     # Highlight what was new on this visit, then clear the badge: opening the
     # inbox is the acknowledgement, the same way an email client behaves.
-    new_ids = updates.unread_ids(g.user["id"])
+    unread = updates.unread_count(g.user["id"])
+    new_ids = updates.unread_event_ids(g.user["id"])
 
-    total_rows = updates.count(g.user["id"], kind)
+    project_ids = [item["id"] for item in accessible_projects(g.user)]
+    total_rows = updates.history_count(project_ids, kind)
     size = page_size(default=25)
     page, page_count = page_window(page_number(), total_rows, size)
-    items = updates.feed(
-        g.user["id"], kind=kind, limit=size, offset_rows=offset(page, size)
+    items = updates.history(
+        project_ids,
+        kind=kind,
+        limit=size,
+        offset_rows=offset(page, size),
+        new_event_ids=new_ids,
     )
-    unread = len(new_ids)
     updates.mark_all_read(g.user["id"])
 
     return render_template(
@@ -63,7 +68,7 @@ def index():
         active="updates",
         projects=accessible_projects(g.user),
         kinds=[
-            {"key": key, "label": label, "count": updates.count(g.user["id"], key)}
+            {"key": key, "label": label, "count": updates.history_count(project_ids, key)}
             for key, (label, _prefixes) in updates.KINDS.items()
         ],
         kind=kind,

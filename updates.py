@@ -369,3 +369,80 @@ def mark_all_read(user_id: str) -> int:
             (now_iso(), user_id),
         )
     return before
+
+
+# ---------------------------------------------------------------------------
+# The history: what happened, including what you did yourself.
+#
+# Notifications are only ever created for *other* stakeholders, so an inbox
+# built from them is empty for whoever did the work — which is exactly what a
+# single-account build looks like, and why a client who completes a stage and
+# attaches a receipt saw "Nothing here yet". The audit log is the record; the
+# read state still comes from this person's notifications.
+# ---------------------------------------------------------------------------
+
+
+def _event_where(kind: str, project_ids):
+    prefixes = KINDS.get(kind, KINDS["all"])[1]
+    where = []
+    params = []
+    if project_ids is not None:
+        where.append("e.project_id IN (" + ", ".join("?" for _ in project_ids) + ")")
+        params.extend(project_ids)
+    if prefixes:
+        where.append("(" + " OR ".join("e.action LIKE ?" for _ in prefixes) + ")")
+        params.extend(f"{prefix}%" for prefix in prefixes)
+    return (" AND ".join(where) or "1 = 1"), params
+
+
+def history(project_ids, kind: str = "all", limit: int = 25, offset_rows: int = 0, new_event_ids=()):
+    """Newest first, joined with the project and the person who did it."""
+    project_ids = list(project_ids or ())
+    if not project_ids:
+        return []
+
+    clause, params = _event_where(kind, project_ids)
+    rows = query(
+        f"""SELECT e.id, e.project_id, e.action, e.detail, e.created_at,
+                   p.name AS project_name, p.code AS project_code,
+                   u.name AS actor_name, u.avatar_color AS actor_color
+            FROM audit_events e
+            JOIN projects p ON p.id = e.project_id
+            LEFT JOIN users u ON u.id = e.user_id
+            WHERE {clause}
+            ORDER BY e.created_at DESC, e.id DESC
+            LIMIT ? OFFSET ?""",
+        [*params, limit, offset_rows],
+    )
+
+    unread = set(new_event_ids or ())
+    for row in rows:
+        # Label, icon, tone and the filter group all come from the action.
+        row.update(describe(row["action"], row["detail"] or ""))
+        row["notification_tone"] = None
+        row["href"] = _href(row["action"], row["project_id"])
+        row["is_unread"] = row["id"] in unread
+    return rows
+
+
+def history_count(project_ids, kind: str = "all") -> int:
+    project_ids = list(project_ids or ())
+    if not project_ids:
+        return 0
+    clause, params = _event_where(kind, project_ids)
+    row = query(
+        f"SELECT COUNT(*) AS total FROM audit_events e WHERE {clause}",
+        params,
+        one=True,
+    )
+    return int(row["total"] or 0)
+
+
+def unread_event_ids(user_id: str) -> set:
+    """The audit events behind this person's unread notifications."""
+    rows = query(
+        """SELECT event_id FROM notifications
+           WHERE user_id = ? AND read_at IS NULL AND event_id IS NOT NULL""",
+        (user_id,),
+    )
+    return {row["event_id"] for row in rows}

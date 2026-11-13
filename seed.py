@@ -616,9 +616,25 @@ def _seed_audit(client_id, manager_id, project_id):
     events = [
         (manager_id, "project.created", "Project Greendale Family Home created", "2026-02-24T08:00:00+00:00"),
         (manager_id, "stage.completed", "Slab & damp course marked complete", "2026-05-30T15:00:00+00:00"),
-        (manager_id, "expense.recorded", "Roof trusses deposit of $5,200.00 recorded", "2026-10-02T12:00:00+00:00"),
-        (client_id, "deposit.notified", "Third tranche of $15,000.00 received", "2026-07-29T08:41:00+00:00"),
     ]
+
+    # The ledger and the record tell the same story. Every seeded transaction
+    # gets the event it would have produced, dated when it happened — otherwise
+    # the demo's Updates page shows four entries above a ledger of thirteen.
+    for row in query(
+        """SELECT type, description, occurred_at, created_by
+           FROM transactions WHERE project_id = ? ORDER BY occurred_at""",
+        (project_id,),
+    ):
+        action = "funding.recorded" if row["type"] == "FUNDING" else "expense.recorded"
+        events.append(
+            (
+                row["created_by"] or manager_id,
+                action,
+                f"{row['description']} recorded",
+                row["occurred_at"],
+            )
+        )
 
     for user_id, action, detail, created_at in events:
         execute(
