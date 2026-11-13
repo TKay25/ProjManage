@@ -755,7 +755,7 @@ body.app {
    summary, the filters and the pager out of reach. It scrolls inside its own
    box instead, and stays keyboard-scrollable because it can take focus. */
 .ledger-scroll {
-  max-height: min(62vh, 680px);
+  max-height: min(30vh, 420px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-padding-block: 8px;
@@ -772,6 +772,69 @@ body.app {
   .ledger-scroll {
     max-height: 58vh;
   }
+}
+
+/* ---------- Long lists fit the screen ----------
+
+   The work area is an app frame, not a document: the title band, the filters,
+   the counts and the actions stay exactly where they are, and a list long
+   enough to overflow scrolls inside its own box instead of dragging the whole
+   page down with it. Scoped to the workspace so the public directory keeps
+   scrolling like a web page. */
+
+body.app .update-feed,
+body.app .alert-list--rows,
+body.app .agreement-list,
+body.app .contact-list,
+body.app .doc-grid,
+body.app .project-grid,
+body.app .supplier-grid,
+body.app .split-grid,
+body.app .admin-table-wrap {
+  max-height: min(62vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  /* Room for the bar, so cards are never clipped by it. */
+  padding-right: 6px;
+}
+
+@media (max-width: 640px) {
+  body.app .update-feed,
+  body.app .alert-list--rows,
+  body.app .agreement-list,
+  body.app .contact-list,
+  body.app .doc-grid,
+  body.app .project-grid,
+  body.app .split-grid,
+  body.app .admin-table-wrap {
+    max-height: 58vh;
+    padding-right: 0;
+  }
+}
+
+/* The directory has the deepest card grid on the workspace, so it gives the
+   page a little more back. */
+body.app .supplier-grid {
+  max-height: min(50vh, 600px);
+}
+
+/* Money holds two columns: the ledger, and the balance chart with its notes
+   beside it. Both are capped, so whichever is taller scrolls on its own
+   instead of pushing the KPI strip off the screen. */
+body.app .money-ledger {
+  max-height: min(50vh, 620px);
+}
+
+body.app .money-side {
+  max-height: min(48vh, 600px);
+}
+
+body.app .money-ledger,
+body.app .money-side {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .tx-row,
