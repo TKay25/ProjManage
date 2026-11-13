@@ -54,7 +54,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Money | Funding and expense ledger in integer US cents, stage tagging, category/method/reference, live balance preview, receipts, and manager-recorded payment tracking |
 | Documents | Receipts, statutory documents and site photos, image thumbnails, download, delete, access-checked file serving |
 | Agreements | Scope, terms, milestone payment schedule, on-screen signature capture, print/PDF view, void |
-| **Property Management** | A second sign-in door at `/property/login` for a building that is already standing. **Rental management is the bonus module inside it**: properties (optionally linked to the finished build), tenants, leases produced from the property and tenant with on-screen signature and a print view, rent invoices (one per lease per month, raised singly or for the whole portfolio), numbered rent receipts that settle or part-pay an invoice, arrears, and periodic property checks with findings, photos and video that are kept on the property and sent to the owner by email and WhatsApp. Accounts are portal-scoped: `/property` refuses a build-only account and `/app` refuses a property-only one |
+| **Property Management** | A second sign-in door at `/property/login` for a building that is already standing. **Rental management is the bonus module inside it**: properties (optionally linked to the finished build), tenants and statements, leases produced from the property and tenant with on-screen signature, renewal and deposit tracking, rent invoices (one rent invoice per lease per month, raised singly or for the whole portfolio, with water, levy and recharge invoices beside it), numbered rent receipts that settle or part-pay an invoice, reminders by email and WhatsApp, reversal, arrears ageing, costs and net income, work orders, portfolio reports and CSV exports, and periodic property checks with findings, photos and video that are kept on the property and sent to the owner by email and WhatsApp. Accounts are portal-scoped: `/property` refuses a build-only account and `/app` refuses a property-only one |
 | Suppliers | Directory of Zimbabwean material suppliers with links out to their own catalogues |
 | WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), conversation history (newest 200 per thread), human takeover (pause/resume the assistant per conversation, with an Updates notification when the client replies while paused), in-app simulator |
 | PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons; a project can be saved as an explicit read-only offline copy that survives a signal drop |
@@ -228,7 +228,7 @@ routes_whatsapp.py      WhatsApp inbox, simulator, webhook
 routes_notifications.py Protected notification outbox dispatcher
 routes_reports.py       Portfolio report and printable project pack
 routes_settings.py      Profile, password, display preferences, backups, add the property door
-routes_rentals.py       Property Management: properties, tenants, leases, rent invoices, receipts, checks
+routes_rentals.py       Property Management: properties, tenants, leases, invoices, receipts, checks, costs, work orders, reports
 portals.py              The two sign-in doors and who may open them
 rentals.py              Rental read models, reference numbers, lease terms, check delivery
 notifications.py        Email + WhatsApp outbox, retries and delivery claims
@@ -245,7 +245,7 @@ templates/              Jinja templates
   app/base.html         Workspace shell (sidebar, topbar, mobile tab bar)
   partials/             Header, footer, sidebar, flash, transaction row
   app/                  Dashboard, projects, money, documents, agreements, suppliers, WhatsApp, settings
-  property/             Property Management: dashboard, properties, tenants, leases, invoices, receipts
+  property/             Property Management: dashboard, properties, tenants, leases, invoices, receipts, costs, work orders, reports, search
   invite.html           Public invitation landing page (sign in / register / accept)
   auth/                 Login, register
   errors/               Error page
@@ -285,7 +285,7 @@ email and over WhatsApp.
 | Door | Signs in at | Holds |
 | --- | --- | --- |
 | Project Management | `/login` | Builds, stages, funding, expenses, receipts, agreements, documents |
-| Property Management | `/property/login` | Properties, tenants, leases, rent invoices, rent receipts, property checks |
+| Property Management | `/property/login` | Properties, tenants, leases, rent invoices, rent receipts, property checks, costs, work orders, statements and reports |
 
 - `users.portals` records which doors an account may open (`project`,
   `property` or both). Staff accounts open both. Existing rows default to
@@ -307,16 +307,28 @@ email and over WhatsApp.
 | Add a property, optionally linked to the finished build | `/property/properties` |
 | Add a tenant to a property | Property page → Add a tenant |
 | Produce a lease, then sign it on screen | `/property/leases/new` → Sign this lease |
+| Renew a lease at the end of its term | Lease page → Renew this lease |
+| Track the deposit in, held and refunded | Lease page → Deposit |
 | Raise one rent invoice, or the whole month across signed leases | `/property/invoices` |
+| Raise a water, levy, deposit or recharge invoice by hand | `/property/invoices` → Raise one invoice by hand |
+| Chase one tenant, or every overdue invoice at once | `/property/invoices` → Remind |
 | Receipt a payment against an invoice (or on account) | `/property/payments` |
+| Reverse a receipt that was recorded in error | `/property/payments` → Reverse |
+| Record rates, insurance, repairs and other costs | `/property/expenses` |
+| Log a repair, book a contractor and close it into a cost | `/property/work-orders` |
+| Hand a tenant a statement of everything they were billed and paid | Tenant page → Statement |
 | Record and send a periodic check with photos and video | Property page → Schedule a check → Complete the check |
-| See arrears, rent roll, collected and outstanding | `/property` |
+| Ask YaVaKa to attend the property and report back | Property page → Checks → Request an inspection |
+| See arrears, rent roll, collected, outstanding, net income and yield | `/property` |
+| Read the whole portfolio, or export it as CSV | `/property/reports` |
+| Find a property, tenant, lease or invoice in one search | `/property/search` |
 
 Rules the code enforces:
 
-- An invoice belongs to a **signed** lease, and `(lease_id, period_start)` is
-  unique, so "raise this month" cannot double-bill. The batch run skips leases
-  that already have that month.
+- An invoice belongs to a **signed** lease. Rent is unique on
+  `(lease_id, period_start, kind)`, so "raise this month" cannot double-bill
+  while a water or levy invoice can still sit beside it. The batch run skips
+  leases that already have that month's rent.
 - The full amount received is recorded; the invoice becomes `part_paid` or
   `paid` from the payments that point at it. A void invoice with payments
   against it is refused.
@@ -333,6 +345,21 @@ Rules the code enforces:
 - Check photos and video reuse the attachment vault: bytes in the database row,
   served only to an account that may open that property, and reachable from a
   WhatsApp message through the same expiring `/d/<token>` link as a build file.
+- Completing a check sends the findings to the owner on the system, by email
+  and over WhatsApp, and schedules the next one from the check type's cadence.
+  A property set to **YaVaKa inspects on site** books the visit rather than
+  asking the owner to walk the building.
+- A work order closed with a cost writes a matching expense, so the repair shows
+  up once in net income rather than twice.
+
+### Tables
+
+`properties`, `property_tenants`, `property_leases`, `property_invoices`,
+`property_payments`, `property_checks`, `property_expenses`,
+`property_work_orders`, `property_activity`, plus `attachments.property_id` and
+`attachments.check_id`. SQLite migrations are versioned in
+`db.run_migrations`; Postgres picks the same columns up through `SCHEMA` and
+`POSTGRES_UPGRADES`.
 
 ### The assistant
 
@@ -351,13 +378,6 @@ property thread means rent. The intents are `rent_due`, `rent_arrears`,
   property sign-in.
 - The WhatsApp bot answers the same questions from the owner's own rows in
   English, Shona and Ndebele.
-
-### Tables
-
-`properties`, `property_tenants`, `property_leases`, `property_invoices`,
-`property_payments`, `property_checks`, plus `attachments.property_id` and
-`attachments.check_id`. SQLite migrations are versioned in `db.run_migrations`;
-Postgres picks the same columns up through `SCHEMA` and `POSTGRES_UPGRADES`.
 
 ---
 

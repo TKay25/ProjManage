@@ -2644,18 +2644,35 @@ class DashboardDensity(VakaTestCase):
         self.assertIn('class="section-block fold-section"', page)
 
     def test_the_checklist_starts_collapsed(self):
-        from db import execute, query
+        from db import execute, new_id, now_iso
+        import auth
 
-        self.login()
+        email = f"collapse-{os.urandom(4).hex()}@example.com"
+        user_id = new_id()
         with self.app.app_context():
-            user_id = query("SELECT id FROM users WHERE email = 'client@yavaka.co.zw'", one=True)["id"]
-            execute("UPDATE users SET onboarded_at = NULL WHERE id = ?", (user_id,))
+            execute(
+                """INSERT INTO users (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Collapse Client', ?, ?, 'client', '#0F5D46', ?)""",
+                (user_id, email, auth.hash_password("Str0ngPassw0rd!"), now_iso()),
+            )
+        self.addCleanup(self._drop_user, user_id)
 
+        self.login(email, "Str0ngPassw0rd!")
         page = self.client.get("/app").get_data(as_text=True)
-        self.assertIn('id="onboarding"', page)
+
         self.assertIn("Set up your workspace", page)
-        # No `open` attribute: the checklist is a row until it is asked for.
-        self.assertNotRegex(page, r'<details[^>]*id="onboarding"[^>]*\sopen>')
+        # Folded until asked for: one row on the overview, checklist on demand.
+        self.assertRegex(page, r'<details class="card fold-card onboarding-card" id="onboarding">')
+        self.assertIn('class="fold-chevron"', page)
+
+    def _drop_user(self, user_id):
+        from db import execute
+
+        with self.app.app_context():
+            execute("DELETE FROM workspaces WHERE owner_id = ?", (user_id,))
+            execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM audit_events WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM users WHERE id = ?", (user_id,))
 
 
 class AssistantWindow(VakaTestCase):
