@@ -2,17 +2,25 @@
 
 Run from the repository root:
 
+    python tools/make_poster_art.py      # once, or after replacing a photo
     python tools/make_posters.py
 
 Posters land in static/posters/ at 1080x1350 (Instagram / WhatsApp Status
-portrait). Export a PNG with any headless browser, e.g.:
+portrait). Every poster carries a dark photographic backdrop: real site,
+renovation and finished-home photography, cropped to portrait by
+tools/make_poster_art.py and embedded as a data URI so the SVG stays
+self-contained. Export a PNG with any headless browser, e.g.:
 
     chrome --headless --screenshot=out.png --window-size=1080,1350 poster.svg
 """
 
+import base64
+from functools import lru_cache
 from pathlib import Path
 
-OUT_DIR = Path(__file__).resolve().parent.parent / "static" / "posters"
+ROOT = Path(__file__).resolve().parent.parent
+OUT_DIR = ROOT / "static" / "posters"
+ART_DIR = ROOT / "static" / "poster-art"
 
 W, H = 1080, 1350
 M = 72
@@ -44,6 +52,97 @@ CTA_HEIGHT = 66
 BAND_TOP = 1178
 BAND_HEIGHT = 78
 FOOTER_BASELINE = 1272
+
+# Photography. Each name is a 4:5 crop written by tools/make_poster_art.py.
+PHOTOS_BY_SLUG = {
+    "you-cant-be-on-site": "site-finish",
+    "tranche-two-went-quiet": "site-house",
+    "your-contractor-our-standard": "site-framing",
+    "two-ways-to-build": "site-row",
+    "we-vet-the-builder": "electrician",
+    "watch-it-happen-live": "steel",
+    "diaspora-price": "house",
+    "the-receipt": "renovation",
+    "nineteen-stages": "site-walls",
+    "dont-use-family": "site-interior",
+    "half-a-house": "site-house",
+    "the-last-ten-percent": "bathroom",
+    "resolving-differences": "site-interior",
+    "the-site-goes-quiet": "site-walls",
+    "we-can-build-it": "steel",
+    "one-phone-number": "site-finish",
+    "progress-in-your-pocket": "kitchen",
+    "keys-and-file": "house",
+    "verify-quote-record": "site-framing",
+    "already-three-months-in": "site-house",
+    "no-need-to-sack-anybody": "electrician",
+    "cannot-audit-what-nobody-recorded": "site-interior",
+    "every-project-one-screen": "site-row",
+    "the-paperwork-does-itself": "joinery",
+    "win-clients-on-evidence": "site-finish",
+    "built-for-the-distance": "site-finish",
+    "the-second-opinion": "site-walls",
+    "four-payments-ahead": "kitchen",
+    "run-more-builds": "site-row",
+    "who-we-are": "site-finish",
+    "the-first-question": "site-house",
+    "nobody-on-site": "site-walls",
+    "cash-with-no-paper": "renovation",
+    "the-quote-that-grew": "kitchen",
+    "three-contractors-one-standard": "site-framing",
+    "the-family-argument": "site-interior",
+    "the-photo-that-proves-nothing": "electrician",
+    "the-stage-nobody-signed": "steel",
+    "one-tranche-too-far": "site-house",
+    "distance-is-not-permission": "house",
+    "whose-gate-is-this": "site-walls",
+    "stage-gate-discipline": "site-framing",
+    "funding-not-feelings": "steel",
+    "first-day-on-site": "site-walls",
+    "the-quiet-variation": "bathroom",
+    "nobody-chases-for-you": "electrician",
+    "what-the-money-bought": "renovation",
+    "the-receipt-is-the-argument": "kitchen",
+    "the-money-that-vanished": "site-house",
+    "why-the-quote-was-low": "kitchen",
+    "rental-management": "site-finish",
+    "rent-invoices": "joinery",
+    "rent-receipts": "site-finish",
+    "arrears-ageing": "house",
+    "tenant-statements": "joinery",
+    "lease-signing": "house",
+    "inspections": "site-interior",
+    "work-orders": "electrician",
+    "property-reports": "site-row",
+    "two-doors": "site-finish",
+    "project-kinds": "kitchen",
+    "kitchen-fitout": "kitchen",
+    "renovation-record": "renovation",
+    "signed-agreements": "joinery",
+    "reports-and-pack": "site-walls",
+    "whatsapp-assistant": "electrician",
+    "suppliers": "site-walls",
+    "account-security": "steel",
+    "offline-copy": "site-house",
+    "everything": "house",
+}
+
+
+@lru_cache(maxsize=None)
+def photo_data_uri(name):
+    path = ART_DIR / f"{name}.jpg"
+    if not path.exists():
+        raise SystemExit(
+            f"missing poster art {path.name}; run tools/make_poster_art.py"
+        )
+    return "data:image/jpeg;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+
+
+def scene_photo(p):
+    photo = p.get("photo") or PHOTOS_BY_SLUG.get(p["slug"])
+    if not photo:
+        raise SystemExit(f"{p['slug']}: no photo mapped")
+    return photo
 
 
 def esc(value):
@@ -145,7 +244,7 @@ def logo(tone="light"):
 
 
 def cta(x, y, label, fill=BRASS, color="#142f27", arrow="#142f27", h=72):
-    width = round(len(label) * 13.0 + 112)
+    width = round(len(label) * 13.4 + 140)
     return "".join([
         rect(x, y, width, h, fill, rx=18),
         text(x + 30, y + h / 2 + 7, label, 21, color, weight=700, family=SANS, spacing=0.4),
@@ -234,15 +333,65 @@ def points_panel(y, points):
     return "".join(out), panel_h
 
 
-def dark_backdrop():
+def photo_layer(name, x=0, y=0, w=W, h=H):
+    return (
+        f'<image x="{x}" y="{y}" width="{w}" height="{h}" '
+        f'preserveAspectRatio="xMidYMid slice" href="{photo_data_uri(name)}"/>'
+    )
+
+
+def photo_full(name):
+    """Full-bleed site photograph under the family's dark overlay."""
     return "".join([
         rect(0, 0, W, H, "url(#sky)"),
-        f'<circle cx="944" cy="102" r="176" fill="{BRASS}" opacity=".09"/>',
-        f'<path d="M0 627c172-84 305-89 476-43s347 28 604-71v310H0Z" fill="#0b4035" opacity=".85"/>',
-        f'<path d="M0 716c190-84 355-67 526-34s348 13 554-82v192H0Z" fill="{FOREST_DEEP}"/>',
-        f'<g fill="none" stroke="#d8b36d" stroke-opacity=".22">'
-        f'<path d="M-20 230c145-91 289-94 424-3s284 87 435 4 253-82 387-15"/>'
-        f'<path d="M-20 249c145-91 289-94 424-3s284 87 435 4 253-82 387-15"/></g>',
+        photo_layer(name),
+        rect(0, 0, W, H, "#0d2b24", opacity=0.34),
+        rect(0, 0, W, H, "url(#scene)"),
+        rect(0, 0, W, H, "url(#scene-side)"),
+    ])
+
+
+def photo_band(name, height, path=None, clip_id="photo-band"):
+    """A photographic header, optionally clipped to the layout's wave."""
+    shape = (
+        f'<path d="{path}"/>' if path
+        else f'<rect x="0" y="0" width="{W}" height="{height}"/>'
+    )
+    image_h = max(height, 480)
+    return "".join([
+        f'<clipPath id="{clip_id}">{shape}</clipPath>',
+        f'<g clip-path="url(#{clip_id})">',
+        photo_layer(name, 0, 0, W, image_h),
+        rect(0, 0, W, image_h, "#0d2b24", opacity=0.34),
+        rect(0, 0, W, image_h, "url(#scene-band)"),
+        rect(0, 0, W, image_h, "url(#scene-side)"),
+        "</g>",
+    ])
+
+
+def dark_backdrop(name=None):
+    if name:
+        base = photo_full(name)
+        contours = (
+            f'<g fill="none" stroke="#e2bd77" stroke-opacity=".2">'
+            f'<path d="M-20 230c145-91 289-94 424-3s284 87 435 4 253-82 387-15"/>'
+            f'<path d="M-20 249c145-91 289-94 424-3s284 87 435 4 253-82 387-15"/></g>'
+        )
+    else:
+        base = "".join([
+            rect(0, 0, W, H, "url(#sky)"),
+            f'<path d="M0 627c172-84 305-89 476-43s347 28 604-71v310H0Z" fill="#0b4035" opacity=".85"/>',
+            f'<path d="M0 716c190-84 355-67 526-34s348 13 554-82v192H0Z" fill="{FOREST_DEEP}"/>',
+        ])
+        contours = (
+            f'<g fill="none" stroke="#d8b36d" stroke-opacity=".22">'
+            f'<path d="M-20 230c145-91 289-94 424-3s284 87 435 4 253-82 387-15"/>'
+            f'<path d="M-20 249c145-91 289-94 424-3s284 87 435 4 253-82 387-15"/></g>'
+        )
+    return "".join([
+        base,
+        f'<circle cx="944" cy="102" r="176" fill="{BRASS}" opacity=".1"/>',
+        contours,
     ])
 
 
@@ -277,7 +426,7 @@ def accountability_card(x0, y0, height=292):
         "Automated WhatsApp and email notifications.",
         "Every receipt, invoice and document — at every",
         "stage — in your YaVaKa portal. Private to your",
-        "build team and encrypted in transit.",
+        "team and encrypted in transit.",
     ]
 
     # Centre the block vertically so the card works at any height.
@@ -321,6 +470,23 @@ def svg_doc(title, desc, body):
         '      <stop offset="0" stop-color="#fbf8f1"/>\n'
         f'      <stop offset="1" stop-color="{SAND_DEEP}"/>\n'
         "    </linearGradient>\n"
+        '    <linearGradient id="scene" x1="0" y1="0" x2="0" y2="1">\n'
+        '      <stop offset="0" stop-color="#040a12" stop-opacity=".94"/>\n'
+        '      <stop offset=".22" stop-color="#040a12" stop-opacity=".76"/>\n'
+        '      <stop offset=".48" stop-color="#071420" stop-opacity=".62"/>\n'
+        '      <stop offset=".74" stop-color="#040a12" stop-opacity=".8"/>\n'
+        '      <stop offset="1" stop-color="#040a12" stop-opacity=".97"/>\n'
+        "    </linearGradient>\n"
+        '    <linearGradient id="scene-band" x1="0" y1="0" x2="0" y2="1">\n'
+        '      <stop offset="0" stop-color="#040a12" stop-opacity=".93"/>\n'
+        '      <stop offset=".45" stop-color="#071420" stop-opacity=".8"/>\n'
+        '      <stop offset="1" stop-color="#040a12" stop-opacity=".92"/>\n'
+        "    </linearGradient>\n"
+        '    <linearGradient id="scene-side" x1="0" y1="0" x2="1" y2="0">\n'
+        '      <stop offset="0" stop-color="#040a12" stop-opacity=".55"/>\n'
+        '      <stop offset=".55" stop-color="#040a12" stop-opacity=".08"/>\n'
+        '      <stop offset="1" stop-color="#040a12" stop-opacity="0"/>\n'
+        "    </linearGradient>\n"
         '    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">\n'
         '      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#16372d" '
         'flood-opacity=".15"/>\n'
@@ -334,7 +500,7 @@ def svg_doc(title, desc, body):
 # ---------------------------------------------------------------- layouts
 
 def layout_statement(p):
-    body = [dark_backdrop(), logo("light"), pill(M + 2, 157, p["eyebrow"])]
+    body = [dark_backdrop(scene_photo(p)), logo("light"), pill(M + 2, 157, p["eyebrow"])]
     # An accent arc behind the headline, mirrored per poster, so two statements
     # in a row do not read as the same image twice.
     mirror = p.get("panel", "right") == "left"
@@ -365,7 +531,7 @@ def layout_twotone(p):
     split = p.get("split", 742)
     body = [
         rect(0, 0, W, H, SAND),
-        rect(0, 0, W, split, FOREST_MID),
+        photo_band(scene_photo(p), split, clip_id="twotone-band"),
         f'<circle cx="944" cy="96" r="180" fill="{BRASS}" opacity=".09"/>',
         f'<path d="M0 {split - 120}c190-54 352-26 527 6s367-8 553-66v180H0Z" fill="{FOREST_DEEP}"/>',
         f'<g fill="none" stroke="#d8b36d" stroke-opacity=".2">'
@@ -400,7 +566,12 @@ def layout_twotone(p):
 def layout_quote(p):
     body = [
         rect(0, 0, W, H, "url(#paper)"),
-        f'<path d="M0 0h1080v196c-214 65-370 50-551 5S195 158 0 232Z" fill="{FOREST}"/>',
+        photo_band(
+            scene_photo(p),
+            232,
+            path="M0 0h1080v196c-214 65-370 50-551 5S195 158 0 232Z",
+            clip_id="quote-band",
+        ),
         f'<circle cx="956" cy="129" r="178" fill="{BRASS}" opacity=".12"/>',
         logo("light"),
         text(M + 6, 152, p["eyebrow"], 15, BRASS_LIGHT, weight=700, family=SANS, spacing=3.2),
@@ -440,7 +611,7 @@ def layout_quote(p):
 
 def layout_stat(p):
     body = [
-        dark_backdrop(),
+        dark_backdrop(scene_photo(p)),
         f'<circle cx="868" cy="520" r="300" fill="{BRASS}" opacity=".07"/>',
         logo("light"),
         pill(M + 2, 157, p["eyebrow"]),
@@ -469,7 +640,7 @@ def _gate_rail_vertical(p):
     """
     gates = p["gates"]
     current = p.get("current", 0)
-    body = [dark_backdrop(), logo("light"), pill(M + 2, 157, p["eyebrow"])]
+    body = [dark_backdrop(scene_photo(p)), logo("light"), pill(M + 2, 157, p["eyebrow"])]
 
     rail_x = M + 26
     top, step = 322, 96
@@ -545,7 +716,7 @@ def layout_gate(p):
         return _gate_rail_vertical(p)
 
     body = [
-        dark_backdrop(),
+        dark_backdrop(scene_photo(p)),
         f'<circle cx="150" cy="330" r="230" fill="{BRASS}" opacity=".06"/>',
         logo("light"),
         pill(M + 2, 157, p["eyebrow"]),
@@ -622,7 +793,12 @@ def layout_ledger(p):
 
     body = [
         rect(0, 0, W, H, "url(#paper)"),
-        f'<path d="M0 0h1080v412c-208 74-372 46-556 2S198 358 0 432Z" fill="{FOREST_MID}"/>',
+        photo_band(
+            scene_photo(p),
+            432,
+            path="M0 0h1080v412c-208 74-372 46-556 2S198 358 0 432Z",
+            clip_id="ledger-band",
+        ),
         f'<circle cx="908" cy="122" r="164" fill="{BRASS}" opacity=".12"/>',
         logo("light"),
         text(M + 6, 178, p["eyebrow"], 15, BRASS_LIGHT, weight=700,
@@ -669,6 +845,76 @@ def layout_ledger(p):
     return svg_doc(p["title"], p["desc"], "".join(body))
 
 
+def layout_feature(p):
+    """A dark site photograph behind a two-column grid of capabilities."""
+    body = [
+        dark_backdrop(scene_photo(p)),
+        f'<circle cx="880" cy="300" r="250" fill="{BRASS}" opacity=".05"/>',
+        logo("light"),
+        pill(M + 2, 157, p["eyebrow"]),
+    ]
+    head, y = head_block(p["lines"], start=300, base=56)
+    body.append(head)
+    sub, _ = sub_block(p["sub"], y + 8)
+    body.append(sub)
+
+    panel_top, row_h, gap = 616, 112, 6
+    panel_h = 3 * row_h + 2 * gap + 40
+    body.append(rect(M, panel_top, CONTENT_W, panel_h, "#ffffff", rx=28, opacity=0.06))
+    body.append(rect(M, panel_top, CONTENT_W, panel_h, "none", rx=28, stroke=CREAM,
+                     stroke_w=1, opacity=0.16))
+    col_w = (CONTENT_W - 36) / 2
+    for index, (glyph, label, sub_line) in enumerate(p["items"]):
+        row, col = divmod(index, 2)
+        x = M + 14 + col * (col_w + 8)
+        cy = panel_top + 38 + row * (row_h + gap) + row_h / 2 - 10
+        tint = "#f5ebd6" if glyph in BRASS_GLYPHS else "#e7f0eb"
+        body.append(f'<circle cx="{x + 26}" cy="{cy}" r="19" fill="{tint}"/>')
+        body.append(icon(glyph, x + 26, cy))
+        body.append(text(x + 58, cy - 2, label, 15.5, CREAM, weight=700,
+                         family=SANS, spacing=1))
+        body.append(text(x + 58, cy + 20, sub_line, 14, "#c3d2c9",
+                         weight=400, family=SANS))
+
+    body.append(text(M + 4, 1048, f"\u201c{p['quote']}\u201d", 25, BRASS_LIGHT,
+                     weight=700, italic=True))
+    body.append(cta(M, 1084, p["cta"], h=CTA_HEIGHT))
+    body.append(footer(p["footer"]))
+    return svg_doc(p["title"], p["desc"], "".join(body))
+
+
+def layout_checklist(p):
+    """A dark site photograph above a cream card of what the service delivers."""
+    body = [
+        dark_backdrop(scene_photo(p)),
+        logo("light"),
+        pill(M + 2, 157, p["eyebrow"]),
+    ]
+    head, y = head_block(p["lines"], start=300, base=54)
+    body.append(head)
+    sub, _ = sub_block(p["sub"], y + 8)
+    body.append(sub)
+
+    card_top, card_h = 596, 430
+    body.append(rect(M, card_top, CONTENT_W, card_h, "#fffdf8", rx=28))
+    body.append(text(M + 44, card_top + 50, p["check_title"], 14, BRASS_DIM,
+                     weight=700, family=SANS, spacing=2.4))
+    row_y = card_top + 96
+    for label, sub_line in p["checks"]:
+        body.append(f'<circle cx="{M + 54}" cy="{row_y}" r="17" fill="#eef4ec"/>')
+        body.append(icon("check", M + 54, row_y))
+        body.append(text(M + 88, row_y - 2, label, 17.5, INK, weight=700, family=SANS))
+        body.append(text(M + 88, row_y + 21, sub_line, 14.5, INK_SOFT,
+                         weight=400, family=SANS))
+        row_y += 64
+
+    body.append(text(M + 4, 1078, f"\u201c{p['quote']}\u201d", 23, BRASS_LIGHT,
+                     weight=700, italic=True))
+    body.append(cta(M, 1108, p["cta"], h=CTA_HEIGHT))
+    body.append(footer(p["footer"]))
+    return svg_doc(p["title"], p["desc"], "".join(body))
+
+
 LAYOUTS = {
     "statement": layout_statement,
     "twotone": layout_twotone,
@@ -676,6 +922,8 @@ LAYOUTS = {
     "stat": layout_stat,
     "gate": layout_gate,
     "ledger": layout_ledger,
+    "feature": layout_feature,
+    "checklist": layout_checklist,
 }
 
 
@@ -1394,6 +1642,277 @@ POSTERS = [
                   ("Sewer connection", "not included", "clock")],
          total_label="REAL COST vs THE QUOTE", total_value="+18%",
          cta="SEE THE FULL BILL", footer="PRICE THE WORK, NOT A NUMBER."),
+
+    # ------------------------------------------------ rental management
+    dict(slug="rental-management", layout="feature",
+         eyebrow="PROPERTY MANAGEMENT",
+         title="The build is finished. The building still has to earn.",
+         desc="Rental management inside the property door: rent invoices, numbered receipts, arrears, tenant statements, leases, deposits and portfolio reports.",
+         lines=[("The building", "cream"), ("still has to earn.", "brass")],
+         sub=["Rental management is built into the property door:",
+              "the lease, the invoice, the receipt and the report in one place."],
+         items=[("wallet", "RENT INVOICES", "Monthly, per signed lease"),
+                ("receipt", "RENT RECEIPTS", "Numbered and filed"),
+                ("clock", "ARREARS", "Who owes, and how long"),
+                ("folder", "STATEMENTS", "Billed, paid, balanced"),
+                ("shield", "DEPOSITS", "In, held, refunded"),
+                ("globe", "REPORTS", "Rent roll and yield")],
+         quote="A building is not passive income if nobody keeps the record.",
+         cta="OPEN THE PROPERTY DOOR", footer="BUILD IT. THEN LET IT EARN."),
+    dict(slug="rent-invoices", layout="statement",
+         eyebrow="RENT, WITHOUT THE NOTEBOOK",
+         title="Every signed lease. Every month. One invoice run.",
+         desc="Raise rent invoices for one lease or the whole portfolio, with water, levy and recharge invoices beside them and no double-billing.",
+         lines=[("Every lease.", "cream"), ("Every month.", "cream"), ("One run.", "brass")],
+         sub=["Raise this month's rent across the portfolio, or for one lease.",
+              "Water, levy and recharge invoices sit beside it.",
+              "The same month cannot be billed twice."],
+         gold="A lease that is not signed cannot be invoiced.",
+         points=[("wallet", "ONE RUN", "Portfolio-wide rent"),
+                 ("receipt", "NUMBERED", "INV-YYYY-NNNN"),
+                 ("clock", "ON TIME", "Raised, not remembered")],
+         quote="The rent run should not depend on somebody remembering the first.",
+         cta="SEE RENT INVOICING", footer="ONE LEASE. ONE INVOICE. ONE MONTH."),
+    dict(slug="rent-receipts", layout="ledger",
+         eyebrow="PROPERTY MANAGEMENT",
+         title="Every rent payment gets a numbered receipt.",
+         desc="Rent receipts settle or part-pay an invoice, are numbered per year, and can be reversed if they were recorded in error.",
+         lines=[("Money in.", "cream"), ("Paper out.", "brass")],
+         slip_head="RENT RECEIPT", slip_sub="RCPT-YYYY-NNNN",
+         entries=[("Rent - March", "paid", "check"),
+                  ("Water recharge", "paid", "check"),
+                  ("Levy", "part paid", "clock"),
+                  ("Deposit", "held", "lock")],
+         total_label="RECEIVED TO DATE", total_value="US$1,240",
+         quote="A tenant and an owner should never disagree about what was paid.",
+         cta="RECEIPT RENT PROPERLY", footer="EVERY PAYMENT. A NUMBER."),
+    dict(slug="arrears-ageing", layout="stat",
+         eyebrow="PROPERTY MANAGEMENT",
+         title="Know who owes, how much, and for how long.",
+         desc="Arrears ageing by tenant and by invoice, so the owner sees the balance and the age of every unpaid rent before it becomes a crisis.",
+         stat="30", stat_label="DAYS LATE - SEEN AT A GLANCE",
+         lines=[("Who owes.", "cream"), ("How much.", "cream"), ("How long.", "brass")],
+         sub=["Arrears are aged by tenant and invoice, not hidden in a",
+              "reconstructed spreadsheet. Remind one tenant, or every",
+              "overdue invoice at once."],
+         gold="The rent roll and the arrears live on the same screen.",
+         cta="SEE THE ARREARS", footer="WHO. HOW MUCH. HOW LONG."),
+    dict(slug="tenant-statements", layout="quote",
+         eyebrow="PROPERTY MANAGEMENT",
+         title="A statement that settles the argument.",
+         desc="Hand a tenant the full history of invoices, payments and balance, generated from the same ledger the owner can read.",
+         quote_lines=["\u201cEverything billed.", "Everything paid.", "One balance.\u201d"],
+         attribution="TENANT STATEMENTS, FROM THE LEDGER",
+         sub=["No reconstructed spreadsheet, no argument about memory.",
+              "The statement is attached to the tenant and visible to the owner."],
+         callout=("Billed and paid in one view", "Available on every tenant"),
+         last_brass=True,
+         cta="SEE A TENANT STATEMENT", footer="BILLED. PAID. BALANCED."),
+    dict(slug="lease-signing", layout="statement",
+         eyebrow="LEASES & DEPOSITS",
+         title="A lease produced, signed on screen, and kept.",
+         desc="Produce a lease from the property and tenant records, sign it on screen, renew it at term and track the deposit through to refund.",
+         lines=[("Signed on", "cream"), ("the phone.", "cream"), ("Kept in the file.", "brass")],
+         sub=["The lease is built from the property and tenant records.",
+              "Sign it on screen, renew it at term, track the deposit.",
+              "The terms are frozen at the moment of signature."],
+         gold="A lease nobody can find is a lease nobody can enforce.",
+         points=[("check", "SIGNED", "On screen, in minutes"),
+                 ("folder", "STORED", "The signed terms, kept"),
+                 ("shield", "DEPOSIT", "In, held, refunded")],
+         quote="The terms should not change after the ink is dry.",
+         cta="LEASE A PROPERTY", footer="SIGNED. STORED. ENFORCEABLE."),
+    dict(slug="inspections", layout="checklist",
+         eyebrow="PROPERTY INSPECTIONS",
+         title="Somebody walks the property. You get the proof.",
+         desc="Periodic property checks with written findings, photos and video, kept on the property and delivered to the owner on the system, by email and over WhatsApp.",
+         lines=[("We attend.", "cream"), ("We photograph.", "cream"), ("We report.", "brass")],
+         sub=["Periodic checks with findings, photos and video -",
+              "kept on the property and sent to the owner."],
+         check_title="WHAT A CHECK DELIVERS",
+         checks=[("Findings, written down", "Condition, defects and what needs doing"),
+                 ("Photos and video", "Filed against the property, not a chat"),
+                 ("Delivered to the owner", "On the system, by email and WhatsApp"),
+                 ("The next check scheduled", "Cadence set by the check type"),
+                 ("YaVaKa can attend", "Booked on site when you cannot be")],
+         quote="You cannot inspect a building from another country.",
+         cta="BOOK A PROPERTY CHECK", footer="ATTEND. RECORD. SEND."),
+    dict(slug="work-orders", layout="feature",
+         eyebrow="REPAIRS & WORK ORDERS",
+         title="Log the repair. Book the contractor. Close it into the cost.",
+         desc="A work order carries a repair from the report to the receipt; closing it with a cost writes the matching expense once.",
+         lines=[("Log it.", "cream"), ("Fix it.", "cream"), ("Cost it.", "brass")],
+         sub=["A repair should have a work order, a contractor and a cost.",
+              "Closing the order writes the expense - not a second version of it."],
+         items=[("chat", "LOGGED", "The repair, in writing"),
+                ("shield", "BOOKED", "A contractor on the job"),
+                ("check", "CLOSED", "The work signed off"),
+                ("receipt", "COSTED", "The expense, once"),
+                ("clock", "TRACKED", "Open items in view"),
+                ("folder", "FILED", "Against the property")],
+         quote="A repair with no work order is a rumour with a price.",
+         cta="SEE WORK ORDERS", footer="REPAIR. RECORD. RECEIPT."),
+    dict(slug="property-reports", layout="stat",
+         eyebrow="PROPERTY REPORTS",
+         title="Arrears, rent roll, net income and yield. One report.",
+         desc="A portfolio report with collected rent, outstanding arrears, costs, net income and yield, exportable as CSV for the accountant.",
+         stat="1", stat_label="REPORT FOR THE WHOLE PORTFOLIO",
+         lines=[("The numbers", "cream"), ("behind the", "cream"), ("building.", "brass")],
+         sub=["Collected against outstanding, costs against net income,",
+              "with a CSV export for the accountant and the owner."],
+         gold="You cannot price a building on a feeling.",
+         cta="SEE PORTFOLIO REPORTS", footer="READ THE PORTFOLIO."),
+    dict(slug="two-doors", layout="statement",
+         eyebrow="PROJECT + PROPERTY",
+         title="One company. Two doors. The build, then the building.",
+         desc="Project Management manages the work; Property Management manages the asset afterwards. The same record keeps going after handover.",
+         lines=[("Build it.", "cream"), ("Then let it", "cream"), ("earn.", "brass")],
+         sub=["Project Management runs the work; Property Management runs",
+              "the asset afterwards. One company, one record, one standard",
+              "from the first stage to next month's rent."],
+         gold="The handover should not be the end of the record.",
+         points=[("shield", "BUILD", "Stages, money, proof"),
+                 ("wallet", "RENT", "Invoices, receipts, arrears"),
+                 ("camera", "CHECKS", "Photos, video, findings")],
+         quote="The building does not stop needing management at handover.",
+         cta="OPEN THE RIGHT DOOR", footer="TWO DOORS. ONE RECORD."),
+
+    # ------------------------------------------------ the rest of the system
+    dict(slug="project-kinds", layout="feature",
+         eyebrow="WHAT WE MANAGE",
+         title="Not every project is a house from scratch.",
+         desc="Full builds, renovations, extensions, kitchens, bathrooms, roofing, solar, boreholes and walls - each with its own stage plan.",
+         lines=[("Roof to", "cream"), ("borehole.", "brass")],
+         sub=["Pick the kind and the stage plan changes with it -",
+              "a kitchen fit-out no longer starts with land due diligence."],
+         items=[("folder", "FULL BUILDS", "Land to handover"),
+                ("check", "RENOVATIONS", "Old building, new record"),
+                ("wallet", "KITCHENS", "Cabinets and fit-out"),
+                ("shield", "BATHROOMS", "Tiling to fixtures"),
+                ("globe", "SOLAR & WATER", "Boreholes, backup power"),
+                ("camera", "WALLS & GATES", "Landscaping, finishes")],
+         quote="The plan should match the job, not the other way round.",
+         cta="START WITH THE KIND", footer="EVERY KIND. ONE STANDARD."),
+    dict(slug="kitchen-fitout", layout="quote",
+         eyebrow="KITCHENS & FIT-OUTS",
+         title="A kitchen is a project, not a shopping trip.",
+         desc="Kitchen and cabinet projects managed end to end: measured, ordered, fitted and paid against stages, with every variation recorded.",
+         quote_lines=["\u201cMeasured.", "Ordered.", "Fitted.", "Paid by stage.\u201d"],
+         attribution="KITCHEN AND CABINET PROJECTS, MANAGED",
+         sub=["The same ledger, stages and receipts as a full build.",
+              "A variation is recorded before the money moves."],
+         callout=("Photo evidence at every stage", "Filed against the project"),
+         last_brass=True,
+         cta="QUOTE A KITCHEN FIT-OUT", footer="MEASURE. FIT. PROVE."),
+    dict(slug="renovation-record", layout="twotone",
+         eyebrow="RENOVATIONS & EXTENSIONS",
+         title="A renovation with a paper trail.",
+         desc="Renovations and extensions manage the surprises with a written record: condition, variations, finishes and handover, stage by stage.",
+         lines=[("Renovations", "cream"), ("need a paper", "cream"), ("trail.", "brass")],
+         sub=["An old building hides surprises. The record is how",
+              "you stop them becoming arguments."],
+         answer_head="What the renovation file holds",
+         answer=[("The condition, recorded first", "Photos and findings before work starts"),
+                 ("Every variation in writing", "The change order, before the cash"),
+                 ("A handover pack at the end", "Certificates, receipts and photos")],
+         cta="MANAGE MY RENOVATION", footer="OLD BUILDING. NEW RECORD."),
+    dict(slug="signed-agreements", layout="statement",
+         eyebrow="AGREEMENTS",
+         title="Scope, terms and a payment schedule. Signed.",
+         desc="An agreement states the scope, the terms and the milestone payments, captures a signature on screen and stays in the project file.",
+         lines=[("Agreed.", "cream"), ("Signed.", "cream"), ("Stored.", "brass")],
+         sub=["Scope, terms and a milestone payment schedule in one document.",
+              "Sign on screen; the signed record stays with the project.",
+              "Void it if it was wrong, and keep the history."],
+         gold="A handshake is a start, not a scope.",
+         points=[("folder", "SCOPE", "What the money buys"),
+                 ("wallet", "MILESTONES", "Payments by stage"),
+                 ("check", "SIGNATURE", "On screen, on record")],
+         quote="The agreement should be as visible as the work.",
+         cta="DRAFT AN AGREEMENT", footer="SCOPE. SIGN. STORE."),
+    dict(slug="reports-and-pack", layout="statement",
+         eyebrow="REPORTS",
+         title="A project pack you can hand to anyone.",
+         desc="Committed, funded and spent per build, stage variance with overruns first, a 90-day burn rate with runway, printed as one project pack.",
+         lines=[("The facts.", "cream"), ("The stages.", "cream"), ("The money.", "brass")],
+         sub=["Committed, funded and spent; stage variance with overruns first;",
+              "a 90-day burn rate and a runway estimate. Print the whole pack",
+              "to PDF for the bank, the family or the next meeting."],
+         gold="A report should end the meeting, not start another one.",
+         points=[("wallet", "BUDGET", "Committed vs spent"),
+                 ("clock", "RUNWAY", "90-day burn"),
+                 ("folder", "PACK", "Print to PDF")],
+         quote="The numbers should be ready before the question is asked.",
+         cta="SEE THE REPORTS", footer="FACTS. STAGES. MONEY."),
+    dict(slug="whatsapp-assistant", layout="feature",
+         eyebrow="WHATSAPP",
+         title="Ask YaVaKa on WhatsApp. The answer comes from the ledger.",
+         desc="Balance, status, projects, payments and receipts over WhatsApp, with a human able to take over the conversation.",
+         lines=[("No app.", "cream"), ("No portal.", "cream"), ("Just a message.", "brass")],
+         sub=["The people on site may never open a dashboard.",
+              "The assistant answers from the same record the portal uses."],
+         items=[("chat", "BALANCE", "What is left, right now"),
+                ("receipt", "PAY 500", "Record a payment"),
+                ("folder", "RECEIPT", "Get the receipt back"),
+                ("check", "STATUS", "Where the build stands"),
+                ("globe", "PROJECTS", "Every build you can open"),
+                ("shield", "HUMAN", "Take over from the assistant")],
+         quote="A build should not need an app store to stay accountable.",
+         cta="MESSAGE YAVAKA", footer="ASK. RECORD. RECEIVE."),
+    dict(slug="suppliers", layout="statement",
+         eyebrow="SUPPLIER DIRECTORY",
+         title="Zimbabwean suppliers, one directory.",
+         desc="A directory of Zimbabwean material suppliers with links out to their own catalogues and price lists.",
+         lines=[("Materials.", "cream"), ("Local", "cream"), ("suppliers.", "brass")],
+         sub=["Bricks, cement, roofing and finishes, with a link out",
+              "to each supplier's own catalogue and price list."],
+         gold="Buying blind is how a budget grows legs.",
+         points=[("globe", "LOCAL", "Zimbabwean suppliers"),
+                 ("check", "CHECKED", "Names and contacts"),
+                 ("folder", "CATALOGUES", "Straight to the source")],
+         quote="The cheapest quote is not the cheapest material.",
+         cta="BROWSE SUPPLIERS", footer="BUY LOCAL. BUY INFORMED."),
+    dict(slug="account-security", layout="feature",
+         eyebrow="ACCOUNT SECURITY",
+         title="Your build file is private. Prove it.",
+         desc="Optional two-step verification, recovery codes, session control, a full audit trail and consistent staff backups.",
+         lines=[("Locked", "cream"), ("down.", "brass")],
+         sub=["Optional two-step verification, single-use recovery codes",
+              "and an audit trail of sign-ins, changes and exports."],
+         items=[("lock", "2FA", "TOTP, optional, yours"),
+                ("shield", "SESSIONS", "Sign out everywhere"),
+                ("receipt", "AUDIT", "Sign-ins and changes"),
+                ("globe", "RESET", "One-hour reset links"),
+                ("check", "ROLES", "Client, manager, staff"),
+                ("folder", "BACKUP", "Consistent snapshots")],
+         quote="Access is a permission, not a promise.",
+         cta="SECURE MY ACCOUNT", footer="PRIVATE BY DEFAULT."),
+    dict(slug="offline-copy", layout="quote",
+         eyebrow="OFFLINE & PWA",
+         title="The file works when the signal does not.",
+         desc="Install YaVaKa on a phone and save an explicit read-only project snapshot before travelling; it survives a signal drop.",
+         quote_lines=["\u201cSaved before", "you travel.", "Readable", "without signal.\u201d"],
+         attribution="AN EXPLICIT READ-ONLY OFFLINE COPY",
+         sub=["Install YaVaKa on your phone and save the project you are",
+              "travelling with. The record survives the dead zone."],
+         callout=("Install from the browser", "No app store needed"),
+         last_brass=True,
+         cta="INSTALL YAVAKA", footer="WORKS OFFLINE. STAYS YOURS."),
+    dict(slug="everything", layout="feature",
+         eyebrow="THE YAVAKA SYSTEM",
+         title="Everything the build needs. Everything the building needs.",
+         desc="YaVaKa covers money, stages, documents, agreements, property checks, rental management, WhatsApp and reports in one account.",
+         lines=[("One account.", "cream"), ("Every record.", "brass")],
+         sub=["From funding a first stage to receipting next month's rent.",
+              "The same file carries the build and the building."],
+         items=[("wallet", "MONEY", "Funding, expenses, receipts"),
+                ("check", "STAGES", "19 Zimbabwe stages"),
+                ("folder", "DOCUMENTS", "Plans, proof, agreements"),
+                ("camera", "CHECKS", "Findings, photos, video"),
+                ("wallet", "RENTAL", "Invoices, arrears, reports"),
+                ("globe", "ANYWHERE", "Web, WhatsApp, offline")],
+         quote="Build from anywhere. Manage from anywhere.",
+         cta="GET STARTED", footer="BUILD. PROVE. MANAGE."),
 ]
 
 

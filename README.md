@@ -168,19 +168,29 @@ python -m unittest discover -s tests -v
 
 ### Marketing posters
 
-The poster set is generated, not drawn by hand: fifty 1080×1350 layouts built
-from one design system, written as SVG and rendered to PNG.
+The poster set is generated, not drawn by hand: seventy 1080×1350 layouts built
+from one design system, written as SVG and rendered to PNG. Every poster carries
+a dark photographic backdrop — Zimbabwe site, renovation, kitchen and finished
+home photography from `static/img/`, centre-cropped to portrait and embedded in
+the SVG as a data URI, so one file travels intact to a phone, a browser or a
+social platform.
 
 ```powershell
+python tools/make_poster_art.py      # crops the site photography (needs Pillow)
 python tools/make_posters.py         # writes the SVG sources
 python tools/make_poster_pngs.py     # renders static/posters/*.png + a zip
 python tools/make_poster_pngs.py --scale 2   # 2160×2700 for print
 ```
 
-PNG rendering needs Chrome, Chromium or Edge installed — a browser is the only
+`make_poster_art.py` only needs re-running when a source photo changes; its
+crops live in `static/poster-art/` and are committed with the posters. PNG
+rendering needs Chrome, Chromium or Edge installed — a browser is the only
 renderer that draws the poster fonts and filters exactly as the site does. Both
 formats are committed, so a poster can be posted straight from
-`/static/posters/` without rebuilding anything.
+`/static/posters/` without rebuilding anything. The set covers the build
+product, the property door (rental management, inspections, work orders,
+portfolio reports) and the supporting system (WhatsApp, suppliers, security,
+offline copies).
 
 ### App icons and share card
 
@@ -239,6 +249,9 @@ health.py               Red / amber / green signal vocabulary
 totp.py                 Two-factor secrets and recovery codes
 tools/check_email.py    Send a test email and explain SMTP failures
 tools/migrate_to_postgres.py  Copy SQLite into Postgres
+tools/make_poster_art.py      Portrait crops of the site photography for posters
+tools/make_posters.py         Generate the SVG poster set
+tools/make_poster_pngs.py     Render the poster PNGs and the download bundle
 
 templates/              Jinja templates
   base.html             Public shell

@@ -6073,11 +6073,15 @@ class PosterBrand(VakaTestCase):
             "no-need-to-sack-anybody",
             "every-project-one-screen",
             "built-for-the-distance",
+            "rental-management",
+            "inspections",
+            "work-orders",
+            "property-reports",
         ):
             with self.subTest(slug=required):
                 self.assertIn(required, slugs)
 
-    def test_the_set_reaches_fifty_with_no_repeated_slug(self):
+    def test_the_set_reaches_seventy_with_no_repeated_slug(self):
         import sys
         from pathlib import Path
 
@@ -6085,11 +6089,11 @@ class PosterBrand(VakaTestCase):
         import make_posters
 
         slugs = [poster["slug"] for poster in make_posters.POSTERS]
-        self.assertEqual(len(slugs), 50)
+        self.assertEqual(len(slugs), 70)
         self.assertEqual(len(set(slugs)), len(slugs), "a slug is used twice")
 
         rendered = sorted(Path("static/posters").glob("yavaka-*.svg"))
-        self.assertEqual(len(rendered), 50)
+        self.assertEqual(len(rendered), 70)
         for path in rendered:
             with self.subTest(poster=path.name):
                 self.assertIn("yavaka.onrender.com", path.read_text(encoding="utf-8"))
@@ -6097,7 +6101,7 @@ class PosterBrand(VakaTestCase):
         # Every poster also ships as a PNG, because that is what a phone and a
         # social platform actually accept.
         images = sorted(Path("static/posters").glob("yavaka-*.png"))
-        self.assertEqual(len(images), 50)
+        self.assertEqual(len(images), 70)
         for image in images:
             with self.subTest(png=image.name):
                 self.assertGreater(image.stat().st_size, 20_000)
@@ -6112,7 +6116,16 @@ class PosterBrand(VakaTestCase):
 
         self.assertEqual(
             sorted(make_posters.LAYOUTS),
-            ["gate", "ledger", "quote", "stat", "statement", "twotone"],
+            [
+                "checklist",
+                "feature",
+                "gate",
+                "ledger",
+                "quote",
+                "stat",
+                "statement",
+                "twotone",
+            ],
         )
         for poster in make_posters.POSTERS:
             with self.subTest(slug=poster["slug"]):
@@ -6123,11 +6136,24 @@ class PosterBrand(VakaTestCase):
                 # layout that forgets its backdrop renders invisible text.
                 if poster["layout"] in {"statement", "stat", "gate"}:
                     self.assertIn("url(#sky)", markup)
+                # Every poster carries a dark photographic backdrop, embedded
+                # so the SVG renders the same on a phone and in the browser.
+                self.assertIn("data:image/jpeg;base64,", markup)
+                self.assertIn("url(#scene", markup)
+                photo = make_posters.scene_photo(poster)
+                self.assertTrue(
+                    (Path("static") / "poster-art" / f"{photo}.jpg").exists(),
+                    f"missing poster art: {photo}",
+                )
                 if poster["layout"] == "ledger":
                     self.assertEqual(len(poster["entries"]), 4)
                 if poster["layout"] == "gate":
                     self.assertGreaterEqual(len(poster["gates"]), 4)
                     self.assertLess(poster["current"], len(poster["gates"]))
+                if poster["layout"] == "feature":
+                    self.assertEqual(len(poster["items"]), 6)
+                if poster["layout"] == "checklist":
+                    self.assertGreaterEqual(len(poster["checks"]), 5)
 
 
 
