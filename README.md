@@ -169,11 +169,13 @@ python -m unittest discover -s tests -v
 ### Marketing posters
 
 The poster set is generated, not drawn by hand: seventy 1080×1350 layouts built
-from one design system, written as SVG and rendered to PNG. Every poster carries
-a dark photographic backdrop — Zimbabwe site, renovation, kitchen and finished
-home photography from `static/img/`, centre-cropped to portrait and embedded in
-the SVG as a data URI, so one file travels intact to a phone, a browser or a
-social platform.
+from one design system, written as SVG and rendered to PNG. Every poster leads
+with a complete, plain-English promise in oversized type, a short deck that
+explains it without making the reader guess, and three proof points — no
+fragment headlines. Each carries a dark photographic backdrop — Zimbabwe site,
+renovation, kitchen and finished home photography from `static/img/`,
+centre-cropped to portrait and embedded in the SVG as a data URI, so one file
+travels intact to a phone, a browser or a social platform.
 
 ```powershell
 python tools/make_poster_art.py      # crops the site photography (needs Pillow)
