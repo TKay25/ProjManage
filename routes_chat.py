@@ -74,7 +74,9 @@ def _send(portal: str):
     if not text:
         return redirect(url_for(_home_endpoint(portal)))
 
-    events = chat.turn(g.user, thread, text)
+    # A tapped button sends the label it showed, so the transcript reads like a
+    # conversation rather than a stream of internal values.
+    events = chat.turn(g.user, thread, text, request.form.get("label"))
     if web.wants_json():
         return jsonify(
             {"ok": True, "html": render_template("chat/_events.html", events=events)}

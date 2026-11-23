@@ -607,19 +607,27 @@ def ordinal_index(text: str, length: int) -> int | None:
 # ----------------------------------------------------------------------
 
 CATEGORY_HINTS = (
-    ("materials", ("cement", "brick", "bricks", "sand", "stone", "quarry", "timber", "wood", "steel", "rebar", "roof", "sheet", "sheets", "tile", "tiles", "paint", "pipe", "pipes", "wire", "cable", "hardware", "material", "materials", "supplies")),
-    ("labour", ("labour", "labor", "wages", "wage", "worker", "workers", "builder", "builders", "fundi", "team", "salary", "paid the guys", "casual")),
-    ("fees", ("fee", "fees", "permit", "permits", "council", "rates", "levy", "survey", "surveyor", "architect", "engineer", "approval", "stamp", "legal", "professional")),
-    ("transport", ("fuel", "petrol", "diesel", "transport", "delivery", "truck", "hire", "lorry", "trip", "trips", "diesel")),
-    ("equipment", ("hire", "equipment", "machine", "mixer", "scaffold", "scaffolding", "compactor", "pump", "generator", "tool", "tools")),
+    ("materials", (
+        "cement", "brick", "bricks", "sand", "stone", "quarry", "timber", "wood", "steel",
+        "rebar", "roof", "sheet", "sheets", "tile", "tiles", "paint", "pipe", "pipes", "wire",
+        "cable", "hardware", "material", "materials", "supplies", "padlock", "lock", "hinge",
+        "handle", "screws", "nails", "bolts", "brackets", "chain", "mesh", "glass", "door",
+        "doors", "window", "windows", "geyser", "tap", "taps", "toilet", "sink", "ceiling",
+        "plaster", "lintel", "beam", "truss", "trusses", "damp", "waterproofing", "adhesive",
+        "grout", "silicone", "board", "boards", "iron", "zinc", "pvc", "copper", "gravel",
+    )),
+    ("labour", ("labour", "labor", "wages", "wage", "worker", "workers", "builder", "builders", "fundi", "team", "salary", "paid the guys", "casual", "crew", "artisan", "foreman", "supervisor", "watchman", "security")),
+    ("fees", ("fee", "fees", "permit", "permits", "council", "rates", "levy", "survey", "surveyor", "architect", "engineer", "approval", "stamp", "legal", "professional", "inspection", "certificate", "valuation")),
+    ("transport", ("fuel", "petrol", "diesel", "transport", "delivery", "truck", "lorry", "trip", "trips", "courier", "freight", "cartage", "taxi", "bus")),
+    ("equipment", ("equipment", "machine", "mixer", "scaffold", "scaffolding", "compactor", "pump", "generator", "tool", "tools", "grinder", "drill", "compressor", "crane", "excavator", "hire")),
     ("other", ("misc", "miscellaneous", "other", "sundries")),
 )
 
 PROPERTY_COST_HINTS = (
     ("rates", ("rates", "council", "city of", "municipal")),
-    ("water", ("water", "sewer", "sewage", "zINWA", "water bill")),
+    ("water", ("water", "sewer", "sewage", "zinwa", "water bill")),
     ("insurance", ("insurance", "insured", "cover", "premium")),
-    ("repairs", ("repair", "repairs", "fix", "plumber", "electrician", "painter", "maintenance", "geyser", "burst", "leak", "broken", "replaced", "spares")),
+    ("repairs", ("repair", "repairs", "fix", "plumber", "electrician", "painter", "maintenance", "geyser", "burst", "leak", "blocked drain", "broken", "replaced", "spares", "tiles", "paint", "door", "window", "roof", "gutter", "gate")),
     ("management", ("management", "managing agent", "commission", "agent fee")),
     ("levy", ("levy", "body corporate", "complex fee")),
     ("other", ("misc", "other", "sundries")),

@@ -172,7 +172,10 @@
   };
 
   function skeletonFor(pathname) {
-    if (pathname === "/app") return SKELETONS.dashboard;
+    if (pathname === "/app" || pathname === "/property") return SKELETONS.chat;
+    if (pathname.startsWith("/app/dashboard") || pathname === "/property/dashboard") {
+      return SKELETONS.dashboard;
+    }
     if (pathname.startsWith("/app/money")) return SKELETONS.money;
     if (pathname.startsWith("/app/attention")) return SKELETONS.attention;
     if (pathname.startsWith("/app/projects/")) return SKELETONS.project;

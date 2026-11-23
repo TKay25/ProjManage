@@ -26,7 +26,7 @@ from flask import g
 from auth import accessible_projects
 from db import execute, log_event, new_id, now_iso, query
 from money import format_money, parse_money_to_cents
-from stages import PAYMENT_METHODS, STAGES, stage_by_key, stage_name
+from stages import PAYMENT_METHODS, stage_name
 import assistant
 import chat_nlu
 import portals
@@ -176,6 +176,20 @@ def current_project(user, thread):
     )
 
 
+def _fresh_project(user, project_id):
+    """The project as it is now, not as it was when the flow began.
+
+    A card rendered after a write must show the new balance, and the request's
+    project list was read before the row existed — so this reads the row again
+    rather than trusting the memoised copy.
+    """
+    row = query("SELECT * FROM projects WHERE id = ?", (project_id,), one=True)
+    if not row:
+        return None
+    summary = queries.projects_with_summary([row])
+    return summary[0] if summary else None
+
+
 def _project_card(project) -> dict:
     totals = project["totals"]
     current = queries.next_stage(project["stages"])
@@ -208,8 +222,8 @@ def _portfolio_card(owner_id) -> dict:
             ("Outstanding", format_money(totals["outstanding"])),
         ],
         "note": (
-            f"{totals['work_orders']} open work order(s), "
-            f"{totals['checks_due']} check(s) due."
+            f"{plural(totals['work_orders'], 'open work order')}, "
+            f"{plural(totals['checks_due'], 'check')} due."
             if totals["properties"]
             else "Add a property to start the record."
         ),
@@ -251,6 +265,17 @@ def _stages_for(user, thread):
     return project["stages"] if project else []
 
 
+def plural(count: int, noun: str, plural_form: str | None = None) -> str:
+    return f"{count} {noun if count == 1 else (plural_form or noun + 's')}"
+
+
+def _and_list(items) -> str:
+    items = list(items)
+    if len(items) <= 1:
+        return "".join(items)
+    return f"{', '.join(items[:-1])} and {items[-1]}"
+
+
 def greeting(user, portal: str) -> dict:
     """The first thing a conversation shows: the numbers, then the actions."""
     first_name = (user["name"] or "").split(" ")[0]
@@ -265,10 +290,14 @@ def greeting(user, portal: str) -> dict:
         else:
             pending = totals["outstanding"]
             body = (
-                f"Hello {first_name}. {totals['properties']} propert"
-                f"{'y' if totals['properties'] == 1 else 'ies'}, "
+                f"Hello {first_name}. "
+                f"{plural(totals['properties'], 'property', 'properties')} on the record, "
                 f"{format_money(totals['collected'])} collected in {totals['month_label']}"
-                + (f", {format_money(pending)} still outstanding." if pending else ", nothing outstanding.")
+                + (
+                    f", {format_money(pending)} still outstanding."
+                    if pending
+                    else ", nothing outstanding."
+                )
             )
         return {"body": body, "card": card, "actions": _property_actions()}
 
@@ -291,17 +320,19 @@ def greeting(user, portal: str) -> dict:
     if counts["total"]:
         waiting = []
         if counts["blocked"]:
-            waiting.append(f"{counts['blocked']} blocked stage(s)")
+            waiting.append(plural(counts["blocked"], "blocked stage"))
         if counts["approvals"]:
-            waiting.append(f"{counts['approvals']} approval(s) waiting")
+            waiting.append(plural(counts["approvals"], "approval") + " waiting")
         if counts["receipts"]:
-            waiting.append(f"{counts['receipts']} entry(ies) without a receipt")
+            waiting.append(
+                plural(counts["receipts"], "entry", "entries") + " without a receipt"
+            )
         if counts["agreements"]:
-            waiting.append(f"{counts['agreements']} agreement(s) to sign")
+            waiting.append(plural(counts["agreements"], "agreement") + " to sign")
         body = (
             f"Hello {first_name}. {project['name']}: "
             f"{format_money(project['totals']['balance'])} available. "
-            f"{counts['total']} thing(s) need you — {', '.join(waiting)}."
+            f"{plural(counts['total'], 'thing')} need you — {_and_list(waiting)}."
         )
     else:
         body = (
@@ -476,6 +507,7 @@ def _commit_money(user, thread, slots):
         occurred=slots.get("occurred"),
     )
     verb = "Deposit" if kind == "FUNDING" else "Expense"
+    project = _fresh_project(user, project["id"]) or project
     return {
         "body": (
             f"{verb} of {format_money(result['amount_cents'])} recorded on "
@@ -518,6 +550,7 @@ def _commit_update(user, thread, slots):
         if result["delivered"]
         else "Saved to the record."
     )
+    project = _fresh_project(user, project["id"]) or project
     return {
         "body": f"Update posted on {project['name']}. {note}",
         "card": _project_card(project),
@@ -535,6 +568,7 @@ def _commit_stage(user, thread, slots):
     services.change_stage_status(
         user, project, stage, slots["change"], slots.get("note", "")
     )
+    project = _fresh_project(user, project["id"]) or project
     return {
         "body": f"{stage['name']} is now {slots['change'].replace('_', ' ')}.",
         "card": _project_card(project),
@@ -601,7 +635,7 @@ def _commit_rent(user, thread, slots):
 
 def _commit_cost(user, thread, slots):
     property_row = _property_row(user, slots)
-    services.record_property_expense(
+    result = services.record_property_expense(
         user,
         property_row,
         category=slots["category"],
@@ -617,6 +651,12 @@ def _commit_cost(user, thread, slots):
         ),
         "card": _portfolio_card(user["id"]),
         "actions": _property_actions(),
+        "undo": {
+            "kind": "cost",
+            "id": result["id"],
+            "property": property_row["id"],
+            "label": f"cost of {format_money(slots['amount'])}",
+        },
     }
 
 
@@ -1241,8 +1281,11 @@ def _switched_instruction(user, thread, draft, text):
     mapped = _flow_for_intent(thread["portal"], intents[0])
     # A half-said instruction ("spent 200") is a better answer to the question
     # than a new errand, so only a sentence that already carries its own detail
-    # is allowed to take over.
+    # is allowed to take over — and only for a different flow, or repeating the
+    # same instruction would restart it.
     if not mapped or len(mapped["slots"]) < 3:
+        return None
+    if mapped["flow"] == draft["flow"]:
         return None
     _touch(thread["id"], {})
     started = _from_intents(user, thread, text)
@@ -1374,11 +1417,13 @@ def _brief(user, thread) -> dict:
         )
         extras = []
         if totals["work_orders"]:
-            extras.append(f"{totals['work_orders']} work order(s) open")
+            extras.append(plural(totals["work_orders"], "work order") + " open")
         if totals["checks_due"]:
-            extras.append(f"{totals['checks_due']} property check(s) due")
+            extras.append(plural(totals["checks_due"], "property check") + " due")
         if totals["expiring_leases"]:
-            extras.append(f"{totals['expiring_leases']} lease(s) expiring within 60 days")
+            extras.append(
+                plural(totals["expiring_leases"], "lease") + " expiring within 60 days"
+            )
         if extras:
             body += " Also: " + ", ".join(extras) + "."
         return {"body": body, "card": _portfolio_card(user["id"]), "actions": _property_actions()}
@@ -1406,9 +1451,10 @@ def _brief(user, thread) -> dict:
         )
     if counts["total"]:
         body += (
-            f" {counts['total']} thing(s) need attention: {counts['blocked']} blocked, "
-            f"{counts['approvals']} awaiting approval, {counts['receipts']} without a receipt, "
-            f"{counts['agreements']} agreement(s) to sign."
+            f" {plural(counts['total'], 'thing')} need attention: "
+            f"{counts['blocked']} blocked, {counts['approvals']} awaiting approval, "
+            f"{counts['receipts']} without a receipt, "
+            f"{counts['agreements']} to sign."
         )
     return {
         "body": body,
@@ -1829,12 +1875,35 @@ def handle(user, thread, text: str) -> list[dict]:
     return [_read(user, portal, text)]
 
 
-def turn(user, thread, text: str) -> list[dict]:
+# Buttons send their value so the server can act on it, but the transcript
+# should read the way the person spoke, not the way the protocol works.
+_VERB_LABELS = {
+    "confirm": "Yes, record it",
+    "cancel": "Cancel",
+    "help": "All commands",
+    "reset": "Start over",
+    "undo": "Undo that",
+    "project": "Switch build",
+}
+
+
+def _spoken(text: str) -> str:
+    if not text.startswith(VERB_PREFIX):
+        return text
+    verb, _, value = text[len(VERB_PREFIX):].partition(":")
+    verb = verb.lower()
+    if verb == "flow":
+        flow = FLOWS.get(value)
+        return flow.label if flow else "Start a flow"
+    return _VERB_LABELS.get(verb, text)
+
+
+def turn(user, thread, text: str, spoken: str | None = None) -> list[dict]:
     """One exchange, persisted: what was said, then every reply it earned."""
     text = (text or "").strip()[:MAX_BODY]
     if not text:
         return []
-    events = [post(thread["id"], "user", text)]
+    events = [post(thread["id"], "user", (spoken or "").strip()[:120] or _spoken(text))]
     for reply in handle(user, thread, text):
         events.append(
             post(
@@ -1879,12 +1948,3 @@ def switch_project(user, thread, project_id: str) -> dict:
         "card": _project_card(project),
         "actions": _project_actions(project),
     }
-
-
-def stage_label(key: str) -> str:
-    definition = stage_by_key(key)
-    return definition["name"] if definition else key
-
-
-def stage_count() -> int:
-    return len(STAGES)

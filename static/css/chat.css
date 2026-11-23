@@ -12,6 +12,10 @@
   flex-direction: column;
   gap: 18px;
   min-width: 0;
+  /* A conversation is read, not scanned: keep it to a comfortable measure
+     instead of stretching a sentence across a 1200px window. */
+  max-width: 780px;
+  margin-inline: auto;
 }
 
 .chat-log {
@@ -38,14 +42,22 @@
 
 .chat-bubble {
   min-width: 0;
-  max-width: min(640px, 92%);
+  /* Assistant replies may use the full measure; a long card is still readable
+     because the column itself is capped. */
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  align-items: flex-start;
+}
+
+.chat-msg--assistant .chat-bubble {
+  max-width: 96%;
 }
 
 .chat-msg--user .chat-bubble {
   align-items: flex-end;
+  max-width: 82%;
 }
 
 .chat-text {
@@ -219,6 +231,9 @@
 
 /* ---------- The dock: starters and the composer ---------- */
 
+/* The dock follows the reader, so it must be opaque: a translucent panel lets
+   the transcript show through the suggestion chips and reads as a glitch. Only
+   the last row of pixels fades, so the edge is soft rather than a hard cut. */
 .chat-dock {
   position: sticky;
   bottom: 12px;
@@ -227,11 +242,21 @@
   flex-direction: column;
   gap: 10px;
   padding: 10px 0 2px;
-  background: linear-gradient(to top, var(--sand-50) 62%, rgba(250, 251, 252, 0));
+  background: var(--sand-50);
 }
 
-[data-theme="dark"] .chat-dock {
-  background: linear-gradient(to top, var(--sand-50) 62%, rgba(11, 17, 32, 0));
+.chat-dock::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -20px;
+  height: 20px;
+  background: linear-gradient(to top, var(--sand-50), rgba(250, 251, 252, 0));
+  pointer-events: none;
+}
+
+[data-theme="dark"] .chat-dock::before {
+  background: linear-gradient(to top, var(--sand-50), rgba(11, 17, 32, 0));
 }
 
 .chat-starters {
@@ -244,6 +269,20 @@
 
 .chat-starters::-webkit-scrollbar {
   display: none;
+}
+
+/* Where there is room, show every suggestion instead of hiding some off the
+   right edge; the sideways scroller is the phone's answer to the same problem. */
+@media (min-width: 561px) {
+  .chat-starters {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .chat-starter {
+    white-space: normal;
+    text-align: left;
+  }
 }
 
 .chat-starter {
@@ -377,12 +416,13 @@
 }
 
 @media (max-width: 560px) {
-  .chat-bubble {
+  .chat-bubble,
+  .chat-msg--assistant .chat-bubble {
     max-width: 100%;
   }
 
-  .chat-msg--assistant .chat-bubble {
-    max-width: 100%;
+  .chat-msg--user .chat-bubble {
+    max-width: 88%;
   }
 
   .chat-stats {

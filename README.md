@@ -23,6 +23,10 @@ A property-only account cannot open `/app`, and a build account cannot open
 `/property`; the staff role can open both. Settings can add the property door to
 an existing account.
 
+Each door opens on a **conversation**: say what happened and it is recorded, ask
+a question and it is answered from your own records. Every screen is still
+there, one tap behind it, for anything that needs a full form.
+
 ---
 
 ## Why it exists
@@ -41,6 +45,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 
 | Area | What works today |
 | --- | --- |
+| **The conversation (home)** | Both doors open on a conversation instead of a dashboard. Type what happened in your own words — "spent 340 on cement yesterday", "received 1,500 from the client", "block the foundation because the sand never arrived", "tenant at Acacia paid 450 rent" — and it reads the figure, the date, the build or property, the bucket and the payment method out of the sentence, then shows a card to confirm before anything is written. A sentence can carry two instructions ("record 500 for cement and post an update that the slab is done") and they run one after another. Ask a question in the same box and it answers from the ledger ("how much did I spend on cement?" totals it, names the latest and the biggest entry). **Undo** takes back the last write from the transcript. Everything a flow writes goes through the same service the pages use, so the ledger, the audit trail, the red/green signals and the stakeholder notifications cannot disagree. The dashboard, ledger, documents and reports are unchanged — kept as drill-downs behind the conversation |
 | Authentication | Register, login, logout, hashed passwords, signed session cookies, per-request CSRF tokens, and a single-use email password reset (one hour, requires SMTP) |
 | **Account security** | Optional TOTP two-step verification with eight single-use recovery codes; changing a password or clicking "sign out everywhere" retires every other session via a per-user session epoch; failed-attempt counters live in the database so they are shared by every worker; sign-in, failure, 2FA, logout and password events land in the audit trail |
 | **Reports** | `/app/reports` — committed budget vs funded vs spent per build, stage variance with overruns first, and a 90-day burn rate with a runway estimate; `/app/projects/<id>/pack` prints a complete project pack (facts, stages and variance, ledger, documents, agreements) to PDF |
@@ -58,7 +63,7 @@ WhatsApp group and a notebook. YaVaKa turns that into a record you can audit:
 | Suppliers | Directory of Zimbabwean material suppliers with links out to their own catalogues |
 | WhatsApp | Meta Cloud API webhook (verify + signature check), intent router (`BALANCE`, `STATUS`, `PROJECTS`, `PAY 500`, `RECEIPT`), conversation history (newest 200 per thread), human takeover (pause/resume the assistant per conversation, with an Updates notification when the client replies while paused), in-app simulator |
 | PWA | Web manifest, service worker, install prompt, offline fallback page, maskable icons, and an install button on every sign-in screen (both doors, registration, password reset and two-step verification) as well as in the workspace header; a project can be saved as an explicit read-only offline copy that survives a signal drop |
-| Dashboard | Balance, received, spent, weighted progress, 6-month cash flow chart, funding runway, attention feed (blocked stages, missing receipts, overdraw), latest updates across every build |
+| Dashboard | `/app/dashboard` — balance, received, spent, weighted progress, 6-month cash flow chart, funding runway, attention feed (blocked stages, missing receipts, overdraw), latest updates across every build |
 | **First run** | A checklist derived from real data (project, team, first payment, first document, agreement) that ticks itself off, is worded for the account type, and can be dismissed for good |
 | **Attention inbox** | `/app/attention` — one cross-project list of approvals due (regulatory gates and unsigned agreements), blocked stages and missing receipts, oldest first; the sidebar and topbar carry a live count of the same items |
 | **Updates inbox** | `/app/updates` — every stage move, upload, payment, receipt and agreement across your builds, newest first and grouped by day; filter by progress, money, documents or agreements, and see what is new since your last visit |
@@ -218,6 +223,9 @@ paging.py               Shared page numbers, clamping and per-user page size
 stages.py               The 19-stage Zimbabwe build sequence and budgets
 suppliers.py            Seed supplier directory
 queries.py              Read models (totals, cash flow, missing receipts)
+chat.py                 The conversation: threads, guided flows, answers, undo
+chat_nlu.py             Reading a sentence (figures, dates, names, intent)
+services.py             Write paths shared by the pages and the conversation
 storage.py              Upload validation and storage
 whatsapp.py             Meta Cloud API client + conversation assistant
 seed.py                 Demo workspace seeding
@@ -225,6 +233,7 @@ ui.py                   Icon set and small render helpers
 
 routes_auth.py          Register / login / logout
 routes_public.py        Landing, public suppliers, PWA assets, health
+routes_chat.py          The conversation home and its send / switch endpoints
 routes_dashboard.py     Signed-in dashboard
 routes_attention.py     Cross-project approvals, blocked stages and missing receipts
 routes_updates.py       The update inbox and the unread-notification feed
@@ -393,6 +402,38 @@ property thread means rent. The intents are `rent_due`, `rent_arrears`,
   property sign-in.
 - The WhatsApp bot answers the same questions from the owner's own rows in
   English, Shona and Ndebele.
+
+### The conversation on the home page
+
+`/app` and `/property` are conversations, and the rest of the workspace sits
+behind them. Three parts do the work:
+
+| Part | Job |
+| --- | --- |
+| `chat_nlu.py` | Reads the sentence: intent, figures (including "1.5k", "$1,250.50" and "twenty five thousand"), dates ("yesterday", "last Friday", "3 May"), which build or property is named, the cost bucket and the payment method. Splits "record 500 for cement and post an update" into two instructions, and refuses to read a question as an instruction |
+| `chat.py` | Owns the thread, the guided flow in progress, the confirmation card, the undo record and the answers that need real arithmetic (spend by keyword, portfolio totals, a brief) |
+| `services.py` | Every write. The ledger form, the stage checklist, the rent receipt form and the conversation all call the same function, so validation, audit rows, red/green signals and stakeholder notifications are identical whichever door was used |
+
+- One thread per person **per door**, stored in the database, so a reload or a
+  second device continues where the flow stopped.
+- Nothing is written until the person confirms. A figure can be corrected
+  mid-flow ("actually 400"), a half-said instruction belongs to the question
+  being asked ("spent 200" while the flow asks for an amount), and a
+  self-contained new instruction takes over.
+- The conversation asks which build only when there is more than one and none
+  has been chosen; the build selected in the page head is remembered for the
+  thread.
+- **Undo** reverses the last write from the transcript — the ledger entry and
+  its receipt file, a rent receipt and the invoice it settled, a property cost,
+  or a stage move back to where it was — for a day, and only once.
+- The floating assistant is not shown on the conversation page; there is one
+  surface, not two.
+
+Fully conversational: money in and out, progress updates, stage moves, rent
+receipts, property costs, adding a tenant and opening a work order. Still a
+screen: creating a project, adding a property, drafting a lease, raising
+invoices, uploading documents, agreements, reports and settings — each is one
+tap from the "All commands" list.
 
 ---
 

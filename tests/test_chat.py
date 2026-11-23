@@ -279,6 +279,79 @@ class ReadingAndWriting(Talk):
         response = self.client.post("/app/chat", data={"text": "spent 10 on sand"})
         self.assertEqual(response.status_code, 400)
 
+    def test_several_builds_with_no_selection_make_the_conversation_ask(self):
+        """Writing to a guessed build would be worse than one extra question."""
+        import auth
+
+        email = f"multi-{os.urandom(4).hex()}@example.com"
+        user_id = new_id()
+        with self.app.app_context():
+            execute(
+                """INSERT INTO users (id, name, email, password_hash, role, avatar_color, created_at)
+                   VALUES (?, 'Multi Builder', ?, ?, 'client', '#0F5D46', ?)""",
+                (user_id, email, auth.hash_password(PASSWORD), now_iso()),
+            )
+            for index in (1, 2):
+                execute(
+                    """INSERT INTO projects (id, code, name, owner_id, city, status, budget_cents,
+                                             created_at, updated_at)
+                       VALUES (?, ?, ?, ?, 'Harare', 'planning', 1000, ?, ?)""",
+                    (
+                        new_id(),
+                        f"YVK-M{index}-{os.urandom(3).hex().upper()}",
+                        f"Multi Build {index}",
+                        user_id,
+                        now_iso(),
+                        now_iso(),
+                    ),
+                )
+        self.addCleanup(self._drop_user_and_projects, user_id)
+
+        self.login(email, PASSWORD)
+        # The page normally pins the build it greeted with. Clear it, so this is
+        # the "several builds, nothing chosen" case the question exists for.
+        with self.app.app_context():
+            execute("UPDATE chat_threads SET project_id = NULL WHERE user_id = ?", (user_id,))
+
+        html = self.say("spent 100 on sand")
+        self.assertIn("Which build?", html)
+        self.assertIn("Multi Build 1", html)
+        self.assertIn("Multi Build 2", html)
+
+        with self.app.app_context():
+            written = query(
+                "SELECT COUNT(*) AS count FROM transactions WHERE project_id IN "
+                "(SELECT id FROM projects WHERE owner_id = ?)",
+                (user_id,),
+                one=True,
+            )["count"]
+        self.assertEqual(written, 0, "asking must not write anything")
+
+    def test_the_chosen_build_is_the_one_written_to(self):
+        self.login()
+        chosen = self.choose_project()
+        self.say("spent 60 on nails")
+        self.say("yes")
+        with self.app.app_context():
+            row = query(
+                "SELECT project_id FROM transactions ORDER BY created_at DESC LIMIT 1", one=True
+            )
+        self.assertEqual(row["project_id"], chosen)
+
+    def _drop_user_and_projects(self, user_id):
+        with self.app.app_context():
+            execute(
+                "DELETE FROM chat_events WHERE thread_id IN "
+                "(SELECT id FROM chat_threads WHERE user_id = ?)",
+                (user_id,),
+            )
+            execute("DELETE FROM chat_threads WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM audit_events WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+            execute("DELETE FROM workspaces WHERE owner_id = ?", (user_id,))
+            execute("DELETE FROM projects WHERE owner_id = ?", (user_id,))
+            execute("DELETE FROM users WHERE id = ?", (user_id,))
+
 
 class PropertyConversation(Talk):
     def test_rent_is_receipted_through_the_conversation(self):
@@ -325,11 +398,11 @@ class PropertyConversation(Talk):
             admin = query(
                 "SELECT id FROM users WHERE email = ?", ("admin@yavaka.co.zw",), one=True
             )
-            self.say_free_threads = query(
+            project_threads = query(
                 "SELECT * FROM chat_threads WHERE user_id = ?", (admin["id"],)
             )
-        self.assertEqual(len(self.say_free_threads), 1)
-        self.assertEqual(self.say_free_threads[0]["portal"], "project")
+        self.assertEqual(len(project_threads), 1)
+        self.assertEqual(project_threads[0]["portal"], "project")
 
         self.client.get("/property")
         with self.app.app_context():
@@ -401,6 +474,14 @@ class Understanding(unittest.TestCase):
 
     def test_a_description_keeps_its_own_words_together(self):
         self.assertEqual(chat_nlu.split_clauses("sand and cement"), ["sand and cement"])
+
+    def test_ordinary_purchases_land_in_the_right_bucket(self):
+        self.assertEqual(chat_nlu.guess_project_category("spent 25 on a padlock"), "materials")
+        self.assertEqual(chat_nlu.guess_project_category("paid the crew 200"), "labour")
+        self.assertEqual(chat_nlu.guess_project_category("40 for diesel"), "transport")
+        self.assertEqual(chat_nlu.guess_project_category("hired a mixer for 60"), "equipment")
+        self.assertEqual(chat_nlu.guess_property_category("paid for a burst pipe"), "repairs")
+        self.assertEqual(chat_nlu.guess_property_category("council rates"), "rates")
 
     def test_navigation_names_a_screen(self):
         found = chat_nlu.detect_navigation("open documents", chat.OPEN_ACTIONS["project"])
