@@ -6,6 +6,7 @@ from datetime import datetime
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 import project_kinds
+import services
 import updates
 import web
 from auth import accessible_projects, archived_projects, login_required, require_project
@@ -382,52 +383,23 @@ def update_stage(project_id, stage_key):
     status = request.form.get("status") or ""
     notes = (request.form.get("notes") or "").strip()[:1000]
 
-    if status not in {"pending", "in_progress", "complete", "blocked"}:
+    try:
+        services.change_stage_status(g.user, project, stage, status, notes)
+    except services.ServiceError as error:
         if web.wants_json():
-            return web.fail("Choose a valid stage status.")
-        flash("Choose a valid stage status.", "error")
+            return web.fail(str(error))
+        flash(str(error), "error")
         return redirect(url_for("projects.detail", project_id=project_id))
 
-    started_at = stage["started_at"]
-    completed_at = stage["completed_at"]
-    stamp = now_iso()
-
-    if status == "in_progress" and not started_at:
-        started_at = stamp
     if status == "complete":
-        started_at = started_at or stamp
-        completed_at = stamp
-    if status in {"pending", "blocked"}:
-        completed_at = None
-
-    execute(
-        "UPDATE stages SET status = ?, notes = ?, started_at = ?, completed_at = ? WHERE id = ?",
-        (status, notes or stage["notes"], started_at, completed_at, stage["id"]),
-    )
-    touch_project(project_id)
-    queue_manager_update(
-        project_id,
-        g.user["id"],
-        g.user["name"],
-        f"Build stage: {stage['name']} — {status.replace('_', ' ')}",
-        notes or stage["notes"] or "",
-    )
-
-    if status == "complete":
-        log_event(g.user["id"], project_id, "stage.completed", f"{stage['name']} marked complete")
         message = f"{stage['name']} marked complete."
         category = "success"
     elif status == "blocked":
-        log_event(g.user["id"], project_id, "stage.blocked", f"{stage['name']} blocked: {notes or 'no reason given'}")
         message = f"{stage['name']} is flagged as blocked."
         category = "error"
     else:
-        log_event(g.user["id"], project_id, "stage.updated", f"{stage['name']} set to {status.replace('_', ' ')}")
         message = f"{stage['name']} updated."
         category = "success"
-
-    if project["status"] == "planning" and status in {"in_progress", "complete"}:
-        execute("UPDATE projects SET status = 'in_progress' WHERE id = ?", (project_id,))
 
     if web.wants_json():
         refreshed = query("SELECT * FROM stages WHERE id = ?", (stage["id"],), one=True)

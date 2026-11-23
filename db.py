@@ -401,6 +401,31 @@ CREATE TABLE IF NOT EXISTS whatsapp_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_wa_msg_contact ON whatsapp_messages(contact_id, created_at);
 
+-- The in-app conversation. One thread per person per door; the draft column
+-- holds a half-finished flow so a reload never loses "amount, then
+-- description, then confirm".
+CREATE TABLE IF NOT EXISTS chat_threads (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  portal TEXT NOT NULL DEFAULT 'project',
+  project_id TEXT,
+  draft TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (user_id, portal)
+);
+
+CREATE TABLE IF NOT EXISTS chat_events (
+  id TEXT PRIMARY KEY,
+  thread_id TEXT NOT NULL REFERENCES chat_threads(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'text',
+  body TEXT NOT NULL DEFAULT '',
+  payload TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chat_events_thread ON chat_events(thread_id, created_at);
+
 CREATE TABLE IF NOT EXISTS audit_events (
   id TEXT PRIMARY KEY,
   user_id TEXT REFERENCES users(id),

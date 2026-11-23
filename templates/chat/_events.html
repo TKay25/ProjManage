@@ -1,0 +1,48 @@
+{# One include for both the first paint and the replies fetched by chat.js,
+   so a message can never look different depending on how it arrived. #}
+{% for event in events %}
+<article class="chat-msg chat-msg--{{ event.role }}" data-event-id="{{ event.id }}">
+  <div class="chat-bubble">
+    <p class="chat-text">{{ event.body }}</p>
+
+    {% if event.card %}
+    <div class="chat-card">
+      <p class="chat-card-title">{{ event.card.title }}</p>
+      {% if event.card.subtitle %}<p class="chat-card-sub">{{ event.card.subtitle }}</p>{% endif %}
+      {% if event.card.stats %}
+      <dl class="chat-stats">
+        {% for row in event.card.stats %}
+        <div class="chat-stat">
+          <dt>{{ row[0] }}</dt>
+          <dd>{{ row[1] }}</dd>
+        </div>
+        {% endfor %}
+      </dl>
+      {% endif %}
+      {% if event.card.note %}<p class="chat-card-note">{{ event.card.note }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if event.links %}
+    <div class="chat-links">
+      {% for link in event.links %}
+      <a class="chat-link" href="{{ link.href }}">{{ icon('arrow-right', 14) }}<span>{{ link.label }}</span></a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if event.actions %}
+    <div class="chat-actions">
+      {% for action in event.actions %}
+        {% if action.href %}
+        <a class="chat-action" href="{{ action.href }}">{{ action.label }}</a>
+        {% else %}
+        <button class="chat-action{% if action.tone == 'primary' %} is-primary{% endif %}"
+                type="button" data-chat-send="{{ action.value }}">{{ action.label }}</button>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</article>
+{% endfor %}

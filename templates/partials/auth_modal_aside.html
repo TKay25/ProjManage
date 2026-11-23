@@ -1,8 +1,11 @@
 <aside class="auth-aside modal-auth-aside" aria-label="YaVaKa project management">
-  <a class="auth-brand" href="/">
-    {{ logo_mark(40) }}
-    <span><strong>YaVaKa</strong><small>Build from anywhere</small></span>
-  </a>
+  <div class="auth-top">
+    <a class="auth-brand" href="/">
+      {{ logo_mark(40) }}
+      <span><strong>YaVaKa</strong><small>Build from anywhere</small></span>
+    </a>
+    {% include "partials/install_app.html" %}
+  </div>
 
   <div class="auth-quote">
     <p class="eyebrow eyebrow-light">Built for the diaspora</p>

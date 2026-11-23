@@ -440,6 +440,11 @@
     /* ---------- PWA install ---------- */
 
     const installButtons = $$(".install-btn, #install-btn");
+    // Already installed: the auth screens render the control unconditionally,
+    // so it must not offer to install what is already on the home screen.
+    const alreadyInstalled =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
 
     if (installPrompt) {
       installButtons.forEach((button) => {
@@ -447,13 +452,24 @@
       });
     }
 
+    if (alreadyInstalled) {
+      installButtons.forEach((button) => {
+        button.hidden = true;
+      });
+    }
+
     installButtons.forEach((button) => {
       button.addEventListener("click", async () => {
         if (!installPrompt) {
-          button.insertAdjacentHTML(
-            "afterend",
-            '<span class="micro-note">Open your browser menu and choose “Add to home screen”.</span>',
-          );
+          // One hint per button: the auth pages can be clicked before the
+          // browser has offered its prompt, and a second click must not stack
+          // a duplicate line under the same control.
+          if (!button.nextElementSibling?.classList.contains("micro-note")) {
+            button.insertAdjacentHTML(
+              "afterend",
+              '<span class="micro-note">Open your browser menu and choose “Add to home screen”.</span>',
+            );
+          }
           return;
         }
         installPrompt.prompt();

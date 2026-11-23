@@ -70,7 +70,9 @@
     {% include "partials/modal_register.html" %}
   {% endif %}
 
-  {% if request.endpoint not in standalone_auth %}
+  {# On the conversation page the transcript is the assistant, so the floating
+     launcher would only be a second door to the same room. #}
+  {% if request.endpoint not in standalone_auth and active != 'home' %}
     {% include "partials/assistant_widget.html" %}
   {% endif %}
 

@@ -8,10 +8,13 @@
 <section class="auth">
   <div class="container auth-grid">
     <aside class="auth-aside">
-      <a class="auth-brand" href="/">
-        {{ logo_mark(44) }}
-        <span><strong>YaVaKa</strong><small>{{ portal.tagline }}</small></span>
-      </a>
+      <div class="auth-top">
+        <a class="auth-brand" href="/">
+          {{ logo_mark(44) }}
+          <span><strong>YaVaKa</strong><small>{{ portal.tagline }}</small></span>
+        </a>
+        {% include "partials/install_app.html" %}
+      </div>
 
       <div class="auth-quote">
         {% if is_property %}

@@ -139,9 +139,10 @@
       {{ icon(item.icon, 21) }}<span>{{ item.label }}</span>
     </a>
   {% endfor %}
-  <button class="tab" type="button" data-aide-open aria-haspopup="dialog"
-          aria-controls="assistant-window" aria-expanded="false">
-    {{ icon('message', 21) }}<span>Ask</span>
+  {# The conversation is the Home tab now, so the fifth slot opens the rest of
+     the workspace rather than a second assistant. #}
+  <button class="tab" type="button" data-drawer-open aria-haspopup="menu">
+    {{ icon('menu', 21) }}<span>More</span>
   </button>
 </nav>
 {% endblock %}

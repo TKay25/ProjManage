@@ -22,6 +22,7 @@ ACTIONS = {
     "project.budget": ("wallet", "Budget updated", ""),
     "project.archived": ("archive", "Project archived", ""),
     "project.restored": ("refresh", "Project restored", ""),
+    "project.update": ("message", "Progress update", ""),
     "stage.completed": ("check", "Stage completed", "success"),
     "stage.blocked": ("alert", "Stage blocked", "danger"),
     "stage.updated": ("clock", "Stage updated", ""),

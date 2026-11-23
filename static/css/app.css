@@ -4625,6 +4625,58 @@ p {
   font-weight: 650;
 }
 
+/* The install control rides in the brand row of the dark panel, so it costs no
+   height on a sign-in screen that is built to fit one screen — and on a phone,
+   where the panel shrinks to that row, it is the first thing a visitor sees. */
+.auth-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auth-top .install-btn {
+  flex: none;
+  min-height: 40px;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.auth-top .install-btn:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.auth-top .micro-note {
+  flex-basis: 100%;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+/* On the narrowest phones the label would squeeze the brand, so the icon
+   carries it — the accessible name is on the button itself. */
+@media (max-width: 380px) {
+  .auth-top .install-btn span {
+    display: none;
+  }
+
+  .auth-top .install-btn {
+    padding: 0 10px;
+  }
+}
+
+/* The sign-in dialog's aside is far narrower than a full page, so it takes the
+   icon-only form at every width. */
+.modal-auth-aside .install-btn span {
+  display: none;
+}
+
+.modal-auth-aside .install-btn {
+  padding: 0 10px;
+}
+
 /* Shorter windows: the aside keeps its headline and its four promises, and
    gives up the paragraph under the quote so the card still fits. The quote
    then centres itself between the brand and the promises instead of leaving a

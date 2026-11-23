@@ -39,7 +39,7 @@ def dismiss_onboarding():
     return ("", 204)
 
 
-@bp.get("/app")
+@bp.get("/app/dashboard")
 @login_required
 def index():
     projects = projects_with_summary(accessible_projects(g.user))

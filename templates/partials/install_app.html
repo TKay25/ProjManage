@@ -1,0 +1,11 @@
+{# The install control, shared by every auth screen.
+
+   Unlike the workspace header copy this one is rendered visible rather than
+   hidden until the browser offers a prompt: a person on a sign-in screen has
+   not installed the app yet, and on a browser that never fires
+   `beforeinstallprompt` (Safari) the click still helps — app.js answers with
+   where that browser keeps "Add to home screen". #}
+<button class="btn btn-outline btn-sm install-btn" type="button"
+        aria-label="Install the YaVaKa app" title="Install the YaVaKa app">
+  {{ icon('download', 15) }}<span>Install app</span>
+</button>

@@ -92,6 +92,57 @@ class PublicPages(VakaTestCase):
     def test_unknown_page_returns_404(self):
         self.assertEqual(self.client.get("/nope").status_code, 404)
 
+    def test_every_auth_screen_can_install_the_app(self):
+        for path in ("/login", "/property/login", "/register", "/forgot-password"):
+            with self.subTest(path=path):
+                page = self.client.get(path).get_data(as_text=True)
+                self.assertIn("install-btn", page)
+                self.assertIn("Install app", page)
+                # The shell script that reveals the prompt is on the page too.
+                self.assertIn("js/app.js", page)
+
+    def test_the_sign_in_dialog_can_install_the_app(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn("modal-login", page)
+        self.assertIn("install-btn", page)
+
+    def test_the_two_step_screen_can_install_the_app(self):
+        from datetime import datetime, timezone
+
+        from db import execute, query
+
+        with self.app.app_context():
+            user = query(
+                "SELECT id, totp_enabled, totp_secret FROM users WHERE email = ?",
+                ("client@yavaka.co.zw",),
+                one=True,
+            )
+            execute(
+                "UPDATE users SET totp_enabled = 1, totp_secret = ? WHERE id = ?",
+                ("JBSWY3DPEHPK3PXP", user["id"]),
+            )
+
+        def restore():
+            with self.app.app_context():
+                execute(
+                    "UPDATE users SET totp_enabled = ?, totp_secret = ? WHERE id = ?",
+                    (user["totp_enabled"], user["totp_secret"], user["id"]),
+                )
+
+        self.addCleanup(restore)
+
+        with self.client.session_transaction() as session:
+            session["pending_2fa"] = {
+                "user_id": user["id"],
+                "next": "/app",
+                "portal": "project",
+                "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            }
+
+        page = self.client.get("/login/2fa").get_data(as_text=True)
+        self.assertIn("install-btn", page)
+        self.assertIn("Install app", page)
+
 
 class Authentication(VakaTestCase):
     def test_dashboard_requires_login(self):
@@ -2652,13 +2703,13 @@ class UpdateNotifications(VakaTestCase):
         page = self.client.get("/app").get_data(as_text=True)
 
         self.assertIn('href="/app/updates"', page)
-        self.assertIn("Latest updates", page)
+        self.assertIn("Latest updates", self.client.get("/app/dashboard").get_data(as_text=True))
 
     def test_reference_panels_fold_away_so_the_overview_fits_one_screen(self):
         """The dashboard is read at a glance; anything that is reference
         material collapses into its own heading and expands on demand."""
         self.login()
-        page = self.client.get("/app").get_data(as_text=True)
+        page = self.client.get("/app/dashboard").get_data(as_text=True)
 
         self.assertIn("dash-page", page)
         for heading in ("Latest money movements", "Needs your attention", "Latest updates", "Coming up"):
@@ -2675,7 +2726,7 @@ class DashboardDensity(VakaTestCase):
 
     def test_a_folded_panel_still_renders_its_contents(self):
         self.login()
-        page = self.client.get("/app").get_data(as_text=True)
+        page = self.client.get("/app/dashboard").get_data(as_text=True)
         self.assertIn('class="fold-body"', page)
         # The project grid lives inside its own fold so a new card can be
         # prepended to it without a reload.
@@ -2697,7 +2748,7 @@ class DashboardDensity(VakaTestCase):
         self.addCleanup(self._drop_user, user_id)
 
         self.login(email, "Str0ngPassw0rd!")
-        page = self.client.get("/app").get_data(as_text=True)
+        page = self.client.get("/app/dashboard").get_data(as_text=True)
 
         self.assertIn("Set up your workspace", page)
         # Folded until asked for: one row on the overview, checklist on demand.
@@ -2727,12 +2778,20 @@ class AssistantWindow(VakaTestCase):
 
     def test_the_window_is_on_the_site_and_in_the_app(self):
         self.login()
-        for path in ("/app", "/app/money"):
+        # The home page is the conversation itself, so the floating window is
+        # only on the drill-down screens.
+        for path in ("/app/money", "/app/dashboard"):
             with self.subTest(path=path):
                 page = self.client.get(path).get_data(as_text=True)
                 self.assertIn("data-aide", page)
                 self.assertIn("YaVaKa assistant", page)
                 self.assertIn("js/assistant.js", page)
+
+    def test_the_home_page_is_the_assistant_instead(self):
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertNotIn("data-aide-open", page)
+        self.assertIn("data-chat", page)
 
     def test_the_window_is_not_on_the_auth_pages(self):
         for path in ("/login", "/register"):
@@ -3727,7 +3786,7 @@ class OnboardingChecklist(VakaTestCase):
         email = self._fresh_user()
         self.login(email, self.PASSWORD)
 
-        page = self.client.get("/app").get_data(as_text=True)
+        page = self.client.get("/app/dashboard").get_data(as_text=True)
         self.assertIn("Set up your workspace", page)
         self.assertIn("Create your first project", page)
 
@@ -3736,7 +3795,7 @@ class OnboardingChecklist(VakaTestCase):
         )
         self.assertEqual(dismissed.status_code, 204)
 
-        page = self.client.get("/app").get_data(as_text=True)
+        page = self.client.get("/app/dashboard").get_data(as_text=True)
         self.assertNotIn("Set up your workspace", page)
 
     def test_the_checklist_ticks_itself_off_from_real_data(self):
@@ -6393,7 +6452,7 @@ class MoneyTrendAndStickyHeader(VakaTestCase):
                 one=True,
             )["count"]
 
-        body = self.client.get(f"/app?project={project['id']}").get_data(as_text=True)
+        body = self.client.get(f"/app/dashboard?project={project['id']}").get_data(as_text=True)
         unit = "entry" if funding == 1 else "entries"
         self.assertIn(f"{funding} funding {unit}", body)
 
@@ -6649,7 +6708,12 @@ class PropertyManagement(VakaTestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/property")
-        self.assertIn(b"Rental management is a bonus", self.client.get("/property").data)
+        # Both doors now land on their own conversation; the dashboard is the
+        # drill-down behind it.
+        self.assertIn(b"data-chat", self.client.get("/property").data)
+        self.assertIn(
+            b"Rental management is a bonus", self.client.get("/property/dashboard").data
+        )
 
     def test_a_property_account_cannot_open_a_build(self):
         self.property_login()

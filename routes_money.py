@@ -23,6 +23,7 @@ from queries import (
     stage_rows,
     stage_spend,
 )
+import services
 from stages import TRANSACTION_CATEGORIES, category_label, method_label, stage_name
 from storage import UploadError, delete_upload, save_upload
 import web
@@ -292,105 +293,28 @@ def create():
     occurred = request.form.get("occurred_at") or datetime.now().strftime("%Y-%m-%d")
     receipt = request.files.get("receipt")
 
-    if tx_type not in {"FUNDING", "EXPENSE"}:
-        if web.wants_json():
-            return web.fail("Choose whether this is money in or money out.")
-        flash("Choose whether this is money in or money out.", "error")
-        return redirect(url_for("money.index", project=project["id"]))
-
-    if amount_cents <= 0:
-        if web.wants_json():
-            return web.fail("Enter an amount greater than zero.")
-        flash("Enter an amount greater than zero.", "error")
-        return redirect(url_for("money.index", project=project["id"]))
-
-    if len(description) < 3:
-        if web.wants_json():
-            return web.fail("Add a short description so the entry makes sense later.")
-        flash("Add a short description so the entry makes sense later.", "error")
-        return redirect(url_for("money.index", project=project["id"]))
-
-    if tx_type == "FUNDING":
-        category = "client_deposit"
-    elif category not in VALID_CATEGORIES:
-        category = "other"
-
-    if method not in VALID_METHODS:
-        method = "OTHER"
-
     try:
-        datetime.strptime(occurred, "%Y-%m-%d")
-    except ValueError:
-        occurred = datetime.now().strftime("%Y-%m-%d")
-
-    saved = None
-    if receipt and receipt.filename:
-        try:
-            saved = save_upload(receipt, "receipt")
-        except UploadError as error:
-            if web.wants_json():
-                return web.fail(str(error))
-            flash(str(error), "error")
-            return redirect(url_for("money.index", project=project["id"]))
-
-    transaction_id = new_id()
-    occurred_at = f"{occurred}T12:00:00+00:00"
-
-    execute(
-        """INSERT INTO transactions
-             (id, project_id, type, amount_cents, currency, category, stage_key, description, method, reference, occurred_at, created_by, created_at)
-           VALUES (?, ?, ?, ?, 'USD', ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            transaction_id,
-            project["id"],
-            tx_type,
-            amount_cents,
-            category,
-            stage_key,
-            description[:200],
-            method,
-            reference,
-            occurred_at,
-            g.user["id"],
-            now_iso(),
-        ),
-    )
-
-    if saved:
-        execute(
-            """INSERT INTO attachments
-                 (id, project_id, transaction_id, uploader_id, kind, filename, original_name, mime_type, size, created_at)
-               VALUES (?, ?, ?, ?, 'receipt', ?, ?, ?, ?, ?)""",
-            (
-                new_id(),
-                project["id"],
-                transaction_id,
-                g.user["id"],
-                saved["filename"],
-                saved["original_name"],
-                saved["mime_type"],
-                saved["size"],
-                now_iso(),
-            ),
+        result = services.record_project_transaction(
+            g.user,
+            project,
+            tx_type=tx_type,
+            amount_cents=amount_cents,
+            description=description,
+            category=category,
+            method=method,
+            stage_key=stage_key,
+            reference=reference,
+            occurred=occurred,
+            receipt=receipt,
         )
+    except services.ServiceError as error:
+        if web.wants_json():
+            return web.fail(str(error))
+        flash(str(error), "error")
+        return redirect(url_for("money.index", project=project["id"]))
 
-    touch_project(project["id"])
-    log_event(
-        g.user["id"],
-        project["id"],
-        "funding.recorded" if tx_type == "FUNDING" else "expense.recorded",
-        f"{description[:120]} — {'received' if tx_type == 'FUNDING' else 'spent'}",
-    )
-    # A payment is the moment a build can slip over budget or over its funding,
-    # so this is where the red signal is raised.
-    updates.raise_health_alerts(project["id"], actor_id=g.user["id"])
-    queue_manager_update(
-        project["id"],
-        g.user["id"],
-        g.user["name"],
-        f"{'Funding received' if tx_type == 'FUNDING' else 'Expense recorded'}: {format_money(amount_cents)}",
-        description[:200],
-    )
+    transaction_id = result["id"]
+    saved = result["receipt_saved"]
 
     if tx_type == "FUNDING":
         message = "Deposit recorded."
@@ -512,13 +436,11 @@ def delete(transaction_id):
 
     project = require_project(transaction["project_id"])
 
-    attachment = query("SELECT * FROM attachments WHERE transaction_id = ?", (transaction_id,), one=True)
-    if attachment:
-        delete_upload(attachment["filename"])
-
-    execute("DELETE FROM transactions WHERE id = ?", (transaction_id,))
-    touch_project(project["id"])
-    log_event(g.user["id"], project["id"], "transaction.deleted", transaction["description"][:120])
+    try:
+        services.delete_project_transaction(g.user, project, transaction_id)
+    except services.ServiceError as error:
+        flash(str(error), "error")
+        return redirect(url_for("money.index", project=project["id"]))
 
     if web.wants_json():
         totals = money_totals(project["id"])

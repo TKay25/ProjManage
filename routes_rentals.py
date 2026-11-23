@@ -29,6 +29,7 @@ from flask import (
 import auth
 import portals
 import rentals
+import services
 import web
 from auth import accessible_properties, portal_required, require_property
 from db import execute, log_event, new_id, now_iso, query
@@ -202,7 +203,7 @@ def _lease_rows(owner_id, status="all"):
 # ----------------------------------------------------------------------
 
 
-@bp.get("/property")
+@bp.get("/property/dashboard")
 @portal_required(portals.PROPERTY)
 def dashboard():
     owner_id = _scope()
@@ -1187,79 +1188,24 @@ def create_payment():
     property_row = require_property(property_id)
 
     amount_cents = parse_money_to_cents(request.form.get("amount"))
-    if amount_cents <= 0:
-        flash("Enter the amount received.", "error")
+
+    try:
+        result = services.record_rent_payment(
+            g.user,
+            property_row,
+            amount_cents=amount_cents,
+            method=request.form.get("method") or "ECOCASH",
+            invoice=invoice,
+            reference=request.form.get("reference"),
+            received_at=request.form.get("received_at"),
+            notes=request.form.get("notes"),
+        )
+    except services.ServiceError as error:
+        flash(str(error), "error")
         return redirect(url_for("rentals.property_detail", property_id=property_row["id"]))
 
-    method = request.form.get("method") or "ECOCASH"
-    if method not in VALID_METHODS:
-        method = "OTHER"
-
-    tenant_id = invoice["tenant_id"] if invoice else None
-    if not tenant_id:
-        tenant_in_place = rentals.tenant_in_place(property_row["id"])
-        tenant_id = tenant_in_place["id"] if tenant_in_place else None
-
-    received_at = request.form.get("received_at") or date.today().isoformat()
-    try:
-        datetime.strptime(received_at, "%Y-%m-%d")
-    except ValueError:
-        received_at = date.today().isoformat()
-
-    payment_id, receipt = None, None
-    for _attempt in range(5):
-        receipt = rentals.receipt_number()
-        try:
-            payment_id = new_id()
-            execute(
-                """INSERT INTO property_payments
-                     (id, owner_id, property_id, lease_id, invoice_id, tenant_id, receipt_number,
-                      amount_cents, currency, method, reference, received_at, notes, created_by, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?, ?, ?, ?)""",
-                (
-                    payment_id,
-                    property_row["owner_id"],
-                    property_row["id"],
-                    invoice["lease_id"] if invoice else None,
-                    invoice["id"] if invoice else None,
-                    tenant_id,
-                    receipt,
-                    amount_cents,
-                    method,
-                    (request.form.get("reference") or "").strip()[:80] or None,
-                    f"{received_at}T12:00:00+00:00",
-                    (request.form.get("notes") or "").strip()[:500] or None,
-                    g.user["id"],
-                    now_iso(),
-                ),
-            )
-            break
-        except Exception as error:  # noqa: BLE001 - a receipt-number clash is retried
-            if not _retryable(error):
-                raise
-            payment_id = None
-            continue
-
-    if not payment_id:
-        flash("Could not allocate a receipt number. Try again.", "error")
-        return redirect(url_for("rentals.payments"))
-
-    if invoice:
-        rentals.refresh_invoice_status(invoice["id"])
-
-    log_event(
-        g.user["id"],
-        None,
-        "rent.receipt",
-        f"{receipt} — {amount_cents / 100:.2f} for {property_row['name'][:60]}",
-    )
-    rentals.log_activity(
-        property_row["owner_id"], property_row["id"], g.user["id"], "rent.receipt",
-        "Rent receipted", f"{receipt} — {format_money(amount_cents)}",
-        href=url_for("rentals.payment_receipt", payment_id=payment_id),
-    )
-    flash(f"Receipt {receipt} recorded.", "success")
-    return redirect(url_for("rentals.payment_receipt", payment_id=payment_id))
+    flash(f"Receipt {result['receipt']} recorded.", "success")
+    return redirect(url_for("rentals.payment_receipt", payment_id=result["id"]))
 
 
 @bp.get("/property/payments/<payment_id>/receipt")
@@ -1923,15 +1869,11 @@ def reverse_payment(payment_id):
         abort(404)
     property_row = require_property(payment["property_id"])
 
-    execute("DELETE FROM property_payments WHERE id = ?", (payment_id,))
-    if payment["invoice_id"]:
-        rentals.refresh_invoice_status(payment["invoice_id"])
-    log_event(g.user["id"], None, "rent.reversed", payment["receipt_number"])
-    rentals.log_activity(
-        property_row["owner_id"], property_row["id"], g.user["id"], "rent.reversed",
-        "Receipt reversed", f"{payment['receipt_number']} - {format_money(payment['amount_cents'])}",
-        href=url_for("rentals.payments"),
-    )
+    try:
+        services.reverse_rent_payment(g.user, property_row, payment_id)
+    except services.ServiceError as error:
+        flash(str(error), "error")
+        return redirect(url_for("rentals.payments"))
     flash(f"Receipt {payment['receipt_number']} reversed. The invoice is open again.", "success")
     return redirect(url_for("rentals.payments"))
 
@@ -2004,45 +1946,22 @@ def create_expense():
     if method not in VALID_METHODS:
         method = "OTHER"
 
-    if amount <= 0:
-        flash("Enter what the cost was.", "error")
-        return redirect(url_for("rentals.expenses", property=property_row["id"]))
-    if len(description) < 3:
-        flash("Add a short description so the cost makes sense later.", "error")
-        return redirect(url_for("rentals.expenses", property=property_row["id"]))
-
-    incurred = request.form.get("incurred_at") or date.today().isoformat()
     try:
-        datetime.strptime(incurred, "%Y-%m-%d")
-    except ValueError:
-        incurred = date.today().isoformat()
+        services.record_property_expense(
+            g.user,
+            property_row,
+            category=category,
+            amount_cents=amount,
+            description=description,
+            method=method,
+            reference=request.form.get("reference"),
+            incurred=request.form.get("incurred_at"),
+            billable=bool(request.form.get("billable")),
+        )
+    except services.ServiceError as error:
+        flash(str(error), "error")
+        return redirect(url_for("rentals.expenses", property=property_row["id"]))
 
-    execute(
-        """INSERT INTO property_expenses
-             (id, owner_id, property_id, category, amount_cents, currency, description, method,
-              reference, incurred_at, billable_to_tenant, created_by, created_at)
-           VALUES (?, ?, ?, ?, ?, 'USD', ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            new_id(),
-            property_row["owner_id"],
-            property_row["id"],
-            category,
-            amount,
-            description[:200],
-            method,
-            (request.form.get("reference") or "").strip()[:80] or None,
-            incurred,
-            1 if request.form.get("billable") else 0,
-            g.user["id"],
-            now_iso(),
-        ),
-    )
-    log_event(g.user["id"], None, "property.expense", f"{description[:80]} {format_money(amount)}")
-    rentals.log_activity(
-        property_row["owner_id"], property_row["id"], g.user["id"], "property.expense",
-        "Property cost recorded", f"{description[:80]} - {format_money(amount)}",
-        href=url_for("rentals.expenses", property=property_row["id"]),
-    )
     flash("Cost recorded.", "success")
     return redirect(url_for("rentals.expenses", property=property_row["id"]))
 
@@ -2055,13 +1974,11 @@ def delete_expense(expense_id):
         abort(404)
     property_row = require_property(expense["property_id"])
 
-    execute("DELETE FROM property_expenses WHERE id = ?", (expense_id,))
-    log_event(g.user["id"], None, "property.expense_deleted", expense["description"][:80])
-    rentals.log_activity(
-        property_row["owner_id"], property_row["id"], g.user["id"], "property.expense_deleted",
-        "Property cost removed", expense["description"][:80],
-        href=url_for("rentals.expenses", property=property_row["id"]),
-    )
+    try:
+        services.delete_property_expense(g.user, property_row, expense_id)
+    except services.ServiceError as error:
+        flash(str(error), "error")
+        return redirect(url_for("rentals.expenses", property=property_row["id"]))
     flash("Cost removed.", "success")
     return redirect(url_for("rentals.expenses", property=property_row["id"]))
 

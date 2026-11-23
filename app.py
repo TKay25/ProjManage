@@ -52,7 +52,10 @@ from ui import badge, brand, icon, logo_mark, progress_bar, progress_ring, wa_fo
 from workspaces import workspaces_for
 
 NAV_ITEMS = [
-    {"key": "dashboard", "href": "/app", "label": "Dashboard", "icon": "dashboard"},
+    # The conversation is the front door; everything below it is the record it
+    # talks about, kept as a page for when a person wants the full screen.
+    {"key": "home", "href": "/app", "label": "Home", "icon": "message"},
+    {"key": "dashboard", "href": "/app/dashboard", "label": "Dashboard", "icon": "dashboard"},
     {"key": "updates", "href": "/app/updates", "label": "Updates", "icon": "activity"},
     {"key": "attention", "href": "/app/attention", "label": "Attention", "icon": "bell"},
     {"key": "projects", "href": "/app/projects", "label": "Projects", "icon": "building"},
@@ -69,7 +72,8 @@ NAV_ITEMS = [
 # The Property Management door. Rental management is the bonus module inside it,
 # so it gets the first-class links; builds stay behind their own door.
 PROPERTY_NAV_ITEMS = [
-    {"key": "property_dashboard", "href": "/property", "label": "Dashboard", "icon": "dashboard"},
+    {"key": "home", "href": "/property", "label": "Home", "icon": "message"},
+    {"key": "property_dashboard", "href": "/property/dashboard", "label": "Dashboard", "icon": "dashboard"},
     {"key": "properties", "href": "/property/properties", "label": "Properties", "icon": "home"},
     {"key": "tenants", "href": "/property/tenants", "label": "Tenants", "icon": "users"},
     {"key": "leases", "href": "/property/leases", "label": "Leases", "icon": "pen"},
@@ -249,6 +253,7 @@ def create_app(config_object=Config):
     from routes_assistant import bp as assistant_bp
     from routes_attention import bp as attention_bp
     from routes_auth import bp as auth_bp
+    from routes_chat import bp as chat_bp
     from routes_dashboard import bp as dashboard_bp
     from routes_digest import bp as digest_bp
     from routes_documents import bp as documents_bp
@@ -268,6 +273,7 @@ def create_app(config_object=Config):
     for blueprint in (
         public_bp,
         auth_bp,
+        chat_bp,
         dashboard_bp,
         attention_bp,
         projects_bp,
@@ -317,7 +323,7 @@ def create_app(config_object=Config):
         kind_noun=project_kinds.kind_noun,
         kind_this=project_kinds.kind_this,
         kind_icon=project_kinds.kind_icon,
-        tab_items=[item for item in NAV_ITEMS if item["key"] in {"dashboard", "updates", "money", "documents"}],
+        tab_items=[item for item in NAV_ITEMS if item["key"] in {"home", "updates", "money", "documents"}],
         asset_url=asset_url,
         page_list=page_list,
         app_name=app.config["APP_NAME"],
@@ -391,7 +397,7 @@ def create_app(config_object=Config):
             # be handed a build dashboard link it cannot open.
             "home_path": portals.home_path(portals.default_for(user)) if user else "/app",
             "property_nav_items": PROPERTY_NAV_ITEMS,
-            "property_tab_items": [item for item in PROPERTY_NAV_ITEMS if item["key"] in {"property_dashboard", "properties", "rent_invoices"}],
+            "property_tab_items": [item for item in PROPERTY_NAV_ITEMS if item["key"] in {"home", "properties", "rent_invoices"}],
             # Each workspace page wears the icon of the section it belongs to,
             # so the header band says where you are before the title is read.
             "section_icons": {item["key"]: item["icon"] for item in NAV_ITEMS + PROPERTY_NAV_ITEMS},

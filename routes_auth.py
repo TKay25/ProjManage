@@ -222,7 +222,7 @@ def two_factor():
         flash("Sign in again to continue.", "error")
         return redirect(url_for("auth.login"))
     if g.user:
-        return redirect(url_for("dashboard.index"))
+        return redirect(portals.home_path(portals.default_for(g.user)))
 
     user = query(
         "SELECT * FROM users WHERE id = ?",
@@ -297,7 +297,7 @@ def _recovery_remaining(user_id: str) -> int:
 @bp.get("/forgot-password")
 def forgot_password():
     if g.user:
-        return redirect(url_for("dashboard.index"))
+        return redirect(portals.home_path(portals.default_for(g.user)))
     return render_template(
         "auth/forgot_password.html",
         title="Reset your password",
@@ -369,7 +369,7 @@ def forgot_password_post():
 @bp.route("/reset-password/<token>", methods=["GET", "POST"])
 def reset_password(token):
     if g.user:
-        return redirect(url_for("dashboard.index"))
+        return redirect(portals.home_path(portals.default_for(g.user)))
 
     row = _load_reset(token)
     if not row:
