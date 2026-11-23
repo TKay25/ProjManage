@@ -91,14 +91,36 @@
     chip.addEventListener("click", () => ask(chip.dataset.aideAsk));
   });
 
+  const summary = root.querySelector("summary");
+
+  const focusLauncher = () => {
+    // On a phone the floating launcher is hidden in favour of the tab-bar Ask
+    // button, so focus has to go back to whichever control is actually visible.
+    if (summary && summary.getClientRects().length) {
+      summary.focus();
+      return;
+    }
+    document.querySelector("[data-aide-open]")?.focus();
+  };
+
   if (closeButton) {
     closeButton.addEventListener("click", () => {
       root.open = false;
-      root.querySelector("summary")?.focus();
+      focusLauncher();
     });
   }
 
+  document.querySelectorAll("[data-aide-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      root.open = !root.open;
+      if (!root.open) focusLauncher();
+    });
+  });
+
   root.addEventListener("toggle", () => {
+    document.querySelectorAll("[data-aide-open]").forEach((button) => {
+      button.setAttribute("aria-expanded", String(root.open));
+    });
     if (root.open && input && !input.disabled) {
       // Deferred so the opening animation has started and focus does not
       // scroll a window that is still growing.
@@ -110,7 +132,7 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && root.open) {
       root.open = false;
-      root.querySelector("summary")?.focus();
+      focusLauncher();
     }
   });
 })();

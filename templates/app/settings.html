@@ -294,9 +294,9 @@
 
   <aside class="detail-side">
     <div class="card">
-      <div class="card-head"><h2>Account</h2><span class="badge badge-soft">{{ 'Build manager' if user.role == 'manager' else 'Client' }}</span></div>
+      <div class="card-head"><h2>Account</h2><span class="badge badge-soft">{{ 'YaVaKa staff' if user.role == 'admin' else ('Build manager' if user.role == 'manager' else 'Client') }}</span></div>
       <dl class="fact-list">
-        <div><dt>Role</dt><dd>{{ 'Build manager' if user.role == 'manager' else 'Client / owner' }}</dd></div>
+        <div><dt>Role</dt><dd>{{ 'YaVaKa staff' if user.role == 'admin' else ('Build manager' if user.role == 'manager' else 'Client / owner') }}</dd></div>
         <div><dt>Member since</dt><dd>{{ user.created_at|date }}</dd></div>
         <div><dt>Projects</dt><dd>{{ counts.projects }}</dd></div>
         <div><dt>Managing</dt><dd>{{ counts.managed }}</dd></div>

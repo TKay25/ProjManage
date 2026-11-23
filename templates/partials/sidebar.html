@@ -128,7 +128,7 @@
       <span class="avatar" style="background:{{ user.avatar_color }}">{{ user.name|initials }}</span>
       <span class="user-card-text">
         <span class="user-card-name">{{ user.name }}</span>
-        <span class="user-card-role">{% if current_portal == 'property' %}{{ 'Property manager' if user.role == 'manager' else 'Property owner' }}{% else %}{{ 'Build manager' if user.role == 'manager' else 'Client' }}{% endif %}</span>
+        <span class="user-card-role">{% if user.role == 'admin' %}YaVaKa staff{% elif current_portal == 'property' %}{{ 'Property manager' if user.role == 'manager' else 'Property owner' }}{% else %}{{ 'Build manager' if user.role == 'manager' else 'Client' }}{% endif %}</span>
       </span>
     </a>
     <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form">

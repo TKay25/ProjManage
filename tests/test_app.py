@@ -6007,14 +6007,21 @@ class PhoneFields(VakaTestCase):
         # Zimbabwe is still first, so the default is +263.
         self.assertTrue(options[0][0] == "263")
 
-    def test_phone_component_is_loaded_on_both_shells(self):
+    def test_phone_component_is_loaded_once_on_a_workspace_page(self):
         from pathlib import Path
 
-        for path in ("templates/base.html", "templates/app/base.html"):
-            with self.subTest(shell=path):
-                self.assertIn(
-                    "phone-field.js", Path(path).read_text(encoding="utf-8")
-                )
+        base = Path("templates/base.html").read_text(encoding="utf-8")
+        app_shell = Path("templates/app/base.html").read_text(encoding="utf-8")
+        self.assertEqual(base.count("phone-field.js"), 1)
+        self.assertNotIn(
+            "phone-field.js",
+            app_shell,
+            "app/base extends base; including it twice splits the phone again",
+        )
+
+        self.login()
+        page = self.client.get("/app").get_data(as_text=True)
+        self.assertEqual(page.count("phone-field.js"), 1)
 
     def test_landing_states_vision_mission_and_objectives(self):
         body = self.app.test_client().get("/").get_data(as_text=True)
@@ -6338,11 +6345,57 @@ class MoneyTrendAndStickyHeader(VakaTestCase):
         self.assertTrue(flat["flat"])
         self.assertNotIn("nan", flat["points"].lower())
 
+    def test_sparkline_can_carry_an_opening_balance(self):
+        from queries import balance_sparkline
+
+        series = [
+            {"label": "Jan", "funded": 0, "spent": 400_00},
+            {"label": "Feb", "funded": 150_00, "spent": 0},
+        ]
+        line = balance_sparkline(series, opening=3_100_00)
+        self.assertEqual(line["last"], 2_850_00)
+
     def test_money_page_draws_the_trend(self):
         self.login("manager@yavaka.co.zw")
         body = self.client.get("/app/money").get_data(as_text=True)
         self.assertIn("Balance over time", body)
         self.assertIn("trend-chart", body)
+
+    def test_money_trend_closes_on_the_real_balance(self):
+        from db import query
+        from money import format_money
+        from queries import money_totals
+
+        self.login("client@yavaka.co.zw")
+        with self.app.app_context():
+            project = query(
+                "SELECT id FROM projects WHERE name = ?", ("Greendale Family Home",), one=True
+            )
+            self.assertIsNotNone(project)
+            balance = money_totals(project["id"])["balance"]
+
+        body = self.client.get(f"/app/money?project={project['id']}").get_data(as_text=True)
+        self.assertIn(f"ending at {format_money(balance)}", body)
+
+    def test_dashboard_counts_every_funding_entry(self):
+        from db import query
+
+        self.login("client@yavaka.co.zw")
+        with self.app.app_context():
+            project = query(
+                "SELECT id FROM projects WHERE name = ?", ("Greendale Family Home",), one=True
+            )
+            self.assertIsNotNone(project)
+            funding = query(
+                """SELECT COUNT(*) AS count FROM transactions
+                   WHERE project_id = ? AND type = 'FUNDING'""",
+                (project["id"],),
+                one=True,
+            )["count"]
+
+        body = self.client.get(f"/app?project={project['id']}").get_data(as_text=True)
+        unit = "entry" if funding == 1 else "entries"
+        self.assertIn(f"{funding} funding {unit}", body)
 
     def test_project_header_is_sticky_and_shows_the_next_gate(self):
         from db import query

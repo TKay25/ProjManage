@@ -569,6 +569,8 @@ body.app {
   letter-spacing: 0.08em;
   color: var(--ink-faint);
   font-weight: 650;
+  white-space: nowrap;
+  flex: none;
 }
 
 .inline-form {
@@ -797,6 +799,19 @@ body.app .admin-table-wrap {
   scrollbar-gutter: stable;
   /* Room for the bar, so cards are never clipped by it. */
   padding-right: 6px;
+}
+
+/* Auto-sized grids in a height-capped scroller would otherwise split the cap
+   across every implicit row and squash each card to a header strip (the
+   supplier directory was the visible case). Keep rows at content height and
+   let the container scroll instead. */
+body.app .doc-grid,
+body.app .project-grid,
+body.app .supplier-grid,
+body.app .agreement-list,
+body.app .split-grid {
+  align-content: start;
+  grid-auto-rows: max-content;
 }
 
 @media (max-width: 640px) {
@@ -3805,8 +3820,7 @@ button.card-trigger {
     right: 0;
     bottom: 0;
     z-index: 50;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    display: flex;
     background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(14px);
     border-top: 1px solid var(--line);
@@ -3820,10 +3834,12 @@ button.card-trigger {
   .tab {
     position: relative;
     display: flex;
+    flex: 1 1 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 3px;
+    min-width: 0;
     min-height: 48px;
     padding: 6px 2px;
     border: 0;
@@ -7166,6 +7182,45 @@ td.align-right,
 @media (max-width: 1024px) {
   body.app .aide {
     bottom: calc(var(--tabbar-h, 66px) + 10px);
+  }
+
+  /* The tab bar carries an Ask button at this width, so the floating launcher
+     would be a second control for the same panel — and it sat over ledger rows,
+     KPI values and chat quick-replies. Keep the widget itself for the panel;
+     only the duplicate launcher goes. */
+  body.app .aide:not([open]) {
+    display: none;
+  }
+
+  body.app .aide[open] {
+    right: 14px;
+  }
+}
+
+/* On public pages there is no tab bar, so the launcher stays. A 46px icon
+   leaves more of the page readable than the full "Ask" pill on a phone. */
+@media (max-width: 560px) {
+  .aide-launcher {
+    width: 46px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .aide-launcher-label {
+    display: none;
+  }
+
+  /* Match the 44px menu and theme buttons; the avatar was the last 32px
+     target left in the phone header. */
+  .topbar .avatar-sm {
+    width: 44px;
+    height: 44px;
+  }
+
+  .aide-close {
+    width: 40px;
+    height: 40px;
   }
 }
 

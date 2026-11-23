@@ -19,6 +19,7 @@ from queries import (
     missing_receipts,
     money_totals,
     monthly_cashflow,
+    opening_balance,
     stage_rows,
     stage_spend,
 )
@@ -247,7 +248,8 @@ def index():
     breakdown = category_breakdown(project["id"])
     spent_total = totals["spent"] or 1
     trend = monthly_cashflow(project["id"])
-    sparkline = balance_sparkline(trend)
+    opening = opening_balance(project["id"], trend[0]["key"]) if trend else 0
+    sparkline = balance_sparkline(trend, opening=opening)
 
     return render_template(
         "app/money.html",

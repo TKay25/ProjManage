@@ -135,7 +135,7 @@
         <span class="kpi-icon">{{ icon('trending-up', 17) }}</span>
       </div>
       <p class="kpi-value">{{ totals.funded|money }}</p>
-      <p class="kpi-sub">{{ transactions|selectattr('type', 'equalto', 'FUNDING')|list|length }} funding entries</p>
+      <p class="kpi-sub">{{ totals.funding_count }} funding {{ 'entry' if totals.funding_count == 1 else 'entries' }}</p>
     </a>
 
     <a class="kpi card-hover" href="{{ url_for('money.index', project=project.id, filter='expense') }}">
@@ -309,7 +309,7 @@
         <summary class="fold-head">
           <h2>Needs your attention</h2>
           <span class="fold-side">
-            <span class="fold-meta">{{ alerts[0].title if alerts else 'Nothing flagged right now' }}</span>
+            <span class="fold-meta">{{ alerts[0].title if alerts else 'Nothing flagged right now' }}{% if alerts|length > 1 %} +{{ alerts|length - 1 }} more{% endif %}</span>
             <span class="count-pill">{{ alerts|length }}</span>
             <span class="fold-chevron">{{ icon('chevron-right', 16) }}</span>
           </span>

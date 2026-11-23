@@ -135,14 +135,35 @@ def monthly_cashflow(project_id: str, months: int = 6):
     return series
 
 
-def balance_sparkline(series, width=640, height=132):
+def opening_balance(project_id: str, before_month: str) -> int:
+    """Money in the drawer before the chart window starts.
+
+    A six-month chart that starts from zero is not a balance: it is the net
+    movement of the window. Seeded builds often have funding older than the
+    window, which is why the line has to begin with this figure.
+    """
+    row = query(
+        """SELECT COALESCE(SUM(
+                     CASE WHEN type = 'FUNDING' THEN amount_cents ELSE -amount_cents END
+                   ), 0) AS opening
+           FROM transactions
+           WHERE project_id = ? AND substr(occurred_at, 1, 7) < ?""",
+        (project_id, before_month),
+        one=True,
+    )
+    return int(row["opening"] or 0)
+
+
+def balance_sparkline(series, width=640, height=132, opening=0):
     """Points for a running-balance line, computed once on the server.
 
     Drawn as an SVG polyline so the chart costs no JavaScript and no extra
-    request. A flat or empty series renders as a centred line rather than a
+    request. ``opening`` is the balance carried into the first month, so the
+    line ends on the account balance rather than the window's net movement.
+    A flat or empty series renders as a centred line rather than a
     divide-by-zero.
     """
-    running = 0
+    running = int(opening or 0)
     values = []
     for row in series or []:
         running += int(row.get("funded", 0)) - int(row.get("spent", 0))
@@ -195,11 +216,16 @@ def projects_with_summary(projects):
         stage_rows_by_project.setdefault(row["project_id"], []).append(row)
 
     totals_by_project = {
-        row["project_id"]: {"funded": int(row["funded"] or 0), "spent": int(row["spent"] or 0)}
+        row["project_id"]: {
+            "funded": int(row["funded"] or 0),
+            "spent": int(row["spent"] or 0),
+            "funding_count": int(row["funding_count"] or 0),
+        }
         for row in query(
             f"""SELECT project_id,
                      COALESCE(SUM(CASE WHEN type = 'FUNDING' THEN amount_cents END), 0) AS funded,
-                     COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount_cents END), 0) AS spent
+                     COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount_cents END), 0) AS spent,
+                     COUNT(CASE WHEN type = 'FUNDING' THEN 1 END) AS funding_count
                 FROM transactions WHERE project_id IN ({placeholders})
                 GROUP BY project_id""",
             ids,
@@ -227,7 +253,9 @@ def projects_with_summary(projects):
     summaries = []
     for project in projects:
         stages = stage_rows_by_project.get(project["id"], [])
-        totals = totals_by_project.get(project["id"], {"funded": 0, "spent": 0})
+        totals = totals_by_project.get(
+            project["id"], {"funded": 0, "spent": 0, "funding_count": 0}
+        )
         totals["balance"] = totals["funded"] - totals["spent"]
         found = flags.get(project["id"], {})
         summaries.append(

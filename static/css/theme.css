@@ -75,8 +75,11 @@
 [data-theme="dark"] .doc-card,
 [data-theme="dark"] .agreement-card,
 [data-theme="dark"] .project-card,
+[data-theme="dark"] .supplier-card,
 [data-theme="dark"] .kpi,
 [data-theme="dark"] .project-hero,
+[data-theme="dark"] .today-chip,
+[data-theme="dark"] .fold-section,
 [data-theme="dark"] .filter-bar-lg,
 [data-theme="dark"] .row-menu-panel,
 [data-theme="dark"] button.card-trigger,
@@ -100,6 +103,42 @@
 [data-theme="dark"] .doc-preview {
   background: var(--sand-200);
   border-color: var(--line);
+}
+
+/* Floating panels and the phone shell also hardcoded their surface. */
+[data-theme="dark"] .notif-panel,
+[data-theme="dark"] .aide-window,
+[data-theme="dark"] .aide-head,
+[data-theme="dark"] .aide-compose,
+[data-theme="dark"] .phone-shell {
+  background: var(--sand-200);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .aide-input,
+[data-theme="dark"] .aide-said--bot {
+  background: var(--sand-100);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .aide-link {
+  background: var(--sand-300);
+  color: var(--forest-200);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .today-chip-count {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--forest-200);
+}
+
+[data-theme="dark"] .notif-row:hover,
+[data-theme="dark"] .notif-row:focus-visible,
+[data-theme="dark"] .notif-foot:hover,
+[data-theme="dark"] .notif-foot:focus-visible,
+[data-theme="dark"] .aide-close:hover {
+  background: rgba(148, 163, 184, 0.08);
 }
 
 [data-theme="dark"] .btn-outline,
@@ -180,6 +219,19 @@
 
 [data-theme="dark"] .stage-files li {
   background: rgba(148, 163, 184, 0.06);
+}
+
+/* Category tones are dark inks chosen for a white card. On the dark surface
+   they become unreadable, so the light end of each tone carries the text. */
+[data-theme="dark"] .supplier-cat,
+[data-theme="dark"] .supplier-link {
+  color: var(--tone-soft);
+}
+
+[data-theme="dark"] .supplier-name a:hover,
+[data-theme="dark"] .supplier-name a:focus-visible {
+  color: var(--tone-soft);
+  border-bottom-color: var(--tone-soft);
 }
 
 [data-theme="dark"] .signature-block,

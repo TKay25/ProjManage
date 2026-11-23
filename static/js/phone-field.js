@@ -10,6 +10,11 @@
 (() => {
   "use strict";
 
+  // Running twice would split an already-split number a second time, so a
+  // page that loads this file twice must not corrupt a saved phone number.
+  if (window.__vakaPhoneFieldReady) return;
+  window.__vakaPhoneFieldReady = true;
+
   const fields = Array.from(document.querySelectorAll("[data-phone-field]"));
   if (!fields.length) return;
 

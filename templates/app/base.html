@@ -139,8 +139,9 @@
       {{ icon(item.icon, 21) }}<span>{{ item.label }}</span>
     </a>
   {% endfor %}
-  <button class="tab" type="button" data-drawer-open>
-    {{ icon('menu', 21) }}<span>More</span>
+  <button class="tab" type="button" data-aide-open aria-haspopup="dialog"
+          aria-controls="assistant-window" aria-expanded="false">
+    {{ icon('message', 21) }}<span>Ask</span>
   </button>
 </nav>
 {% endblock %}
@@ -148,7 +149,6 @@
 {% block scripts %}
   {# Workspace scripts stay loaded across in-app page transitions. #}
   <script src="{{ asset_url('js/signature.js') }}" defer></script>
-<script src="{{ asset_url('js/phone-field.js') }}" defer></script>
   <script src="{{ asset_url('js/whatsapp.js') }}" defer></script>
   <script src="{{ asset_url('js/palette.js') }}" defer></script>
   {% if current_portal != 'property' %}
