@@ -516,6 +516,10 @@ dialog.modal--auth-register {
 .modal-panel--auth {
   display: grid;
   grid-template-columns: minmax(230px, 0.78fr) minmax(0, 1.45fr);
+  /* An implicit row sizes to max-content, so on a short viewport the sheet
+     grew past its max-height and the panel's overflow:hidden cut the foot off.
+     Pin the row to the sheet height so .modal-body scrolls instead. */
+  grid-template-rows: minmax(0, 1fr);
   max-height: min(92vh, 860px);
 }
 
@@ -597,11 +601,16 @@ dialog.modal--auth-register {
     width: calc(100vw - 20px);
     max-width: calc(100vw - 20px);
     max-height: 92vh;
+    max-height: 92dvh;
   }
 
   .modal-panel--auth {
     grid-template-columns: minmax(0, 1fr);
+    /* Brand row keeps its height; the form row takes whatever is left so the
+       body scrolls behind the pinned head and foot. */
+    grid-template-rows: auto minmax(0, 1fr);
     max-height: 92vh;
+    max-height: 92dvh;
   }
 
   .modal-auth-aside {

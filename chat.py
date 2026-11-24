@@ -1109,8 +1109,14 @@ def _ask_confirm(user, thread, draft):
     rows = flow.summary(user, thread, draft["slots"])
     draft["step"] = "confirm"
     _touch(thread["id"], draft)
+    # The nudge only offers a correction the flow can actually take.
+    hint = (
+        " Say “change the amount to 600” if the figure is off."
+        if "amount" in draft["slots"]
+        else " Say “cancel” if something is wrong."
+    )
     return {
-        "body": "Ready. Shall I record it? Say “change the amount to 600” if something is off.",
+        "body": "Ready. Shall I record it?" + hint,
         "card": {
             "title": flow.label,
             "stats": [[label, value] for label, value in rows],
